@@ -1,0 +1,8 @@
+{
+  "freshnessThresholdMinutes": 45,
+  "timezone": "Europe/Berlin",
+  "stations": [
+    {"key": "lauchhammer", "name": "Lauchhammer", "stationNumber": "5530401", "river": "Schwarze Elster"},
+    {"key": "biehlen-1", "name": "Biehlen 1", "stationNumber": "5530302", "river": "Schwarze Elster"}
+  ]
+}
