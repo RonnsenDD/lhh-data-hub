@@ -8,18 +8,13 @@
     "measuredAt": "2026-10-18T17:00:00+02:00",
     "measuredAtUtc": "2026-10-18T15:00:00Z"
   },
-  "retrievedAt": "2026-10-18T16:22:09.408782Z",
-  "ageMinutes": 82,
+  "retrievedAt": "2026-10-18T16:43:50.367772Z",
+  "ageMinutes": 103,
   "freshnessThresholdMinutes": 45,
   "status": "stale",
   "statusReason": "Letzter gültiger Messwert älter als 45 Minuten",
-  "invalidRowsSkipped": 1,
+  "invalidRowsSkipped": 2,
   "history": [
-    {
-      "measuredAt": "2026-10-17T17:30:00+02:00",
-      "measuredAtUtc": "2026-10-17T15:30:00Z",
-      "waterLevelCm": 58.0
-    },
     {
       "measuredAt": "2026-10-17T17:45:00+02:00",
       "measuredAtUtc": "2026-10-17T15:45:00Z",
@@ -498,5 +493,5 @@
   },
   "officialAlarmLevel": null,
   "officialAlarmLevelNote": "Keine amtliche Alarmstufe aus dem Messwert abgeleitet.",
-  "lastAttemptAt": "2026-10-18T16:22:09.408782Z"
+  "lastAttemptAt": "2026-10-18T16:43:50.367772Z"
 }
