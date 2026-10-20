@@ -4,72 +4,17 @@
   "stationNumber": "5530302",
   "river": "Schwarze Elster",
   "latestMeasurement": {
-    "waterLevelCm": 41.0,
-    "measuredAt": "2026-10-20T00:00:00+02:00",
-    "measuredAtUtc": "2026-10-19T22:00:00Z"
+    "waterLevelCm": 40.0,
+    "measuredAt": "2026-10-20T02:30:00+02:00",
+    "measuredAtUtc": "2026-10-20T00:30:00Z"
   },
-  "retrievedAt": "2026-10-19T23:05:48.449608Z",
-  "ageMinutes": 65,
+  "retrievedAt": "2026-10-20T01:48:18.538747Z",
+  "ageMinutes": 78,
   "freshnessThresholdMinutes": 45,
   "status": "stale",
   "statusReason": "Letzter gültiger Messwert älter als 45 Minuten",
   "invalidRowsSkipped": 0,
   "history": [
-    {
-      "measuredAt": "2026-10-19T00:15:00+02:00",
-      "measuredAtUtc": "2026-10-18T22:15:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T00:30:00+02:00",
-      "measuredAtUtc": "2026-10-18T22:30:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T00:45:00+02:00",
-      "measuredAtUtc": "2026-10-18T22:45:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T01:00:00+02:00",
-      "measuredAtUtc": "2026-10-18T23:00:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T01:15:00+02:00",
-      "measuredAtUtc": "2026-10-18T23:15:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T01:30:00+02:00",
-      "measuredAtUtc": "2026-10-18T23:30:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T01:45:00+02:00",
-      "measuredAtUtc": "2026-10-18T23:45:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T02:00:00+02:00",
-      "measuredAtUtc": "2026-10-19T00:00:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T02:15:00+02:00",
-      "measuredAtUtc": "2026-10-19T00:15:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T02:30:00+02:00",
-      "measuredAtUtc": "2026-10-19T00:30:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-10-19T02:45:00+02:00",
-      "measuredAtUtc": "2026-10-19T00:45:00Z",
-      "waterLevelCm": 41.0
-    },
     {
       "measuredAt": "2026-10-19T03:00:00+02:00",
       "measuredAtUtc": "2026-10-19T01:00:00Z",
@@ -493,7 +438,57 @@
     {
       "measuredAt": "2026-10-20T00:00:00+02:00",
       "measuredAtUtc": "2026-10-19T22:00:00Z",
-      "waterLevelCm": 41.0
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T00:15:00+02:00",
+      "measuredAtUtc": "2026-10-19T22:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T00:30:00+02:00",
+      "measuredAtUtc": "2026-10-19T22:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T00:45:00+02:00",
+      "measuredAtUtc": "2026-10-19T22:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T01:00:00+02:00",
+      "measuredAtUtc": "2026-10-19T23:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T01:15:00+02:00",
+      "measuredAtUtc": "2026-10-19T23:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T01:30:00+02:00",
+      "measuredAtUtc": "2026-10-19T23:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T01:45:00+02:00",
+      "measuredAtUtc": "2026-10-19T23:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T02:00:00+02:00",
+      "measuredAtUtc": "2026-10-20T00:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T02:15:00+02:00",
+      "measuredAtUtc": "2026-10-20T00:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-10-20T02:30:00+02:00",
+      "measuredAtUtc": "2026-10-20T00:30:00Z",
+      "waterLevelCm": 40.0
     }
   ],
   "source": {
@@ -503,5 +498,5 @@
   },
   "officialAlarmLevel": null,
   "officialAlarmLevelNote": "Keine amtliche Alarmstufe aus dem Messwert abgeleitet.",
-  "lastAttemptAt": "2026-10-19T23:05:48.449608Z"
+  "lastAttemptAt": "2026-10-20T01:48:18.538747Z"
 }
