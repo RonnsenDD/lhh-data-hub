@@ -9,7 +9,7 @@
     "measuredAtUtc": "2026-10-21T12:00:00Z"
   },
   "retrievedAt": "2026-10-21T13:14:25.328209Z",
-  "ageMinutes": 1009,
+  "ageMinutes": 1307,
   "freshnessThresholdMinutes": 45,
   "status": "error",
   "statusReason": "Abruf oder Verarbeitung fehlgeschlagen; gespeicherter Messwert ist nicht als aktuell zu verwenden",
@@ -503,6 +503,6 @@
   },
   "officialAlarmLevel": null,
   "officialAlarmLevelNote": "Keine amtliche Alarmstufe aus dem Messwert abgeleitet.",
-  "lastAttemptAt": "2026-10-22T04:49:49.760564Z",
+  "lastAttemptAt": "2026-10-22T09:47:13.272755Z",
   "lastError": "Abruf fehlgeschlagen: HTTP Error 503: Service Unavailable"
 }
