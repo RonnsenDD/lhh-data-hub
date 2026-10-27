@@ -10,6 +10,8 @@ Erst nach erfolgreichem manuellen End-to-End-Test wird der 15-Minuten-Cron-Eintr
 
 Das Pages-Artefakt enthält jeweils nur radar/latest.json und radar/frames/<Frame-ID>/rain.png sowie coverage.png. Pro Veröffentlichung wird das Pages-Artefakt ersetzt; es werden keine HDF5-Archive oder Radar-PNGs in Git commits gespeichert. Der Upload-Artefakt hat ein Aufbewahrungslimit von einem Tag.
 
+Das Deployment-Artefakt enthält außerdem eine minimale `index.html` als Pages-Einstieg. Der Online-Smoke-Test prüft Einstieg, JSON-/PNG-Content-Type, Frame-IDs und Prüfsummen.
+
 ## Status und Verträge
 
 - current: DWD-Produktzeit höchstens 15 Minuten alt.
