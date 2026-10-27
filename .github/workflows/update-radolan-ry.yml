@@ -54,7 +54,7 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          root = Path("\${{ runner.temp }}/radar-site/radar")
+          root = Path("${{ runner.temp }}/radar-site/radar")
           manifest_path = root / "latest.json"
           if not manifest_path.is_file():
               raise SystemExit("latest.json fehlt")
@@ -79,7 +79,7 @@ jobs:
       - name: Pages-Artefakt hochladen (nur aktueller Stand, 1 Tag Aufbewahrung)
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
-          path: \${{ runner.temp }}/radar-site
+          path: ${{ runner.temp }}/radar-site
           retention-days: 1
 
       - name: Pages veröffentlichen
@@ -89,7 +89,7 @@ jobs:
       - name: Veröffentlichte JSON- und PNG-Dateien prüfen
         if: always()
         env:
-          PAGE_URL: \${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: python -B tools/radolan-ry/verify_public.py
 
       - name: Technischen Fehlerzustand im Workflow kenntlich machen
