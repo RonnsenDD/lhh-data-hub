@@ -1,8 +1,10 @@
 name: DWD RADOLAN-RY Radar (Best Effort)
 
 on:
+  schedule:
+    # Alle 15 Minuten mit Versatz, um volle Stunden nicht zusätzlich zu belasten.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
-    # Testbetrieb: Zeitplan erst nach erfolgreichem manuellen End-to-End-Test ergänzen.
 
 permissions:
   contents: read
