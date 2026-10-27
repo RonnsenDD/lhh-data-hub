@@ -96,7 +96,7 @@ export async function publishKonrad({ siteDir, xml, sourceUrl = DWD_KONRAD_DIREC
       referenceTime: null, creationTime: null, retrievedAt, publishedAt: now.toISOString(),
       ageMinutes: null, staleAfterMinutes: 15, totalCells: null, relevantCellCount: null,
       outOfAreaCount: null, cellResult: null, cellsGeoJSON: 'cells.geojson',
-      cellsGeoJSONSha256: digest(Buffer.from(JSON.stringify(geojson))), source: 'DWD', sourceUrl,
+      cellsGeoJSONSha256: digest(Buffer.from(`${JSON.stringify(geojson)}\n`)), source: 'DWD', sourceUrl,
       attribution: 'Datenquelle: Deutscher Wetterdienst (DWD), KONRAD3D.'
     };
     await writeFile(path.join(target, 'cells.geojson.tmp'), `${JSON.stringify(geojson)}\n`);
