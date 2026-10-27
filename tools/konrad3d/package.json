@@ -1,0 +1,8 @@
+{
+  "name": "lhh-data-hub-konrad3d",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "fast-xml-parser": "5.11.1"
+  }
+}
