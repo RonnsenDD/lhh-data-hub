@@ -4,107 +4,17 @@
   "stationNumber": "5530401",
   "river": "Schwarze Elster",
   "latestMeasurement": {
-    "waterLevelCm": 58.0,
-    "measuredAt": "2026-10-27T17:00:00+01:00",
-    "measuredAtUtc": "2026-10-27T16:00:00Z"
+    "waterLevelCm": 57.0,
+    "measuredAt": "2026-10-27T21:00:00+01:00",
+    "measuredAtUtc": "2026-10-27T20:00:00Z"
   },
-  "retrievedAt": "2026-10-27T16:45:43.937151Z",
-  "ageMinutes": 45,
+  "retrievedAt": "2026-10-27T21:04:38.705726Z",
+  "ageMinutes": 64,
   "freshnessThresholdMinutes": 45,
   "status": "stale",
   "statusReason": "Letzter gültiger Messwert älter als 45 Minuten",
-  "invalidRowsSkipped": 2,
+  "invalidRowsSkipped": 3,
   "history": [
-    {
-      "measuredAt": "2026-10-26T17:45:00+01:00",
-      "measuredAtUtc": "2026-10-26T16:45:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T18:00:00+01:00",
-      "measuredAtUtc": "2026-10-26T17:00:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T18:15:00+01:00",
-      "measuredAtUtc": "2026-10-26T17:15:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T18:30:00+01:00",
-      "measuredAtUtc": "2026-10-26T17:30:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T18:45:00+01:00",
-      "measuredAtUtc": "2026-10-26T17:45:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T19:00:00+01:00",
-      "measuredAtUtc": "2026-10-26T18:00:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T19:15:00+01:00",
-      "measuredAtUtc": "2026-10-26T18:15:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T19:30:00+01:00",
-      "measuredAtUtc": "2026-10-26T18:30:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T19:45:00+01:00",
-      "measuredAtUtc": "2026-10-26T18:45:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T20:00:00+01:00",
-      "measuredAtUtc": "2026-10-26T19:00:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T20:15:00+01:00",
-      "measuredAtUtc": "2026-10-26T19:15:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T20:30:00+01:00",
-      "measuredAtUtc": "2026-10-26T19:30:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T20:45:00+01:00",
-      "measuredAtUtc": "2026-10-26T19:45:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T21:00:00+01:00",
-      "measuredAtUtc": "2026-10-26T20:00:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T21:15:00+01:00",
-      "measuredAtUtc": "2026-10-26T20:15:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T21:30:00+01:00",
-      "measuredAtUtc": "2026-10-26T20:30:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T21:45:00+01:00",
-      "measuredAtUtc": "2026-10-26T20:45:00Z",
-      "waterLevelCm": 59.0
-    },
-    {
-      "measuredAt": "2026-10-26T22:00:00+01:00",
-      "measuredAtUtc": "2026-10-26T21:00:00Z",
-      "waterLevelCm": 59.0
-    },
     {
       "measuredAt": "2026-10-26T22:15:00+01:00",
       "measuredAtUtc": "2026-10-26T21:15:00Z",
@@ -484,6 +394,86 @@
       "measuredAt": "2026-10-27T17:00:00+01:00",
       "measuredAtUtc": "2026-10-27T16:00:00Z",
       "waterLevelCm": 58.0
+    },
+    {
+      "measuredAt": "2026-10-27T17:15:00+01:00",
+      "measuredAtUtc": "2026-10-27T16:15:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T17:30:00+01:00",
+      "measuredAtUtc": "2026-10-27T16:30:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T17:45:00+01:00",
+      "measuredAtUtc": "2026-10-27T16:45:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T18:00:00+01:00",
+      "measuredAtUtc": "2026-10-27T17:00:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T18:15:00+01:00",
+      "measuredAtUtc": "2026-10-27T17:15:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T18:30:00+01:00",
+      "measuredAtUtc": "2026-10-27T17:30:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T18:45:00+01:00",
+      "measuredAtUtc": "2026-10-27T17:45:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T19:00:00+01:00",
+      "measuredAtUtc": "2026-10-27T18:00:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T19:15:00+01:00",
+      "measuredAtUtc": "2026-10-27T18:15:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T19:30:00+01:00",
+      "measuredAtUtc": "2026-10-27T18:30:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T19:45:00+01:00",
+      "measuredAtUtc": "2026-10-27T18:45:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T20:00:00+01:00",
+      "measuredAtUtc": "2026-10-27T19:00:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T20:15:00+01:00",
+      "measuredAtUtc": "2026-10-27T19:15:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T20:30:00+01:00",
+      "measuredAtUtc": "2026-10-27T19:30:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T20:45:00+01:00",
+      "measuredAtUtc": "2026-10-27T19:45:00Z",
+      "waterLevelCm": 57.0
+    },
+    {
+      "measuredAt": "2026-10-27T21:00:00+01:00",
+      "measuredAtUtc": "2026-10-27T20:00:00Z",
+      "waterLevelCm": 57.0
     }
   ],
   "source": {
@@ -493,5 +483,5 @@
   },
   "officialAlarmLevel": null,
   "officialAlarmLevelNote": "Keine amtliche Alarmstufe aus dem Messwert abgeleitet.",
-  "lastAttemptAt": "2026-10-27T16:45:43.937151Z"
+  "lastAttemptAt": "2026-10-27T21:04:38.705726Z"
 }
