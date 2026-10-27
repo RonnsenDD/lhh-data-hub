@@ -150,7 +150,7 @@ class ParseTests(unittest.TestCase):
         self.assertNotIn("data/generated/*.json", patterns)
 
     def test_workflow_adds_both_outputs_and_only_fails_on_technical_error(self):
-        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/update-levels.yml.example").read_text()
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/update-levels.yml").read_text()
         self.assertIn("contents: write", workflow)
         self.assertIn("git add -f data/generated/pegel-lauchhammer.json data/generated/pegel-biehlen-1.json", workflow)
         self.assertIn('cron: "*/15 * * * *"', workflow)

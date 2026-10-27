@@ -1,0 +1,54 @@
+name: DWD-Graslandfeuerindex
+
+on:
+  schedule:
+    # DWD beschreibt die tägliche Bereitstellung um etwa 05:00 UTC.
+    - cron: '15 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lhh-data-hub-graslandfeuerindex
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: GLFI-Parser- und Regressionstests
+        id: tests
+        run: python3 -B -m unittest discover -s tests -p 'test_graslandfeuerindex_fetch.py' -v
+
+      - name: DWD-Feed abrufen und JSON schreiben
+        id: fetch
+        continue-on-error: true
+        run: python3 -B src/graslandfeuerindex_fetch.py --output data/generated/graslandfeuerindex.json
+
+      - name: JSON-Vertrag prüfen
+        id: validate
+        if: always() && steps.tests.outcome == 'success' && steps.fetch.outcome != 'skipped'
+        run: python3 -B src/graslandfeuerindex_fetch.py --validate-only --output data/generated/graslandfeuerindex.json
+
+      - name: Feedstatus im Data Hub veröffentlichen
+        if: always() && steps.validate.outcome == 'success'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/generated/graslandfeuerindex.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Aktualisiere DWD-Graslandfeuerindex'
+            git push
+          fi
+
+      - name: Technischen DWD-Fehler im Laufstatus melden
+        if: always() && steps.fetch.outcome == 'failure'
+        run: exit 1
