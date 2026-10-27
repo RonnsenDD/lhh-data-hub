@@ -16,10 +16,15 @@ def fetch(url):
 
 def main():
     base = os.environ["PAGE_URL"].rstrip("/") + "/"
+    entry, entry_headers, entry_status = fetch(base)
+    if entry_status != 200 or "text/html" not in entry_headers.get("Content-Type", "").lower() or b"radar/latest.json" not in entry:
+        raise SystemExit(f"Pages-Einstiegsseite fehlt oder ist unvollständig (HTTP {entry_status})")
     latest = urllib.parse.urljoin(base, "radar/latest.json") + "?t=" + str(int(time.time()))
     body, headers, status = fetch(latest)
     if status != 200:
         raise SystemExit(f"latest.json HTTP {status}")
+    if "application/json" not in headers.get("Content-Type", "").lower():
+        raise SystemExit(f"latest.json Content-Type unerwartet: {headers.get('Content-Type', '(fehlt)')}")
     data = json.loads(body)
     origin = headers.get("Access-Control-Allow-Origin", "")
     print(json.dumps({"http": status, "status": data.get("status"), "productTime": data.get("productTime"),
@@ -33,6 +38,8 @@ def main():
         image, image_headers, image_status = fetch(url)
         if image_status != 200 or not image.startswith(bytes((137,80,78,71,13,10,26,10))):
             raise SystemExit(f"{key}: kein erfolgreiches PNG (HTTP {image_status})")
+        if "image/png" not in image_headers.get("Content-Type", "").lower():
+            raise SystemExit(f"{key}: Content-Type unerwartet: {image_headers.get('Content-Type', '(fehlt)')}")
         if hashlib.sha256(image).hexdigest() != data.get(checksum):
             raise SystemExit(f"{key}: SHA256 stimmt nicht mit latest.json überein")
         print(f"{key}: HTTP {image_status}, {len(image)} Bytes, ACAO={image_headers.get('Access-Control-Allow-Origin', '(nicht gesetzt)')}")
