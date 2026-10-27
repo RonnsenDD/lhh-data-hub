@@ -1,8 +1,8 @@
-name: DWD RADOLAN-RY Radar (Best Effort)
+name: DWD RADOLAN-RY Radar and KONRAD3D (Best Effort)
 
 on:
   schedule:
-    # Alle 15 Minuten mit Versatz, um volle Stunden nicht zusätzlich zu belasten.
+    # Existing RADOLAN schedule; both products share this one Pages publication.
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     environment:
       name: github-pages
     steps:
@@ -30,14 +30,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Node.js einrichten
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/konrad3d/package-lock.json
+
       - name: Pages-Ziel konfigurieren
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
       - name: RADOLAN-Abhängigkeiten installieren
         run: python -m pip install --disable-pip-version-check --requirement tools/radolan-ry/requirements.txt
 
-      - name: Veröffentlichungsregressionen
+      - name: KONRAD3D-Abhängigkeiten installieren
+        run: npm ci --prefix tools/konrad3d --ignore-scripts
+
+      - name: RADOLAN-Veröffentlichungsregressionen
         run: python -B -m unittest discover -s tools/radolan-ry -p "test_publish*.py" -v
+
+      - name: KONRAD3D-Parser- und Veröffentlichungsregressionen
+        run: node --test tools/konrad3d/tests/*.test.mjs
 
       - name: Vorheriges Build-Artefakt ausschließen
         run: rm -rf "$RUNNER_TEMP/radar-site" "$RUNNER_TEMP/radolan-download"
@@ -50,7 +63,7 @@ jobs:
             --site-dir "$RUNNER_TEMP/radar-site" \
             --download-dir "$RUNNER_TEMP/radolan-download"
 
-      - name: Build-Ausgabe auf genau einen Frame prüfen
+      - name: RADOLAN-Build-Ausgabe prüfen
         if: always()
         run: |
           python - <<'PY'
@@ -59,26 +72,61 @@ jobs:
           root = Path("${{ runner.temp }}/radar-site/radar")
           manifest_path = root / "latest.json"
           if not manifest_path.is_file():
-              raise SystemExit("latest.json fehlt")
+              raise SystemExit("RADOLAN latest.json fehlt")
           manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
           frames = root / "frames"
           names = sorted(p.name for p in frames.iterdir() if p.is_dir()) if frames.exists() else []
           if manifest.get("status") == "unavailable":
               if names or manifest.get("rainImage") is not None:
-                  raise SystemExit("Fehlerzustand darf keinen alten Frame referenzieren")
-              print("Quelle/Dekodierung nicht verfügbar; expliziter Status wird veröffentlicht.")
+                  raise SystemExit("Fehlerzustand darf keinen alten Radarframe referenzieren")
           else:
               if manifest.get("status") not in ("current", "stale"):
                   raise SystemExit("Unbekannter Radarstatus")
               if len(names) != 1 or names[0] != manifest.get("frameId"):
-                  raise SystemExit("Ausgabe enthält nicht exakt den durch latest.json referenzierten Frame")
+                  raise SystemExit("RADOLAN-Ausgabe enthält nicht exakt einen referenzierten Frame")
               for key in ("rainImage", "coverageImage"):
                   path = root / manifest[key]
                   if not path.is_file() or path.stat().st_size == 0:
-                      raise SystemExit(f"Frame-Ressource fehlt: {key}")
+                      raise SystemExit(f"Radarressource fehlt: {key}")
+          print(f"RADOLAN status={manifest.get('status')} frame={manifest.get('frameId')}")
           PY
 
-      - name: Pages-Artefakt hochladen (nur aktueller Stand, 1 Tag Aufbewahrung)
+      - name: Neueste KONRAD3D-Datei abrufen und GeoJSON erstellen
+        id: konrad
+        continue-on-error: true
+        run: node tools/konrad3d/scripts/publish_pages.mjs --site-dir "$RUNNER_TEMP/radar-site"
+
+      - name: Gemeinsamen Pages-Build auf getrennte Produktpfade prüfen
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          site = Path("${{ runner.temp }}/radar-site")
+          radar = site / "radar/latest.json"
+          manifest_path = site / "konrad3d/latest.json"
+          geo_path = site / "konrad3d/cells.geojson"
+          if not radar.is_file():
+              raise SystemExit("RADOLAN-Datei wurde durch KONRAD3D nicht erhalten")
+          if not manifest_path.is_file() or not geo_path.is_file():
+              raise SystemExit("KONRAD3D latest.json oder cells.geojson fehlt")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          geo = json.loads(geo_path.read_text(encoding="utf-8"))
+          if manifest.get("schemaVersion") != 1 or manifest.get("product") != "DWD KONRAD3D":
+              raise SystemExit("KONRAD3D-Manifest entspricht nicht Schema v1")
+          if manifest.get("status") not in ("current", "stale", "unavailable"):
+              raise SystemExit("Unbekannter KONRAD3D-Status")
+          if geo.get("type") != "FeatureCollection" or not isinstance(geo.get("features"), list):
+              raise SystemExit("cells.geojson ist keine FeatureCollection")
+          digest = hashlib.sha256(geo_path.read_bytes()).hexdigest()
+          if digest != manifest.get("cellsGeoJSONSha256"):
+              raise SystemExit("GeoJSON-Prüfsumme passt nicht zum Manifest")
+          if manifest.get("status") == "unavailable" and geo["features"]:
+              raise SystemExit("Unavailable darf keine Zellgeometrien veröffentlichen")
+          print(f"KONRAD3D status={manifest['status']} reference={manifest.get('referenceTime')} features={len(geo['features'])}")
+          PY
+
+      - name: Pages-Artefakt hochladen (nur gemeinsamer aktueller Stand, 1 Tag Aufbewahrung)
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: ${{ runner.temp }}/radar-site
@@ -88,13 +136,18 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
-      - name: Veröffentlichte JSON- und PNG-Dateien prüfen
+      - name: RADOLAN-Publikation öffentlich prüfen
         if: steps.deployment.outcome == 'success'
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: python -B tools/radolan-ry/verify_public.py
 
-      - name: Technischen Fehlerzustand im Workflow kenntlich machen
-        if: always() && steps.radar.outcome == 'failure'
-        run: exit 1
+      - name: KONRAD3D-Publikation öffentlich prüfen
+        if: steps.deployment.outcome == 'success'
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: python -B tools/konrad3d/verify_public.py
 
+      - name: Technische Quellenfehler nach gemeinsamer Veröffentlichung kenntlich machen
+        if: always() && (steps.radar.outcome == 'failure' || steps.konrad.outcome == 'failure')
+        run: exit 1
