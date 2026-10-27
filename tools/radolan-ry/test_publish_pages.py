@@ -37,6 +37,7 @@ class PagesArtifactTests(unittest.TestCase):
             self.make_rasters(raster_dir)
             site = root / "site"
             result = publisher.publish(site, META, raster_dir)
+            self.assertTrue((site / "index.html").is_file())
             expected = "20261027T204000Z"
             self.assertEqual(result["frameId"], expected)
             self.assertEqual(result["status"], "stale")
@@ -70,6 +71,7 @@ class PagesArtifactTests(unittest.TestCase):
             frames.mkdir(parents=True)
             (frames / "rain.png").write_bytes(b"old")
             error = publisher.unavailable(site, OSError("HTTP 503"), datetime(2026, 10, 27, tzinfo=timezone.utc))
+            self.assertTrue((site / "index.html").is_file())
             self.assertEqual(error["status"], "unavailable")
             self.assertIsNone(error["rainImage"])
             self.assertIsNone(error["coverageImage"])
