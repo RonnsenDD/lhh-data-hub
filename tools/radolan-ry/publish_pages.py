@@ -14,9 +14,26 @@ from typing import Any
 import radolan_ry as decoder
 
 PNG_SIGNATURE = bytes((137, 80, 78, 71, 13, 10, 26, 10))
+INDEX_HTML = """<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DWD RADOLAN-RY – Lauchhammer</title>
+<main>
+  <h1>DWD RADOLAN-RY – Lauchhammer</h1>
+  <p>Maschinenlesbarer Status: <a href="radar/latest.json">radar/latest.json</a></p>
+</main>
+</html>
+"""
+
+
+def ensure_pages_entry(site_dir: Path) -> None:
+    site_dir.mkdir(parents=True, exist_ok=True)
+    (site_dir / "index.html").write_text(INDEX_HTML, encoding="utf-8")
 
 
 def publish(site_dir: Path, metadata: dict[str, Any], raster_dir: Path) -> dict[str, Any]:
+    ensure_pages_entry(site_dir)
     product_time = metadata["productTime"]
     product_dt = decoder.parse_utc(product_time)
     frame_id = product_dt.strftime("%Y%m%dT%H%M%SZ")
@@ -81,6 +98,7 @@ def publish(site_dir: Path, metadata: dict[str, Any], raster_dir: Path) -> dict[
 
 
 def unavailable(site_dir: Path, error: Exception, attempt: datetime) -> dict[str, Any]:
+    ensure_pages_entry(site_dir)
     frames_dir = site_dir / "radar" / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
     for old in frames_dir.iterdir():
