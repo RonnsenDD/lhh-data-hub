@@ -44,24 +44,32 @@ is_allowlisted() {
   esac
 }
 
-declare -A requested=()
-for target in "${TARGETS[@]}"; do
+for ((i = 0; i < ${#TARGETS[@]}; i++)); do
+  target="${TARGETS[$i]}"
   if ! is_allowlisted "$target"; then
     echo "Refusing non-allowlisted publication path: $target" >&2
     exit 2
   fi
-  if [[ -n "${requested[$target]+present}" ]]; then
-    echo "Refusing duplicate publication path: $target" >&2
-    exit 2
-  fi
-  requested["$target"]=1
+  for ((j = 0; j < i; j++)); do
+    if [[ "${TARGETS[$j]}" == "$target" ]]; then
+      echo "Refusing duplicate publication path: $target" >&2
+      exit 2
+    fi
+  done
 done
 
 assert_only_requested_paths() {
-  local path
+  local path target allowed
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    if [[ -z "${requested[$path]+present}" ]]; then
+    allowed=false
+    for target in "${TARGETS[@]}"; do
+      if [[ "$path" == "$target" ]]; then
+        allowed=true
+        break
+      fi
+    done
+    if [[ "$allowed" != true ]]; then
       echo "Refusing publication: unrequested path changed: $path" >&2
       return 1
     fi
