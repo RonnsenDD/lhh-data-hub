@@ -57,3 +57,8 @@ jobs:
               raise SystemExit("; ".join(bad))
           print("Pegelabrufe technisch erfolgreich; stale values remain explicitly marked stale.")
           PY
+      - name: Scheduled start delay prüfen
+        if: always() && github.event_name == 'schedule'
+        env:
+          RUN_STARTED_AT: ${{ github.run_started_at }}
+        run: python3 scripts/check_schedule_lateness.py --run-started-at "$RUN_STARTED_AT" --cron-minutes "11,26,41,56" --max-delay-minutes 5
