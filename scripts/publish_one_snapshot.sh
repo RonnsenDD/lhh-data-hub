@@ -38,7 +38,7 @@ fi
 
 is_allowlisted() {
   case "$1" in
-    data/generated/pegel-lauchhammer.json|data/generated/pegel-biehlen-1.json|data/generated/dwd-weather.json|data/generated/graslandfeuerindex.json)
+    data/generated/pegel-lauchhammer.json|data/generated/pegel-biehlen-1.json|data/generated/dwd-weather.json|data/generated/graslandfeuerindex.json|data/generated/waldbrandgefahrenstufe-osl.json)
       return 0 ;;
     *) return 1 ;;
   esac

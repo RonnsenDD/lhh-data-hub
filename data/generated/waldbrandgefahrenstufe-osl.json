@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "district": {
+    "name": "Oberspreewald-Lausitz",
+    "regionalschluessel": "12066"
+  },
+  "level": null,
+  "description": null,
+  "sourceDate": null,
+  "retrievedAt": null,
+  "lastSuccessfulAt": null,
+  "lastAttemptAt": null,
+  "status": "unavailable",
+  "statusReason": "Es liegt noch kein erfolgreich validierter MLEUV-Datensatz vor",
+  "fetchStatus": "not-attempted",
+  "lastError": "Noch kein erfolgreicher Abruf im Data Hub",
+  "source": {
+    "provider": "Ministerium für Land- und Ernährungswirtschaft, Umwelt und Verbraucherschutz des Landes Brandenburg",
+    "url": "https://mleuv.brandenburg.de/mleuv/de/umwelt/forst/waldschutz/waldbrandgefahr-in-brandenburg/waldbrandgefahrenstufen/",
+    "attribution": "Ministerium für Land- und Ernährungswirtschaft, Umwelt und Verbraucherschutz des Landes Brandenburg",
+    "license": "Auf der Quellseite ist keine ausdrückliche Datenlizenz ausgewiesen."
+  }
+}
