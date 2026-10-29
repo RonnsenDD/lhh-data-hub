@@ -1,16 +1,16 @@
-# This publication lock matches the currently active remote update-levels.yml.
 name: Update DWD weather
 
 on:
   schedule:
-    - cron: "*/15 * * * *" # UTC; GitHub may delay or coalesce scheduled starts.
+    # Offset from minute 00 (GitHub documents its highest schedule load at each hour start).
+    - cron: "3,18,33,48 * * * *" # UTC; quarterly cadence retained.
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: lhh-data-hub-pegel
+  group: lhh-data-hub-dwd-weather
   cancel-in-progress: false
 
 jobs:
@@ -46,4 +46,4 @@ jobs:
           --max-attempt-age-minutes 10
 
       - name: Publish only the DWD snapshot (bounded safe push)
-        run: bash scripts/publish_one_snapshot.sh data/generated/dwd-weather.json "Update DWD weather snapshot"
+        run: bash scripts/publish_one_snapshot.sh --message "Update DWD weather snapshot" data/generated/dwd-weather.json
