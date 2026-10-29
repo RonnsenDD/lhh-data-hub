@@ -66,11 +66,12 @@ exit 1
         hook.chmod(0o755)
         return bare, work, racer
 
-    def run_helper(self, work, racer, mode):
+    def run_helper(self, work, racer, mode, targets=None):
         counter = work.parent / "race-count"
         env = os.environ.copy()
         env.update({"RACE_COUNTER": str(counter), "RACE_MODE": mode, "RACER_DIR": str(racer)})
-        return subprocess.run(["bash", str(HELPER), TARGET, "Update local fixture"], cwd=work,
+        targets = targets or [TARGET]
+        return subprocess.run(["bash", str(HELPER), "--message", "Update local fixture", *targets], cwd=work,
                               env=env, text=True, capture_output=True)
 
     def test_unrelated_remote_update_is_fetched_rebased_and_retried(self):
@@ -108,11 +109,26 @@ exit 1
             count = int((root / "race-count").read_text())
             self.assertEqual(count, 3)
 
+    def test_multiple_disjoint_allowlisted_snapshots_publish_together(self):
+        with tempfile.TemporaryDirectory(prefix="publisher-multiple-") as temp:
+            root = Path(temp)
+            bare, work, racer = self.make_repos(root)
+            second = "data/generated/pegel-biehlen-1.json"
+            second_path = work / second
+            second_path.parent.mkdir(parents=True, exist_ok=True)
+            second_path.write_text('{"station": "Biehlen 1"}\\n')
+            result = self.run_helper(work, racer, "unrelated", [TARGET, second])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            committed_paths = git(["show", "--pretty=format:", "--name-only", "main"], work).stdout.split()
+            self.assertEqual(set(committed_paths), {TARGET, second})
+            self.assertIn("remote update", git(["--git-dir", str(bare), "show", "main:README.md"], root).stdout)
+            self.assertIn("Biehlen 1", git(["--git-dir", str(bare), "show", f"main:{second}"], root).stdout)
+
     def test_non_allowlisted_target_is_rejected_before_staging(self):
         with tempfile.TemporaryDirectory(prefix="publisher-allowlist-") as temp:
             root = Path(temp)
             _, work, racer = self.make_repos(root)
-            result = subprocess.run(["bash", str(HELPER), "README.md"], cwd=work,
+            result = subprocess.run(["bash", str(HELPER), "--message", "fixture", "README.md"], cwd=work,
                                     text=True, capture_output=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("non-allowlisted", result.stderr)
