@@ -76,5 +76,5 @@ jobs:
           WORKFLOW_FILE: update-graslandfeuerindex.yml
           SCHEDULE_INTERVAL_MINUTES: "1440"
           MAX_SCHEDULE_GAP_MINUTES: "1500"
-          MAX_QUEUE_DELAY_MINUTES: "5"
+          MAX_QUEUE_DELAY_MINUTES: "60"
         run: python3 scripts/audit_workflow_schedule.py
