@@ -1,13 +1,14 @@
-# Nicht aktiviert. Erst nach expliziter Freigabe und Lizenzprüfung in .yml umbenennen.
 name: Public Pegel Daten
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *" # UTC; GitHub kann Schedule-Ausführungen verzögern.
+    # Separater Offset zu Wetter (:03) und Radar (:07); nicht am Stundenbeginn.
+    - cron: "11,26,41,56 * * * *" # UTC; Viertelstundentakt bleibt erhalten.
 concurrency:
   group: lhh-data-hub-pegel
   cancel-in-progress: false
 permissions:
+  actions: read
   contents: write
 jobs:
   update:
@@ -15,19 +16,20 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main # Publishing is allowed only from the default branch.
+          fetch-depth: 0 # Required by the guarded main publisher.
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Pegeldaten abrufen und validieren
         run: python src/pegel_fetch.py --output-dir data/generated
-      - name: JSON-Dateien versionieren
+      - name: JSON-Dateien konfliktbewusst veröffentlichen
         run: |
-          git add -f data/generated/pegel-lauchhammer.json data/generated/pegel-biehlen-1.json
-          if git diff --cached --quiet; then exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Aktualisiere öffentliche Pegeldaten"
-          git push
+          bash scripts/publish_one_snapshot.sh \
+            --message "Aktualisiere öffentliche Pegeldaten" \
+            data/generated/pegel-lauchhammer.json \
+            data/generated/pegel-biehlen-1.json
       - name: Technische Fehler und ausgebliebene Abrufe melden
         if: always()
         run: |
@@ -57,3 +59,31 @@ jobs:
               raise SystemExit("; ".join(bad))
           print("Pegelabrufe technisch erfolgreich; stale values remain explicitly marked stale.")
           PY
+  schedule-audit:
+    name: Schedule health (separate from producer result)
+    if: always() && github.event_name == 'schedule'
+    needs: update
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Audit schedule history
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          PRODUCER_JOB_NAME: update
+          PRODUCER_JOB_RESULT: ${{ needs.update.result }}
+          WORKFLOW_FILE: update-levels.yml
+          SCHEDULE_INTERVAL_MINUTES: "15"
+          MAX_SCHEDULE_GAP_MINUTES: "20"
+          MAX_QUEUE_DELAY_MINUTES: "5"
+        run: python3 scripts/audit_workflow_schedule.py

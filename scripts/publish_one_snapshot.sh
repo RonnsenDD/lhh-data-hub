@@ -1,14 +1,80 @@
 #!/usr/bin/env bash
-# Safely publish exactly one generated JSON file to main; never force-push.
+# Safely publish only allowlisted generated JSON snapshots to main; never force-push.
 set -euo pipefail
 
-TARGET="${1:-}"
-MESSAGE="${2:-Update public data snapshot}"
 MAX_ATTEMPTS=3
-case "$TARGET" in
-  data/generated/pegel-lauchhammer.json|data/generated/pegel-biehlen-1.json|data/generated/dwd-weather.json) ;;
-  *) echo "Refusing non-allowlisted publication path: $TARGET" >&2; exit 2 ;;
-esac
+MESSAGE="Update public data snapshot"
+
+if [[ "$#" -gt 0 && "$1" == "--message" ]]; then
+  if [[ "$#" -lt 3 || -z "$2" ]]; then
+    echo "Usage: $0 --message <commit-message> <allowlisted-path>..." >&2
+    exit 2
+  fi
+  MESSAGE="$2"
+  shift 2
+  TARGETS=("$@")
+else
+  # Backward-compatible single-file form: <path> [commit-message]
+  if [[ "$#" -lt 1 ]]; then
+    echo "Usage: $0 <allowlisted-path> [commit-message]" >&2
+    exit 2
+  fi
+  TARGETS=("$1")
+  shift
+  if [[ "$#" -gt 0 ]]; then
+    MESSAGE="$1"
+    shift
+  fi
+  if [[ "$#" -gt 0 ]]; then
+    echo "Unexpected arguments; use --message before multiple paths." >&2
+    exit 2
+  fi
+fi
+
+if [[ "${#TARGETS[@]}" -eq 0 ]]; then
+  echo "At least one publication path is required." >&2
+  exit 2
+fi
+
+is_allowlisted() {
+  case "$1" in
+    data/generated/pegel-lauchhammer.json|data/generated/pegel-biehlen-1.json|data/generated/dwd-weather.json|data/generated/graslandfeuerindex.json)
+      return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+for ((i = 0; i < ${#TARGETS[@]}; i++)); do
+  target="${TARGETS[$i]}"
+  if ! is_allowlisted "$target"; then
+    echo "Refusing non-allowlisted publication path: $target" >&2
+    exit 2
+  fi
+  for ((j = 0; j < i; j++)); do
+    if [[ "${TARGETS[$j]}" == "$target" ]]; then
+      echo "Refusing duplicate publication path: $target" >&2
+      exit 2
+    fi
+  done
+done
+
+assert_only_requested_paths() {
+  local path target allowed
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    allowed=false
+    for target in "${TARGETS[@]}"; do
+      if [[ "$path" == "$target" ]]; then
+        allowed=true
+        break
+      fi
+    done
+    if [[ "$allowed" != true ]]; then
+      echo "Refusing publication: unrequested path changed: $path" >&2
+      return 1
+    fi
+  done
+}
 
 branch="$(git branch --show-current)"
 if [[ "$branch" != "main" ]]; then
@@ -19,48 +85,58 @@ if [[ -n "$(git diff --cached --name-only)" ]]; then
   echo "Refusing to publish with a non-empty index." >&2
   exit 2
 fi
-changed="$(git diff --name-only)"
-if [[ -n "$changed" && "$changed" != "$TARGET" ]]; then
-  echo "Refusing to publish: tracked changes include paths other than $TARGET: $changed" >&2
+changed="$( { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u)"
+if ! assert_only_requested_paths <<< "$changed"; then
   exit 2
 fi
 
-# Bring the checkout up to date before making a commit. If the same output
-# changed since checkout, do not replace it with this run's older candidate.
+# Fetch first while the producer's generated files are still safely in the worktree.
+# A rebase requires a clean worktree, so commit only validated targets before rebasing.
+# If a requested output changed since checkout, do not replace it with this run's candidate.
 git fetch --quiet origin main
 initial_head="$(git rev-parse HEAD)"
 remote_head="$(git rev-parse refs/remotes/origin/main)"
 if [[ "$initial_head" != "$remote_head" ]]; then
-  if ! git diff --quiet "$initial_head" "$remote_head" -- "$TARGET"; then
-    echo "Refusing publication: $TARGET changed on origin/main during this run." >&2
+  if ! git diff --quiet "$initial_head" "$remote_head" -- "${TARGETS[@]}"; then
+    echo "Refusing publication: a requested output changed on origin/main during this run." >&2
     exit 1
   fi
-  git rebase refs/remotes/origin/main
 fi
 
-git add -- "$TARGET"
-staged="$(git diff --cached --name-only)"
-if [[ "$staged" != "$TARGET" ]]; then
-  echo "Refusing publication: staged paths are not exactly $TARGET: $staged" >&2
-  exit 1
-fi
-if git diff --cached --quiet; then
-  echo "No changes in $TARGET; nothing to publish."
+git add -- "${TARGETS[@]}"
+staged="$(git diff --cached --name-only | sort -u)"
+if [[ -z "$staged" ]]; then
+  echo "No changes in requested snapshots; nothing to publish."
   exit 0
+fi
+if ! assert_only_requested_paths <<< "$staged"; then
+  exit 1
 fi
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git commit -m "$MESSAGE"
 
+if [[ "$initial_head" != "$remote_head" ]]; then
+  if ! git rebase refs/remotes/origin/main; then
+    git rebase --abort || true
+    echo "Rebase failed; the generated snapshot remains preserved in its local commit and was not published." >&2
+    exit 1
+  fi
+fi
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Refusing publication: unexpected worktree changes remain after snapshot commit/rebase." >&2
+  exit 1
+fi
+
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  committed_paths="$(git diff-tree --no-commit-id --name-only -r HEAD)"
-  if [[ "$committed_paths" != "$TARGET" ]]; then
-    echo "Refusing publication: commit contains unexpected paths: $committed_paths" >&2
+  committed_paths="$(git diff-tree --no-commit-id --name-only -r HEAD | sort -u)"
+  if ! assert_only_requested_paths <<< "$committed_paths"; then
     exit 1
   fi
   if git push origin HEAD:refs/heads/main; then
-    echo "Published $TARGET on main (attempt $attempt)."
+    echo "Published snapshots on main (attempt $attempt):"
+    printf '%s\n' "$committed_paths"
     exit 0
   fi
 
@@ -71,8 +147,8 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
     echo "Push failed but origin/main did not advance; refusing blind retry." >&2
     exit 1
   fi
-  if ! git diff --quiet "$previous_base" "$remote_head" -- "$TARGET"; then
-    echo "Push conflict: $TARGET changed remotely. No retry will overwrite it." >&2
+  if ! git diff --quiet "$previous_base" "$remote_head" -- "${TARGETS[@]}"; then
+    echo "Push conflict: a requested output changed remotely. No retry will overwrite it." >&2
     exit 1
   fi
   if ! git rebase refs/remotes/origin/main; then
@@ -80,8 +156,9 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
     echo "Push conflict could not be rebased safely; aborting." >&2
     exit 1
   fi
-  if [[ "$(git diff-tree --no-commit-id --name-only -r HEAD)" != "$TARGET" ]]; then
-    echo "Refusing retry: rebased publication commit has unexpected paths." >&2
+  committed_paths="$(git diff-tree --no-commit-id --name-only -r HEAD | sort -u)"
+  if ! assert_only_requested_paths <<< "$committed_paths"; then
+    echo "Refusing retry: rebased publication commit contains an unexpected path." >&2
     exit 1
   fi
 done
