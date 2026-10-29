@@ -47,6 +47,26 @@ jobs:
           --for-publication
           --max-attempt-age-minutes 10
 
+      - name: Wetter-Quelldatenstand und Alter protokollieren
+        run: |
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          data = json.loads(Path("data/generated/dwd-weather.json").read_text(encoding="utf-8"))
+          now = datetime.now(timezone.utc)
+          def age_minutes(value):
+              if not value:
+                  return "nicht verfügbar"
+              parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+              return f"{(now - parsed.astimezone(timezone.utc)).total_seconds() / 60:.1f} min"
+          print(f"weather status={data.get('status')} lastAttemptAt={data.get('lastAttemptAt')}")
+          for name, item in data.get("observations", {}).items():
+              print(f"observation={name} status={item.get('status')} measuredAt={item.get('measuredAt')} actualAge={age_minutes(item.get('measuredAt'))}m threshold={item.get('freshnessThresholdMinutes')}m")
+          forecast = data.get("forecast", {})
+          print(f"forecast status={forecast.get('status')} issuedAt={forecast.get('issuedAt')} actualAge={age_minutes(forecast.get('issuedAt'))}m thresholdHours=12")
+          PY
+
       - name: Publish only the DWD snapshot (bounded safe push)
         run: bash scripts/publish_one_snapshot.sh --message "Update DWD weather snapshot" data/generated/dwd-weather.json
       - name: Schedule-Lücken und letzte Ausführung prüfen
