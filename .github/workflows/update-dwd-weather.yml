@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -33,6 +34,7 @@ jobs:
         run: |
           python -B -m unittest discover -s tests -p 'test_dwd_*.py' -v
           python -B -m unittest discover -s tests -p 'test_publish_one_snapshot.py' -v
+          python -B -m unittest discover -s tests -p 'test_audit_workflow_schedule.py' -v
 
       - name: Fetch official DWD sources
         run: python3 -m src.dwd_weather_live --output "$GITHUB_WORKSPACE/data/generated/dwd-weather.json"
@@ -47,3 +49,14 @@ jobs:
 
       - name: Publish only the DWD snapshot (bounded safe push)
         run: bash scripts/publish_one_snapshot.sh --message "Update DWD weather snapshot" data/generated/dwd-weather.json
+      - name: Schedule-Lücken und letzte Ausführung prüfen
+        if: always() && github.event_name == 'schedule'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_FILE: update-dwd-weather.yml
+          SCHEDULE_INTERVAL_MINUTES: "15"
+          MAX_SCHEDULE_GAP_MINUTES: "20"
+          MAX_QUEUE_DELAY_MINUTES: "5"
+        run: python3 scripts/audit_workflow_schedule.py
