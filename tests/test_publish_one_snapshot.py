@@ -116,7 +116,7 @@ exit 1
             second = "data/generated/pegel-biehlen-1.json"
             second_path = work / second
             second_path.parent.mkdir(parents=True, exist_ok=True)
-            second_path.write_text('{"station": "Biehlen 1"}\\n')
+            second_path.write_text('{"station": "Biehlen 1"}\n')
             result = self.run_helper(work, racer, "unrelated", [TARGET, second])
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             committed_paths = git(["show", "--pretty=format:", "--name-only", "main"], work).stdout.split()
