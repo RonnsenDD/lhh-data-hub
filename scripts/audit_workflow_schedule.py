@@ -19,7 +19,9 @@ def parse_time(value: str) -> datetime:
 
 
 def audit(current: dict, runs: list[dict], *, interval_minutes: int,
-          max_gap_minutes: int, max_queue_delay_minutes: int) -> tuple[list[str], list[str]]:
+          max_gap_minutes: int, max_queue_delay_minutes: int,
+          producer_job_name: str, current_producer_result: str,
+          prior_producer_results: dict[str, str]) -> tuple[list[str], list[str]]:
     problems: list[str] = []
     messages: list[str] = []
     current_created = parse_time(current["created_at"])
@@ -29,6 +31,10 @@ def audit(current: dict, runs: list[dict], *, interval_minutes: int,
         f"current_run={current.get('id')} event={current.get('event')} "
         f"created_at={current_created.isoformat()} started_at={current_started.isoformat()} "
         f"queue_delay_minutes={queue_delay:.1f}"
+    )
+    messages.append(
+        f"producer_job={producer_job_name} current_producer_result={current_producer_result} "
+        f"workflow_run_conclusion={current.get('conclusion') or 'in_progress'}"
     )
     if current.get("event") != "schedule":
         problems.append("current run is not an automatic schedule event")
@@ -48,15 +54,19 @@ def audit(current: dict, runs: list[dict], *, interval_minutes: int,
             prior.append((created, run))
     prior.sort(key=lambda item: item[0], reverse=True)
 
-    successful = [item for item in prior if item[1].get("conclusion") == "success"]
-    if successful:
-        last_ok_time, last_ok = successful[0]
+    successful_producers = [
+        item for item in prior
+        if prior_producer_results.get(str(item[1].get("id"))) == "success"
+    ]
+    if successful_producers:
+        last_ok_time, last_ok = successful_producers[0]
         messages.append(
-            f"last_successful_schedule_run={last_ok.get('id')} "
-            f"created_at={last_ok_time.isoformat()} conclusion=success"
+            f"last_successful_producer_run={last_ok.get('id')} "
+            f"created_at={last_ok_time.isoformat()} producer_job={producer_job_name} "
+            f"producer_result=success workflow_run_conclusion={last_ok.get('conclusion')}"
         )
     else:
-        messages.append("last_successful_schedule_run=none in returned history")
+        messages.append("last_successful_producer_run=none in returned history")
 
     if not prior:
         messages.append("schedule_gap=baseline unavailable; no earlier scheduled run returned")
@@ -99,6 +109,8 @@ def main() -> int:
         repository = os.environ["GITHUB_REPOSITORY"]
         run_id = os.environ["GITHUB_RUN_ID"]
         workflow = os.environ["WORKFLOW_FILE"]
+        producer_job_name = os.environ["PRODUCER_JOB_NAME"]
+        current_producer_result = os.environ["PRODUCER_JOB_RESULT"]
         interval = int(os.environ["SCHEDULE_INTERVAL_MINUTES"])
         max_gap = int(os.environ["MAX_SCHEDULE_GAP_MINUTES"])
         max_queue = int(os.environ.get("MAX_QUEUE_DELAY_MINUTES", "5"))
@@ -109,11 +121,42 @@ def main() -> int:
             f"{api}/actions/workflows/{encoded_workflow}/runs?event=schedule&per_page=100",
             token,
         )
+        runs = history.get("workflow_runs", [])
+        current_created = parse_time(current["created_at"])
+        producer_results: dict[str, str] = {}
+        prior_scheduled = sorted(
+            (run for run in runs
+             if run.get("event") == "schedule"
+             and run.get("created_at")
+             and parse_time(run["created_at"]) < current_created),
+            key=lambda run: parse_time(run["created_at"]),
+            reverse=True,
+        )
+        for run in prior_scheduled:
+            run_id_value = str(run.get("id"))
+            if run.get("conclusion") == "success":
+                producer_results[run_id_value] = "success"
+            else:
+                jobs = github_json(
+                    f"{api}/actions/runs/{run_id_value}/jobs?per_page=100", token
+                ).get("jobs", [])
+                producer_job = next(
+                    (job for job in jobs if job.get("name") == producer_job_name), None
+                )
+                producer_results[run_id_value] = (
+                    producer_job.get("conclusion") or producer_job.get("status") or "unknown"
+                    if producer_job else "unknown"
+                )
+            if producer_results[run_id_value] == "success":
+                break
         problems, messages = audit(
-            current, history.get("workflow_runs", []),
+            current, runs,
             interval_minutes=interval,
             max_gap_minutes=max_gap,
             max_queue_delay_minutes=max_queue,
+            producer_job_name=producer_job_name,
+            current_producer_result=current_producer_result,
+            prior_producer_results=producer_results,
         )
     except (KeyError, ValueError, RuntimeError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
         print(f"schedule audit unavailable: {error}", file=sys.stderr)
