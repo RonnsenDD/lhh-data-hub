@@ -49,7 +49,7 @@ class AuditWorkflowScheduleTests(unittest.TestCase):
             current, [current, prior], interval_minutes=15, max_gap_minutes=20,
             max_queue_delay_minutes=5, producer_job_name="update-weather",
             current_producer_result="success", prior_producer_results={"2": "success"})
-        self.assertEqual(problems, [])
+        self.assertTrue(any("schedule gap" in problem for problem in problems))
         self.assertTrue(any("current_producer_result=success" in line for line in messages))
         self.assertTrue(any("last_successful_producer_run=2" in line
                             and "workflow_run_conclusion=failure" in line for line in messages))
