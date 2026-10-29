@@ -90,8 +90,9 @@ if ! assert_only_requested_paths <<< "$changed"; then
   exit 2
 fi
 
-# Bring the checkout up to date before making a commit. If any requested output
-# changed since checkout, do not replace it with this run's candidate.
+# Fetch first while the producer's generated files are still safely in the worktree.
+# A rebase requires a clean worktree, so commit only validated targets before rebasing.
+# If a requested output changed since checkout, do not replace it with this run's candidate.
 git fetch --quiet origin main
 initial_head="$(git rev-parse HEAD)"
 remote_head="$(git rev-parse refs/remotes/origin/main)"
@@ -100,12 +101,6 @@ if [[ "$initial_head" != "$remote_head" ]]; then
     echo "Refusing publication: a requested output changed on origin/main during this run." >&2
     exit 1
   fi
-  git rebase refs/remotes/origin/main
-fi
-
-changed="$( { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u)"
-if ! assert_only_requested_paths <<< "$changed"; then
-  exit 2
 fi
 
 git add -- "${TARGETS[@]}"
@@ -121,6 +116,18 @@ fi
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git commit -m "$MESSAGE"
+
+if [[ "$initial_head" != "$remote_head" ]]; then
+  if ! git rebase refs/remotes/origin/main; then
+    git rebase --abort || true
+    echo "Rebase failed; the generated snapshot remains preserved in its local commit and was not published." >&2
+    exit 1
+  fi
+fi
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Refusing publication: unexpected worktree changes remain after snapshot commit/rebase." >&2
+  exit 1
+fi
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   committed_paths="$(git diff-tree --no-commit-id --name-only -r HEAD | sort -u)"
