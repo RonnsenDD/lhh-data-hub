@@ -27,13 +27,16 @@ Wichtige Felder:
 - `sourceDate`: offizielles MLEUV-Veröffentlichungsdatum, nicht der Abrufzeitpunkt.
 - `retrievedAt` und `lastSuccessfulAt`: Zeitpunkt des letzten validierten Abrufs in UTC.
 - `lastAttemptAt`: letzter Abrufversuch in UTC.
-- `status`: `current`, `stale` oder `unavailable`, bewertet anhand des Quelldatums und des Kalendertags in `Europe/Berlin`.
+- `status`: `current`, `stale` oder `unavailable`, bewertet anhand des offiziellen Intervalls von 08:00 Uhr des `sourceDate` bis 08:00 Uhr des Folgetags in `Europe/Berlin`.
+- `statusEvaluatedAt`: Zeitpunkt, zu dem `status` und `statusReason` zuletzt gemeinsam bewertet wurden. Das Manifest ist eine statische Veröffentlichung; Verbraucher müssen das 08:00-Intervall anhand von `sourceDate` und der aktuellen Uhrzeit selbst neu bewerten.
 - `fetchStatus`: `success`, `error` oder `not-attempted`; ein erfolgreicher HTTP-Abruf macht ein altes Quelldatum nicht aktuell.
 - `level`: ganzzahlig 1–5 oder `null`; bei fehlendem gültigem Snapshot werden keine Werte erfunden.
 - `lastError`: sicherer technischer Fehlerhinweis ohne Antwort-HTML oder Credentials.
 - `source`: Anbieter, URL, Attribution und der Hinweis, dass keine ausdrückliche Lizenz auf der Quellseite angegeben ist.
 
-Ein Abruffehler behält den letzten geprüften Wert und sein Quelldatum bei, setzt `fetchStatus: error` und aktualisiert nur `lastAttemptAt`. Das `status` bleibt ausschließlich vom gespeicherten offiziellen Quelldatum abhängig. Eine neu gelieferte Quelle mit einem gegenüber dem letzten Snapshot zurückgegangenen Datum wird nicht veröffentlicht. Ein initialer Fehler veröffentlicht ein `unavailable`-Manifest ohne Stufe.
+Die offiziell veröffentlichte Stufe gilt täglich ab 08:00 Uhr bis 08:00 Uhr am Folgetag. Die Intervallgrenzen werden als lokale Berliner Wandzeit berechnet; dadurch beträgt die verstrichene UTC-Dauer am Zeitumstellungstag 23 beziehungsweise 25 Stunden, während beide lokalen Grenzen bei 08:00 Uhr bleiben.
+
+Ein Abruffehler behält den letzten geprüften Wert und sein Quelldatum bei, setzt `fetchStatus: error`, aktualisiert `lastAttemptAt` und bewertet `status` erneut gegen das offizielle Intervall. `statusReason` nennt das genaue Intervall, den Bewertungszeitpunkt und den fehlgeschlagenen Abruf. `statusEvaluatedAt` bindet Status und Begründung an denselben Zeitpunkt. Nach Ablauf bleibt der letzte Wert als `stale` erhalten; ein initialer Fehler veröffentlicht ein `unavailable`-Manifest ohne Stufe. Ein neu gelieferter Wert vor seinem 08:00-Gültigkeitsbeginn oder mit einem gegenüber dem letzten Snapshot zurückgegangenen Datum wird nicht veröffentlicht.
 
 ## Ablauf und Schutz
 
