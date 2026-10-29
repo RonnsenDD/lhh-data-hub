@@ -34,8 +34,16 @@ This detects a missed or delayed interval when a later run starts; it cannot ale
 
 ## If native scheduling keeps missing
 
-GitHub's schedule remains best-effort; changing cron offsets is mitigation only. A missed/late run must be evidenced from Actions history, and stale source data must remain visibly stale in its JSON status. A cost-neutral fallback candidate is one Cloudflare Workers Free cron trigger used solely to invoke the existing GitHub workflow-dispatch API (not to fetch or publish data). For a 15-minute interval that is 96 invocations/day, far below the published Workers Free request limit, but the dispatcher still depends on GitHub Actions availability and does not supply a delivery SLA. The Worker would need a narrowly scoped GitHub token stored as an encrypted secret, HTTPS-only API calls, repository/workflow allowlists, timestamp/nonce checks, rate limiting, and failure logging. Account eligibility/limits and the token's minimum permission must be confirmed before approval. This PR does not set it up.
+GitHub's schedule remains best-effort; changing cron offsets is mitigation only. A missed/late run must be evidenced from Actions history, and stale source data must remain visibly stale in its JSON status. A cost-neutral fallback candidate is one Cloudflare Workers Free cron trigger used solely to invoke the existing GitHub workflow-dispatch API (not to fetch or publish data). For a 15-minute interval that is 96 invocations/day, far below the published Workers Free request limit, but the dispatcher still depends on GitHub Actions availability and does not supply a delivery SLA. The Worker would need a narrowly scoped GitHub token stored as an encrypted secret, HTTPS-only API calls, repository/workflow allowlists, timestamp/nonce checks, rate limiting, and failure logging. GitHub dispatch requires Actions write permission; reading run history requires Actions read permission, so token scope must be limited to this repository and the Worker must hard-code the permitted workflow IDs. Account eligibility/limits and the token's minimum permission must be confirmed before approval. This PR does not set it up. At the documented Workers Free limit (100,000 requests/day and five Cron Triggers/account), 96 dispatch calls/day would be within the request quota; execution remains best-effort and depends on GitHub.
 
 ## Verification after merge
 
 Do not treat manual runs as schedule proof. Record at least two separate `event=schedule` successes per workflow, together with publication commit/deployment time and source timestamps. Continue to report schedule gaps as gaps; do not refresh or rewrite source timestamps to make the feed appear current.
+
+
+## Official references
+
+- GitHub schedule delays and high load at the start of each hour: https://docs.github.com/en/actions/how-tos/troubleshoot-workflows
+- Schedule runs only from the default branch: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+- Cloudflare Workers Cron Triggers: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+- Cloudflare Workers Free limits: https://developers.cloudflare.com/workers/platform/limits/
