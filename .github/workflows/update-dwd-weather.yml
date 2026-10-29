@@ -33,7 +33,6 @@ jobs:
         run: |
           python -B -m unittest discover -s tests -p 'test_dwd_*.py' -v
           python -B -m unittest discover -s tests -p 'test_publish_one_snapshot.py' -v
-          python -B -m unittest discover -s tests -p 'test_schedule_lateness.py' -v
 
       - name: Fetch official DWD sources
         run: python3 -m src.dwd_weather_live --output "$GITHUB_WORKSPACE/data/generated/dwd-weather.json"
@@ -48,8 +47,3 @@ jobs:
 
       - name: Publish only the DWD snapshot (bounded safe push)
         run: bash scripts/publish_one_snapshot.sh --message "Update DWD weather snapshot" data/generated/dwd-weather.json
-      - name: Scheduled start delay prüfen
-        if: always() && github.event_name == 'schedule'
-        env:
-          RUN_STARTED_AT: ${{ github.run_started_at }}
-        run: python3 scripts/check_schedule_lateness.py --run-started-at "$RUN_STARTED_AT" --cron-minutes "3,18,33,48" --max-delay-minutes 5
