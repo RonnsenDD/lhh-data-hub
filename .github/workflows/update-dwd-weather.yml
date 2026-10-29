@@ -59,12 +59,12 @@ jobs:
               if not value:
                   return "nicht verfügbar"
               parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-              return f"{(now - parsed.astimezone(timezone.utc)).total_seconds() / 60:.1f} min"
+              return f"{(now - parsed.astimezone(timezone.utc)).total_seconds() / 60:.1f}"
           print(f"weather status={data.get('status')} lastAttemptAt={data.get('lastAttemptAt')}")
           for name, item in data.get("observations", {}).items():
-              print(f"observation={name} status={item.get('status')} measuredAt={item.get('measuredAt')} actualAge={age_minutes(item.get('measuredAt'))}m threshold={item.get('freshnessThresholdMinutes')}m")
+              print(f"observation={name} status={item.get('status')} measuredAt={item.get('measuredAt')} actualAgeMinutes={age_minutes(item.get('measuredAt'))} threshold={item.get('freshnessThresholdMinutes')}m")
           forecast = data.get("forecast", {})
-          print(f"forecast status={forecast.get('status')} issuedAt={forecast.get('issuedAt')} actualAge={age_minutes(forecast.get('issuedAt'))}m thresholdHours=12")
+          print(f"forecast status={forecast.get('status')} issuedAt={forecast.get('issuedAt')} actualAgeMinutes={age_minutes(forecast.get('issuedAt'))} thresholdHours=12")
           PY
 
       - name: Publish only the DWD snapshot (bounded safe push)
