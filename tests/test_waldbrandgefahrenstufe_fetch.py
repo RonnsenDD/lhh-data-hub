@@ -74,7 +74,11 @@ class WaldbrandFetchTests(unittest.TestCase):
 
     def test_incomplete_html_is_rejected(self):
         with self.assertRaisesRegex(wgs.SourceError, "vollständiges HTML"):
-            wgs.parse_source("<html><p>Daten vom: 29.10.2026</p>")
+            wgs.parse_source("<html><body><p>Daten vom: 29.10.2026</p>")
+
+    def test_accepts_official_document_with_optional_html_end_tag_omitted(self):
+        html = page().replace("</html>", "")
+        self.assertEqual(wgs.parse_source(html), (dt.date(2026, 10, 29), 1))
 
     def test_future_source_date_is_rejected_without_publication(self):
         with self.assertRaisesRegex(wgs.SourceError, "Zukunft"):
@@ -151,6 +155,19 @@ class WaldbrandFetchTests(unittest.TestCase):
         response.headers = {"Content-Type": "application/json"}
         with self.assertRaisesRegex(wgs.SourceError, "Content-Type"):
             wgs.fetch_source(opener=lambda request, timeout: response)
+
+    def test_http_fetch_rejects_non_200_status_with_status_code(self):
+        response = Response(page().encode())
+        response.status = 503
+        with self.assertRaisesRegex(wgs.SourceError, "MLEUV-HTTP-Status-503"):
+            wgs.fetch_source(opener=lambda request, timeout: response)
+
+    def test_http_error_is_reported_without_response_body(self):
+        def fail(request, timeout):
+            raise wgs.urllib.error.HTTPError(wgs.SOURCE_URL, 503, "Service unavailable", {}, None)
+
+        with self.assertRaisesRegex(wgs.SourceError, "MLEUV-HTTP-Status-503"):
+            wgs.fetch_source(opener=fail)
 
     def test_http_fetch_rejects_oversized_response(self):
         response = Response(b"x" * (wgs.MAX_RESPONSE_BYTES + 1))

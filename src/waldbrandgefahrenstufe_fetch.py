@@ -74,7 +74,11 @@ def berlin_today(now: dt.datetime | None = None) -> dt.date:
 
 
 def parse_source(html: str) -> tuple[dt.date, int]:
-    if not isinstance(html, str) or "<html" not in html.lower() or "</html" not in html.lower():
+    # The official MLEUV page currently closes </body> but omits </html>.
+    # Use the body close as the completeness marker instead of requiring the
+    # optional HTML document end tag.
+    lowered = html.lower() if isinstance(html, str) else ""
+    if "<html" not in lowered or "</body" not in lowered:
         raise SourceError("MLEUV-Antwort ist kein vollständiges HTML-Dokument")
 
     parser = VisibleText()

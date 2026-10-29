@@ -6,15 +6,21 @@ Der Produzent liest die offizielle Tagesübersicht des Ministeriums für Land- u
 
 `https://mleuv.brandenburg.de/mleuv/de/umwelt/forst/waldschutz/waldbrandgefahr-in-brandenburg/waldbrandgefahrenstufen/`
 
-Die Quellseite verlangt bei Verwendung eine Quellenangabe. Dieser Feed führt deshalb den Namen des Ministeriums und die Quell-URL mit. Auf der geprüften Seite ist keine ausdrückliche Datenlizenz ausgewiesen. Die dortige Bitte um Mitteilung an die Webredaktion bezieht sich ausdrücklich auf das Einbinden der MLEUV-Karte. Vor einer produktiven Dashboardnutzung des extrahierten Wertes ist die zulässige Weiternutzung dennoch zu klären; dieses PR-Set richtet keine externe Veröffentlichung oder Dashboardumschaltung selbst ein.
+Die Quellseite bietet ausdrücklich einen maschinenlesbaren XML-Export der Tagesstufen unter `https://mleuv.brandenburg.de/mleuv/de/wgs.xml` an. Sie nennt als Quelle das Ministerium; der Export einer einzelnen Tabellenstufe ist keine Einbettung der Karte. Die Bitte um E-Mail an die Webredaktion steht ausdrücklich beim Einbetten der MLEUV-Karte und wird durch diesen JSON-Feed nicht ausgelöst.
+
+Auf der konkreten Quellseite und im XML-Export ist keine benannte Einzel-Lizenz ausgewiesen. Die Rechtsprüfung fand aber keine entgegenstehende Nutzungsbeschränkung: § 4a BbgEGovG verlangt für von Landesbehörden öffentlich elektronisch bereitgestellte Daten maschinenlesbare und möglichst offene Bereitstellung, sofern keine Rechte Dritter entgegenstehen; § 2 DNG erfasst öffentlich bereitgestellte Behördendaten und § 4 DNG lässt deren kommerzielle und nichtkommerzielle Nutzung grundsätzlich zu. Die Daten werden bereits öffentlich als XML exportiert. Der Feed übernimmt ausschließlich die sachliche Landkreisstufe und das Quelldatum, keine Karte, Grafik oder sonstigen Seiteninhalte. Auf dieser Grundlage ist die Weiterveröffentlichung des einzelnen OSL-Wertes mit Quellenangabe hinreichend gestützt. Das ist eine technische Nutzungsprüfung, keine individuelle Rechtsberatung; sollte die Behörde künftig ausdrückliche abweichende Bedingungen veröffentlichen, ist die Veröffentlichung auszusetzen und neu zu bewerten.
+
+Attribution im Feed und bei der Anzeige: **Quelle: Ministerium für Land- und Ernährungswirtschaft, Umwelt und Verbraucherschutz des Landes Brandenburg (MLEUV)**, mit Link zur obenstehenden Quellseite.
 
 Die Landkreis-Zuordnung verwendet den Regionalschlüssel `12066` (Landkreis Oberspreewald-Lausitz). Es werden ausschließlich das auf der MLEUV-Seite ausgewiesene Datum und die dortige Stufe 1–5 übernommen. Der Produzent enthält keine SharePoint-, Azure- oder sonstigen Zugangsdaten und führt keinerlei SharePoint-Schreibzugriff aus.
 
 ## Öffentlicher Datenvertrag
 
-Nach Aufnahme in `main` ist der Snapshot für GitHub Pages unter folgender URL vorgesehen:
+Der bestehende RADOLAN/KONRAD3D-Pages-Workflow baut ein eigenes `radar/`- und `konrad3d/`-Artefakt; er veröffentlicht nicht den gesamten Repository-Baum. Dieser Waldbrand-Snapshot wird vom guarded publisher als Datei auf `main` abgelegt und ist deshalb nach erfolgreicher Veröffentlichung über Raw GitHub erreichbar:
 
-`https://ronnsendd.github.io/lhh-data-hub/data/generated/waldbrandgefahrenstufe-osl.json`
+`https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/waldbrandgefahrenstufe-osl.json`
+
+Eine URL unter `ronnsendd.github.io/lhh-data-hub/data/generated/` ist für diesen Datenpfad nicht vorgesehen und darf nicht als Dashboard-Endpunkt verwendet werden.
 
 Wichtige Felder:
 
@@ -43,4 +49,4 @@ python3 -B src/waldbrandgefahrenstufe_fetch.py --source-only
 python3 -B src/waldbrandgefahrenstufe_fetch.py --validate-only --output data/generated/waldbrandgefahrenstufe-osl.json
 ```
 
-`--source-only` ruft die aktuelle MLEUV-Seite ab und zeigt HTTP-/Parser-Ergebnis, Quelldatum, Stufe und Status, schreibt aber keine Datei. Ein veralteter offizieller Tagesstand liefert einen vom Erfolg getrennten `stale`-Status. Vor produktiver Nutzung sind wiederholte automatische Ausführungen, die Lizenz-/Weiterverwendungsfrage und ein kontrollierter Dashboard-Adaptertest erforderlich. Der frühere private Erzeuger darf bis zu diesem Nachweis nicht abgeschaltet werden.
+`--source-only` ruft die aktuelle MLEUV-Seite ab und zeigt Parser-Ergebnis, Quelldatum, Stufe und Status, schreibt aber keine Datei. Ein veralteter offizieller Tagesstand liefert einen vom Erfolg getrennten `stale`-Status. Vor dem Dashboardwechsel sind mindestens zwei erfolgreiche automatische Veröffentlichungen und ein kontrollierter Adaptertest erforderlich. Der frühere private Erzeuger darf bis zu diesem Nachweis nicht abgeschaltet werden.
