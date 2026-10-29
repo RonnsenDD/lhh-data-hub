@@ -113,8 +113,10 @@ exit 1
             self.assertEqual(published, generated)
             self.assertIn("parallel producer update", remote_readme)
             self.assertEqual(git(["status", "--porcelain"], work).stdout, "")
-            self.assertEqual(git(["rev-parse", "HEAD^"], work).stdout.strip(),
+            self.assertEqual(git(["rev-parse", "HEAD"], work).stdout.strip(),
                              git(["rev-parse", "refs/remotes/origin/main"], work).stdout.strip())
+            parent_readme = git(["show", "HEAD^:README.md"], work).stdout
+            self.assertIn("parallel producer update", parent_readme)
 
     def test_same_target_remote_update_aborts_without_overwrite(self):
         with tempfile.TemporaryDirectory(prefix="publisher-same-target-") as temp:
