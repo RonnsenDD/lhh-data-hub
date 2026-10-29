@@ -73,6 +73,37 @@ def berlin_today(now: dt.datetime | None = None) -> dt.date:
     return value.astimezone(BERLIN).date()
 
 
+def validity_interval(source_date: dt.date) -> tuple[dt.datetime, dt.datetime]:
+    """Return the official local 08:00-to-08:00 validity window."""
+    start = dt.datetime.combine(source_date, dt.time(8), tzinfo=BERLIN)
+    end = dt.datetime.combine(source_date + dt.timedelta(days=1), dt.time(8), tzinfo=BERLIN)
+    return start, end
+
+
+def source_status(source_date: dt.date, now: dt.datetime) -> str:
+    """Evaluate sourceDate independently of fetch time and Berlin date rollover."""
+    if now.tzinfo is None:
+        raise ValueError("now muss eine Zeitzone enthalten")
+    start, end = validity_interval(source_date)
+    local_now = now.astimezone(BERLIN)
+    if local_now < start:
+        return "unavailable"
+    return "current" if local_now < end else "stale"
+
+
+def _validity_reason(source_date: dt.date, now: dt.datetime, status: str, fetch_failed: bool = False) -> str:
+    start, end = validity_interval(source_date)
+    status_word = {"current": "innerhalb des offiziellen Gültigkeitszeitraums", "stale": "abgelaufen", "unavailable": "noch nicht gültig"}[status]
+    reason = (
+        f"Offizielle Stufe vom {source_date.isoformat()} gilt von "
+        f"{start.strftime('%d.%m.%Y %H:%M %Z')} bis {end.strftime('%d.%m.%Y %H:%M %Z')} "
+        f"(Europe/Berlin); zum Bewertungszeitpunkt {iso_utc(now)} ist sie {status_word}."
+    )
+    if fetch_failed:
+        reason += " Der letzte Abruf ist fehlgeschlagen; der gespeicherte Stand wurde nicht erneut bestätigt."
+    return reason
+
+
 def parse_source(html: str) -> tuple[dt.date, int]:
     # The official MLEUV page currently closes </body> but omits </html>.
     # Use the body close as the completeness marker instead of requiring the
@@ -183,6 +214,8 @@ def validate_feed(feed: object) -> bool:
             return False
     if not isinstance(feed.get("statusReason"), str) or not feed["statusReason"].strip():
         return False
+    if not _is_iso_timestamp(feed.get("statusEvaluatedAt"), optional=True):
+        return False
     if feed.get("lastError") is not None and not isinstance(feed.get("lastError"), str):
         return False
 
@@ -205,6 +238,11 @@ def validate_feed(feed: object) -> bool:
         return False
     if feed.get("fetchStatus") == "not-attempted":
         return False
+    evaluated_at = feed.get("statusEvaluatedAt")
+    if evaluated_at:
+        evaluated = dt.datetime.fromisoformat(evaluated_at[:-1] + "+00:00")
+        if feed.get("status") != source_status(dt.date.fromisoformat(source_date), evaluated):
+            return False
     return True
 
 
@@ -214,12 +252,10 @@ def _snapshot(source_date: dt.date, level: int, now: dt.datetime, fetch_status: 
         raise SourceError("MLEUV-Quelldatum liegt in der Zukunft")
     if type(level) is not int or level not in LEVEL_LABELS:
         raise SourceError("MLEUV-Stufe liegt außerhalb der Klassen 1 bis 5")
-    status = "current" if source_date == today else "stale"
-    reason = (
-        "Offizielle Tagesstufe für Europe/Berlin geprüft"
-        if status == "current"
-        else "Offizielles Quelldatum ist nicht der heutige Kalendertag in Europe/Berlin"
-    )
+    status = source_status(source_date, now)
+    if status == "unavailable":
+        raise SourceError("MLEUV-Stufe ist vor 08:00 Europe/Berlin für diesen Quelltag noch nicht gültig")
+    reason = _validity_reason(source_date, now, status)
     retrieved = iso_utc(now)
     return {
         "schemaVersion": 1,
@@ -232,6 +268,7 @@ def _snapshot(source_date: dt.date, level: int, now: dt.datetime, fetch_status: 
         "lastAttemptAt": retrieved,
         "status": status,
         "statusReason": reason,
+        "statusEvaluatedAt": retrieved,
         "fetchStatus": fetch_status,
         "lastError": None,
         "source": {
@@ -256,6 +293,7 @@ def initial_feed(now: dt.datetime | None = None, error: str = "Noch kein erfolgr
         "lastAttemptAt": timestamp,
         "status": "unavailable",
         "statusReason": "Es liegt noch kein erfolgreich validierter MLEUV-Datensatz vor",
+        "statusEvaluatedAt": timestamp,
         "fetchStatus": "not-attempted" if timestamp is None else "error",
         "lastError": error,
         "source": {
@@ -272,10 +310,10 @@ def error_feed(previous: object, now: dt.datetime, message: str) -> dict:
     timestamp = iso_utc(now)
     if validate_feed(previous) and previous.get("sourceDate") is not None:
         result = dict(previous)
-        result["status"] = "current" if previous["sourceDate"] == berlin_today(now).isoformat() else "stale"
-        result["statusReason"] = (
-            "Letzter Abruf fehlgeschlagen; Aktualität bleibt anhand des offiziellen Quelldatums bewertet"
-        )
+        previous_date = dt.date.fromisoformat(previous["sourceDate"])
+        result["status"] = source_status(previous_date, now)
+        result["statusReason"] = _validity_reason(previous_date, now, result["status"], fetch_failed=True)
+        result["statusEvaluatedAt"] = timestamp
         result["fetchStatus"] = "error"
         result["lastAttemptAt"] = timestamp
         result["lastError"] = message
@@ -346,10 +384,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.source_only:
         try:
             source_date, level = fetch_source()
-            today = berlin_today()
-            status = "current" if source_date == today else "stale"
+            now = dt.datetime.now(BERLIN)
+            today = now.date()
             if source_date > today:
                 raise SourceError("MLEUV-Quelldatum liegt in der Zukunft")
+            status = source_status(source_date, now)
+            if status == "unavailable":
+                raise SourceError("MLEUV-Stufe ist vor 08:00 Europe/Berlin für diesen Quelltag noch nicht gültig")
             print(f"MLEUV Quelle geprüft: district={DISTRICT_NAME} regionalschluessel={DISTRICT_CODE} level={level} sourceDate={source_date.isoformat()} status={status}")
             return 0 if status == "current" else 2
         except SourceError as exc:
