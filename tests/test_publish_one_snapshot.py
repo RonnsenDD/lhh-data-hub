@@ -88,6 +88,34 @@ exit 1
             content = git(["--git-dir", str(bare), "show", f"main:{TARGET}"], root).stdout
             self.assertIn('"generation": 2', content)
 
+    def test_uncommitted_snapshot_survives_rebase_after_other_producer_advances_main(self):
+        with tempfile.TemporaryDirectory(prefix="publisher-dirty-rebase-") as temp:
+            root = Path(temp)
+            bare, work, racer = self.make_repos(root)
+            hook = work / ".git/hooks/pre-push"
+            hook.unlink()
+
+            # Producer output is already generated but still uncommitted locally.
+            self.assertIn(TARGET, git(["status", "--porcelain"], work).stdout)
+            generated = (work / TARGET).read_text()
+
+            # A separate producer advances main on an unrelated path meanwhile.
+            (racer / "README.md").write_text("base\\nparallel producer update\\n")
+            git(["add", "README.md"], racer)
+            git(["commit", "-m", "parallel producer"], racer)
+            git(["push", "origin", "main"], racer)
+
+            result = self.run_helper(work, racer, "no-race")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            published = git(["--git-dir", str(bare), "show", f"main:{TARGET}"], root).stdout
+            remote_readme = git(["--git-dir", str(bare), "show", "main:README.md"], root).stdout
+            self.assertEqual(published, generated)
+            self.assertIn("parallel producer update", remote_readme)
+            self.assertEqual(git(["status", "--porcelain"], work).stdout, "")
+            self.assertEqual(git(["rev-parse", "HEAD^"], work).stdout.strip(),
+                             git(["rev-parse", "refs/remotes/origin/main^"], work).stdout.strip())
+
     def test_same_target_remote_update_aborts_without_overwrite(self):
         with tempfile.TemporaryDirectory(prefix="publisher-same-target-") as temp:
             root = Path(temp)
