@@ -1,0 +1,81 @@
+{
+  "location": {
+    "key": "lauchhammer",
+    "name": "Lauchhammer",
+    "latitude": 51.4693,
+    "longitude": 13.76319
+  },
+  "freshnessThresholdMinutes": 60,
+  "observationProducts": [
+    {
+      "provider": "Deutscher Wetterdienst (DWD), Climate Data Center (CDC)",
+      "product": "10-minute air temperature, relative humidity, dew point and station pressure",
+      "stationId": "02627",
+      "stationName": "Schipkau-Klettwitz",
+      "url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/air_temperature/now/10minutenwerte_TU_02627_now.zip",
+      "coordinates": { "latitude": 51.5554, "longitude": 13.8845, "distanceKm": 12.7 },
+      "verifiedParameters": {
+        "TT_10": "temperatureC",
+        "RF_10": "relativeHumidityPercent",
+        "TD_10": "dewPointC"
+      },
+      "enabled": true,
+      "note": "Live-verified 2026-10-18; DWD now/ values are not finally quality-controlled. PP_10 was unavailable at this station in the checked record."
+    },
+    {
+      "provider": "Deutscher Wetterdienst (DWD), Climate Data Center (CDC)",
+      "product": "10-minute station pressure",
+      "stationId": "01001",
+      "stationName": "Doberlug-Kirchhain",
+      "url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/air_temperature/now/10minutenwerte_TU_01001_now.zip",
+      "coordinates": { "latitude": 51.6451, "longitude": 13.5747, "distanceKm": 23.5 },
+      "verifiedParameters": { "PP_10": "stationPressureHpa" },
+      "enabled": true,
+      "note": "Nearest next suitable live pressure value after the missing PP_10 sample at 02627; remains a separate station observation."
+    },
+    {
+      "provider": "Deutscher Wetterdienst (DWD), Climate Data Center (CDC)",
+      "product": "10-minute wind speed and direction",
+      "stationId": "01001",
+      "stationName": "Doberlug-Kirchhain",
+      "url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/10minutenwerte_wind_01001_now.zip",
+      "coordinates": { "latitude": 51.6451, "longitude": 13.5747, "distanceKm": 23.5 },
+      "verifiedParameters": { "FF_10": "windSpeedKmh (m/s converted to km/h)", "DD_10": "windDirectionDeg" },
+      "enabled": true,
+      "note": "Nearest currently available 10-minute wind station identified in the DWD live station list."
+    },
+    {
+      "provider": "Deutscher Wetterdienst (DWD), Climate Data Center (CDC)",
+      "product": "10-minute extreme wind / maximum gust",
+      "stationId": "01001",
+      "stationName": "Doberlug-Kirchhain",
+      "url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/extreme_wind/now/10minutenwerte_extrema_wind_01001_now.zip",
+      "coordinates": { "latitude": 51.6451, "longitude": 13.5747, "distanceKm": 23.5 },
+      "verifiedParameters": { "FX_10": "windGustKmh (m/s converted to km/h)" },
+      "enabled": true,
+      "note": "DWD product description identifies FX_10 as maximum gust for the 10-minute interval."
+    },
+    {
+      "provider": "Deutscher Wetterdienst (DWD), Climate Data Center (CDC)",
+      "product": "10-minute precipitation sum",
+      "stationId": "02627",
+      "stationName": "Schipkau-Klettwitz",
+      "url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/precipitation/now/10minutenwerte_nieder_02627_now.zip",
+      "coordinates": { "latitude": 51.5554, "longitude": 13.8845, "distanceKm": 12.7 },
+      "verifiedParameters": { "RWS_10": "precipitation10MinMm" },
+      "enabled": true,
+      "note": "RWS_10 is the precipitation sum for the previous 10 minutes; duration/indicator were missing in the checked sample."
+    }
+  ],
+  "forecast": {
+    "provider": "Deutscher Wetterdienst (DWD), MOSMIX",
+    "product": "MOSMIX-L single-point KMZ",
+    "enabled": true,
+    "stationId": "P0043",
+    "stationName": "SENFTENBERG/LUB",
+    "coordinates": { "latitude": 51.52, "longitude": 14.0, "distanceKm": 17.34 },
+    "url": "https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/P0043/kml/MOSMIX_L_LATEST_P0043.kmz",
+    "freshnessThresholdHours": 12,
+    "note": "Live-verified 2026-10-18: issue 15:00 UTC, forecast steps hourly; DWD-published MOSMIX lists ICON and ECMWF/IFS input models."
+  }
+}
