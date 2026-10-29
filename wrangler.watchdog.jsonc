@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lhh-data-hub-watchdog",
+  "main": "tools/watchdog/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "workers_dev": false,
+  "triggers": {
+    "crons": ["14,29,44,59 * * * *"]
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "WATCHDOG_COORDINATOR", "class_name": "WatchdogCoordinator" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["WatchdogCoordinator"] }
+  ],
+  "vars": {
+    "GH_OWNER": "RonnsenDD",
+    "GH_REPO": "lhh-data-hub"
+  }
+}
