@@ -8,6 +8,7 @@ concurrency:
   group: lhh-data-hub-pegel
   cancel-in-progress: false
 permissions:
+  actions: read
   contents: write
 jobs:
   update:
@@ -58,3 +59,14 @@ jobs:
               raise SystemExit("; ".join(bad))
           print("Pegelabrufe technisch erfolgreich; stale values remain explicitly marked stale.")
           PY
+      - name: Schedule-Lücken und letzte Ausführung prüfen
+        if: always() && github.event_name == 'schedule'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_FILE: update-levels.yml
+          SCHEDULE_INTERVAL_MINUTES: "15"
+          MAX_SCHEDULE_GAP_MINUTES: "20"
+          MAX_QUEUE_DELAY_MINUTES: "5"
+        run: python3 scripts/audit_workflow_schedule.py
