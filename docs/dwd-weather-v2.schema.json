@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/RonnsenDD/lhh-data-hub/schemas/weather-dwd-v2.schema.json",
+  "title": "Lauchhammer DWD Weather Snapshot v2",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "location",
+    "status",
+    "observations",
+    "forecast",
+    "lastAttemptAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "location": {
+      "type": "object",
+      "required": [
+        "key",
+        "name",
+        "latitude",
+        "longitude"
+      ],
+      "properties": {
+        "key": {
+          "const": "lauchhammer"
+        },
+        "name": {
+          "const": "Lauchhammer"
+        },
+        "latitude": {
+          "const": 51.4693
+        },
+        "longitude": {
+          "const": 13.76319
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "partial",
+        "error"
+      ]
+    },
+    "observations": {
+      "type": "object",
+      "required": [
+        "temperatureHumidity",
+        "stationPressure",
+        "wind",
+        "windGust",
+        "precipitation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "temperatureHumidity": {
+          "$ref": "#/$defs/observation"
+        },
+        "stationPressure": {
+          "$ref": "#/$defs/observation"
+        },
+        "wind": {
+          "$ref": "#/$defs/observation"
+        },
+        "windGust": {
+          "$ref": "#/$defs/observation"
+        },
+        "precipitation": {
+          "$ref": "#/$defs/observation"
+        }
+      }
+    },
+    "forecast": {
+      "type": "object",
+      "required": [
+        "provider",
+        "status",
+        "stationId",
+        "issuedAt",
+        "points"
+      ],
+      "properties": {
+        "provider": {
+          "const": "Deutscher Wetterdienst (DWD), MOSMIX-L"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "stale",
+            "error"
+          ]
+        },
+        "stationId": {
+          "type": "string"
+        },
+        "stationName": {
+          "type": "string"
+        },
+        "issuedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "issuedAtLocal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "retrievedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retrievedAtLocal": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "referenceTime": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "validAt",
+              "validAtLocal",
+              "values"
+            ],
+            "properties": {
+              "validAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "validAtLocal": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "values": {
+                "$ref": "#/$defs/forecastValues"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastAttemptAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceNote": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "required": [
+        "status",
+        "station",
+        "measuredAt",
+        "retrievedAt",
+        "ageMinutes",
+        "values",
+        "source"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "stale",
+            "error"
+          ]
+        },
+        "station": {
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "latitude",
+            "longitude",
+            "distanceKm"
+          ]
+        },
+        "measuredAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "measuredAtLocal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "retrievedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retrievedAtLocal": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ageMinutes": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "freshnessThresholdMinutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "qualityLevel": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "units": {
+          "type": "object"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "provider",
+            "url",
+            "license"
+          ]
+        }
+      }
+    },
+    "forecastValues": {
+      "type": "object",
+      "properties": {
+        "temperatureC": {
+          "type": "number"
+        },
+        "windDirectionDeg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "windSpeedKmh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "windGustKmh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "precipitation1hMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pressureHpa": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weatherCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99
+        },
+        "weatherSymbol": {
+          "enum": [
+            "cloud",
+            "haze",
+            "fog",
+            "precipitation",
+            "snow",
+            "drizzle",
+            "rain",
+            "freezing_rain",
+            "rain_showers",
+            "snow_showers",
+            "thunderstorm",
+            "unknown"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
