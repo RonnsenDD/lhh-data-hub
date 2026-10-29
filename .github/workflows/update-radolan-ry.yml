@@ -173,6 +173,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          PRODUCER_JOB_NAME: publish
+          PRODUCER_JOB_RESULT: ${{ needs.publish.result }}
           WORKFLOW_FILE: update-radolan-ry.yml
           SCHEDULE_INTERVAL_MINUTES: "15"
           MAX_SCHEDULE_GAP_MINUTES: "20"
