@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / "scripts/publish_one_snapshot.sh"
 TARGET = "data/generated/dwd-weather.json"
+WALDBRAND_TARGET = "data/generated/waldbrandgefahrenstufe-osl.json"
 
 
 def git(args, cwd, *, check=True, env=None):
@@ -153,6 +154,22 @@ exit 1
             self.assertEqual(set(committed_paths), {TARGET, second})
             self.assertIn("remote update", git(["--git-dir", str(bare), "show", "main:README.md"], root).stdout)
             self.assertIn("Biehlen 1", git(["--git-dir", str(bare), "show", f"main:{second}"], root).stdout)
+
+    def test_waldbrand_snapshot_is_allowlisted_and_publishes_only_that_file(self):
+        with tempfile.TemporaryDirectory(prefix="publisher-waldbrand-") as temp:
+            root = Path(temp)
+            bare, work, racer = self.make_repos(root)
+            git(["checkout", "--", TARGET], work)
+            (work / ".git/hooks/pre-push").unlink()
+            target = work / WALDBRAND_TARGET
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text('{"status":"current","sourceDate":"2026-10-29","level":1}\n')
+            result = self.run_helper(work, racer, "no-race", [WALDBRAND_TARGET])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            paths = git(["show", "--pretty=format:", "--name-only", "main"], work).stdout.split()
+            self.assertEqual(paths, [WALDBRAND_TARGET])
+            published = git(["--git-dir", str(bare), "show", f"main:{WALDBRAND_TARGET}"], root).stdout
+            self.assertIn('"sourceDate":"2026-10-29"', published)
 
     def test_non_allowlisted_target_is_rejected_before_staging(self):
         with tempfile.TemporaryDirectory(prefix="publisher-allowlist-") as temp:
