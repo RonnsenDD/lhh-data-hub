@@ -1,4 +1,4 @@
-"""Publication-contract tests use the checked-in historical snapshot as a fixture only."""
+"""Publication-contract tests use a deterministic historical fixture; no live snapshot is required."""
 from __future__ import annotations
 
 import copy
@@ -16,7 +16,61 @@ class DwdPublicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.schema = json.loads((ROOT / "docs/dwd-weather-v2.schema.json").read_text())
-        cls.fixture = json.loads((ROOT / "data/generated/dwd-weather.json").read_text())
+        # Stable historical fixture, intentionally independent of the generated
+        # production snapshot (which is created only after this offline test step).
+        observed = "2026-10-18T18:00:00Z"
+        retrieved = "2026-10-18T18:08:13Z"
+        local_observed = "2026-10-18T20:00:00+02:00"
+        local_retrieved = "2026-10-18T20:08:13+02:00"
+        cdc = "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes"
+        stations = {
+            "temperatureHumidity": ("02627", "Schipkau-Klettwitz", 51.5554, 13.8845, 12.7, "air_temperature/now/10minutenwerte_TU_02627_now.zip"),
+            "stationPressure": ("01001", "Doberlug-Kirchhain", 51.6451, 13.5747, 23.5, "air_temperature/now/10minutenwerte_TU_01001_now.zip"),
+            "wind": ("01001", "Doberlug-Kirchhain", 51.6451, 13.5747, 23.5, "wind/now/10minutenwerte_wind_01001_now.zip"),
+            "windGust": ("01001", "Doberlug-Kirchhain", 51.6451, 13.5747, 23.5, "extreme_wind/now/10minutenwerte_extrema_wind_01001_now.zip"),
+            "precipitation": ("02627", "Schipkau-Klettwitz", 51.5554, 13.8845, 12.7, "precipitation/now/10minutenwerte_nieder_02627_now.zip"),
+        }
+        values = {
+            "temperatureHumidity": ({"temperatureC": 9.6, "relativeHumidityPercent": 95.6, "dewPointC": 8.9}, {"temperatureC": "°C", "relativeHumidityPercent": "%", "dewPointC": "°C"}),
+            "stationPressure": ({"stationPressureHpa": 1016.7}, {"stationPressureHpa": "hPa"}),
+            "wind": ({"windSpeedKmh": 3.6, "windDirectionDeg": 360.0}, {"windSpeedKmh": "km/h", "windDirectionDeg": "degree"}),
+            "windGust": ({"windGustKmh": 5.4}, {"windGustKmh": "km/h"}),
+            "precipitation": ({"precipitation10MinMm": 0.0}, {"precipitation10MinMm": "mm"}),
+        }
+        observations = {}
+        for key, (station_id, name, lat, lon, distance, path) in stations.items():
+            measured_values, units = values[key]
+            observations[key] = {
+                "status": "ok",
+                "station": {"id": station_id, "name": name, "latitude": lat, "longitude": lon, "distanceKm": distance},
+                "measuredAt": observed, "measuredAtLocal": local_observed,
+                "retrievedAt": retrieved, "retrievedAtLocal": local_retrieved,
+                "ageMinutes": 8.2, "freshnessThresholdMinutes": 60, "qualityLevel": 2,
+                "units": units, "values": measured_values,
+                "source": {"provider": "DWD Climate Data Center (CDC)", "url": f"{cdc}/{path}", "license": "CC BY 4.0"},
+            }
+        cls.fixture = {
+            "schemaVersion": 2,
+            "location": {"key": "lauchhammer", "name": "Lauchhammer", "latitude": 51.4693, "longitude": 13.76319},
+            "status": "ok",
+            "observations": observations,
+            "forecast": {
+                "provider": "Deutscher Wetterdienst (DWD), MOSMIX-L", "status": "ok",
+                "stationId": "P0043", "stationName": "SENFTENBERG/LUB",
+                "coordinates": {"latitude": 51.52, "longitude": 14.0}, "distanceKm": 17.34,
+                "issuedAt": "2026-10-18T15:00:00Z", "issuedAtLocal": "2026-10-18T17:00:00+02:00",
+                "retrievedAt": retrieved, "retrievedAtLocal": local_retrieved, "ageHours": 3.14,
+                "models": [{"name": "ICON", "referenceTime": "2026-10-18T12:00:00Z"}],
+                "points": [{"validAt": "2026-10-18T19:00:00Z", "validAtLocal": "2026-10-18T21:00:00+02:00",
+                            "values": {"temperatureC": 12.0, "windDirectionDeg": 270, "windSpeedKmh": 7.2,
+                                       "windGustKmh": 14.4, "precipitation1hMm": 0, "pressureHpa": 1013.25,
+                                       "weatherCode": 3, "weatherSymbol": "cloud"}}],
+                "source": {"url": "https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/P0043/kml/MOSMIX_L_LATEST_P0043.kmz",
+                           "license": "DWD Open Data; CC BY 4.0 attribution applies"},
+            },
+            "lastAttemptAt": retrieved,
+            "sourceNote": "Historical test fixture only; never publish as current weather.",
+        }
 
     def snapshot(self):
         value = copy.deepcopy(self.fixture)
