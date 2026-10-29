@@ -91,6 +91,30 @@ class WaldbrandFetchTests(unittest.TestCase):
         self.assertEqual(feed["fetchStatus"], "success")
         self.assertTrue(wgs.validate_feed(feed))
 
+    def test_official_validity_boundaries_are_08_to_08_in_berlin(self):
+        source_date = dt.date(2026, 10, 29)
+        cases = [
+            (dt.datetime(2026, 10, 29, 22, 59, tzinfo=dt.timezone.utc), "current"),  # 23:59 CEST/CET
+            (dt.datetime(2026, 10, 29, 23, 0, tzinfo=dt.timezone.utc), "current"),  # 00:00 Berlin
+            (dt.datetime(2026, 10, 30, 6, 59, tzinfo=dt.timezone.utc), "current"),  # 07:59 Berlin
+            (dt.datetime(2026, 10, 30, 7, 0, tzinfo=dt.timezone.utc), "stale"),  # 08:00 Berlin
+        ]
+        for instant, expected in cases:
+            with self.subTest(instant=instant):
+                self.assertEqual(wgs.source_status(source_date, instant), expected)
+        self.assertEqual(wgs.source_status(dt.date(2026, 10, 30), dt.datetime(2026, 10, 30, 7, 0, tzinfo=dt.timezone.utc)), "current")
+        self.assertEqual(wgs.source_status(dt.date(2026, 10, 30), dt.datetime(2026, 10, 30, 7, 1, tzinfo=dt.timezone.utc)), "current")
+
+    def test_08_00_interval_respects_summer_and_winter_time_changes(self):
+        spring_start, spring_end = wgs.validity_interval(dt.date(2026, 3, 28))
+        self.assertEqual(spring_start.isoformat(), "2026-03-28T08:00:00+01:00")
+        self.assertEqual(spring_end.isoformat(), "2026-03-29T08:00:00+02:00")
+        self.assertEqual((spring_end.astimezone(dt.timezone.utc) - spring_start.astimezone(dt.timezone.utc)).total_seconds(), 23 * 3600)
+        fall_start, fall_end = wgs.validity_interval(dt.date(2026, 10, 24))
+        self.assertEqual(fall_start.isoformat(), "2026-10-24T08:00:00+02:00")
+        self.assertEqual(fall_end.isoformat(), "2026-10-25T08:00:00+01:00")
+        self.assertEqual((fall_end.astimezone(dt.timezone.utc) - fall_start.astimezone(dt.timezone.utc)).total_seconds(), 25 * 3600)
+
     def test_failed_fetch_preserves_last_valid_value_and_product_date(self):
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "latest.json"
@@ -109,7 +133,7 @@ class WaldbrandFetchTests(unittest.TestCase):
             self.assertEqual(result["lastError"], "MLEUV-HTTP-Status-503")
             self.assertEqual(result["status"], "current")
 
-    def test_failed_fetch_marks_previous_snapshot_stale_after_berlin_day_changes(self):
+    def test_failed_fetch_keeps_previous_snapshot_current_after_midnight(self):
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "latest.json"
             previous = wgs._snapshot(dt.date(2026, 10, 29), 1, NOW)
@@ -117,8 +141,21 @@ class WaldbrandFetchTests(unittest.TestCase):
             later = dt.datetime(2026, 10, 30, 0, 5, tzinfo=dt.timezone.utc)
             result, failed = wgs.update_feed(target, later, fetcher=lambda: (_ for _ in ()).throw(wgs.SourceError("timeout")))
             self.assertTrue(failed)
-            self.assertEqual(result["status"], "stale")
+            self.assertEqual(result["status"], "current")
             self.assertEqual(result["sourceDate"], "2026-10-29")
+            self.assertIn("bis 30.10.2026 08:00", result["statusReason"])
+
+    def test_failed_fetch_marks_snapshot_stale_at_the_next_morning_cutoff(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "latest.json"
+            previous = wgs._snapshot(dt.date(2026, 10, 29), 1, NOW)
+            target.write_text(json.dumps(previous), encoding="utf-8")
+            cutoff = dt.datetime(2026, 10, 30, 7, 0, tzinfo=dt.timezone.utc)
+            result, failed = wgs.update_feed(target, cutoff, fetcher=lambda: (_ for _ in ()).throw(wgs.SourceError("timeout")))
+            self.assertTrue(failed)
+            self.assertEqual(result["status"], "stale")
+            self.assertEqual(result["statusEvaluatedAt"], "2026-10-30T07:00:00Z")
+            self.assertIn("ist sie abgelaufen", result["statusReason"])
 
     def test_failed_fetch_without_valid_snapshot_is_unavailable(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -177,10 +214,22 @@ class WaldbrandFetchTests(unittest.TestCase):
     def test_source_only_does_not_write_output_file(self):
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "must-not-exist.json"
-            with patch.object(wgs, "fetch_source", return_value=(dt.date(2026, 10, 29), 1)):
+            class FrozenDateTime(dt.datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    return NOW.astimezone(tz) if tz else NOW.replace(tzinfo=None)
+
+            with patch.object(wgs, "fetch_source", return_value=(dt.date(2026, 10, 29), 1)), patch.object(wgs.dt, "datetime", FrozenDateTime):
                 result = wgs.main(["--source-only", "--output", str(target)])
             self.assertEqual(result, 0)
             self.assertFalse(target.exists())
+
+    def test_status_snapshot_is_consistent_with_its_evaluation_instant(self):
+        feed = wgs._snapshot(dt.date(2026, 10, 29), 1, dt.datetime(2026, 10, 29, 23, 30, tzinfo=dt.timezone.utc))
+        self.assertEqual(feed["status"], "current")
+        self.assertEqual(feed["statusEvaluatedAt"], "2026-10-29T23:30:00Z")
+        self.assertIn("bis 30.10.2026 08:00", feed["statusReason"])
+        self.assertTrue(wgs.validate_feed(feed))
 
     def test_atomic_output_contract_validates(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -189,13 +238,16 @@ class WaldbrandFetchTests(unittest.TestCase):
             wgs.atomic_write(target, feed)
             self.assertTrue(wgs.validate_feed(json.loads(target.read_text(encoding="utf-8"))))
 
-    def test_initial_public_snapshot_is_valid_and_contains_no_fabricated_value(self):
+    def test_public_snapshot_is_valid_and_does_not_fabricate_missing_values(self):
         target = Path(__file__).resolve().parents[1] / "data/generated/waldbrandgefahrenstufe-osl.json"
         feed = json.loads(target.read_text(encoding="utf-8"))
         self.assertTrue(wgs.validate_feed(feed))
-        self.assertEqual(feed["status"], "unavailable")
-        self.assertIsNone(feed["sourceDate"])
-        self.assertIsNone(feed["level"])
+        if feed["sourceDate"] is None:
+            self.assertEqual(feed["status"], "unavailable")
+            self.assertIsNone(feed["level"])
+        else:
+            self.assertIn(feed["level"], range(1, 6))
+            self.assertTrue(wgs._is_iso_date(feed["sourceDate"]))
 
     def test_workflow_is_daily_manual_and_uses_isolated_guarded_publication(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/update-waldbrandgefahrenstufe-osl.yml").read_text()
