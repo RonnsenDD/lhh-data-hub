@@ -13,6 +13,8 @@ This document records the operational contract for the four active scheduled pro
 
 The weather and gauge schedules were shifted away from minute 00 because GitHub documents that scheduled events can be delayed during high load, especially at the start of each hour, and may be dropped under sufficiently high load. The feed cadence is unchanged. Radar was already offset; the daily grassland schedule is already away from the hour boundary. These offsets reduce a known pressure point; they do not prove that GitHub caused prior gaps or guarantee schedule delivery.
 
+Scheduled runs now log their expected UTC slot and actual GitHub run start. A delay above five minutes is a failed operational check for 15-minute sources; the daily grassland run uses a 30-minute budget. The check is skipped for manual dispatches. It does not mask or rewrite source timestamps. This catches late starts only when a run exists; a wholly missing event remains visible as a gap in Actions history and in source freshness.
+
 ## Main-branch publication concurrency
 
 Weather, levels, and grassland are independent data fetches and now have per-source concurrency groups. They no longer hold a shared lock while downloading unrelated upstream data. Their writes still target the same `main` branch, so each producer uses `scripts/publish_one_snapshot.sh` for a bounded, non-force publication:
@@ -28,7 +30,7 @@ The publication helper serializes successful branch updates through Git's fast-f
 
 ## Monitoring and missed runs
 
-On each actual run, inspect both the GitHub run event/conclusion and the source timestamps above. A recent workflow completion only proves a recent attempt; it does not make an old upstream measurement fresh. Stale/error values remain marked as such, and workflow validation rejects technically invalid snapshots.
+On each actual run, inspect both the GitHub run event/conclusion and the source timestamps above. A recent workflow completion only proves a recent attempt; it does not make an old upstream measurement fresh. Stale/error values remain marked as such, and workflow validation rejects technically invalid snapshots. Per-source timestamps and computed ages remain in the generated JSON and are included by each producer's fetch/validation logs; use those alongside the run conclusion.
 
 A missing schedule event cannot be detected by the producer workflow when no job starts. The public repository's Actions run history is therefore the authoritative current audit for missed starts. A separate external watchdog could poll the GitHub Actions API and compare the last scheduled completion with the expected schedule, then alert or dispatch the same existing workflow. It would require a private, minimum-scope credential with permission only to read workflow runs and dispatch these workflows. No secret, worker, external scheduler, monitor workflow, or new workflow was added here.
 
