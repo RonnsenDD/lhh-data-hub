@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -64,19 +65,74 @@ class PagesArtifactTests(unittest.TestCase):
             self.assertEqual([p.name for p in frames.iterdir()], ["20261027T204000Z"])
             self.assertFalse(any(frames.rglob("*.hdf5")))
 
-    def test_unavailable_manifest_has_no_images_and_removes_old_frames(self):
+    def test_unavailable_keeps_checksum_verified_last_frame_and_marks_it_stale(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            raster_dir = root / "decoder"
+            raster_dir.mkdir()
+            self.make_rasters(raster_dir)
+            site = root / "site"
+            previous = publisher.publish(site, META, raster_dir)
+            rain = site / "radar" / previous["rainImage"]
+            coverage = site / "radar" / previous["coverageImage"]
+            rain_bytes, coverage_bytes = rain.read_bytes(), coverage.read_bytes()
+
+            result = publisher.unavailable(site, OSError("HTTP 503"), datetime(2026, 10, 27, 21, 0, tzinfo=timezone.utc))
+
+            self.assertTrue((site / "index.html").is_file())
+            self.assertEqual(result["status"], "stale")
+            self.assertEqual(result["fetchStatus"], "error")
+            self.assertEqual(result["error"], "OSError: HTTP 503")
+            self.assertEqual(result["frameId"], previous["frameId"])
+            self.assertEqual(result["productTime"], META["productTime"])
+            self.assertEqual(result["ageMinutes"], 20)
+            self.assertEqual(rain.read_bytes(), rain_bytes)
+            self.assertEqual(coverage.read_bytes(), coverage_bytes)
+            self.assertEqual(result["imageSha256"], previous["imageSha256"])
+            self.assertEqual(result["coverageSha256"], previous["coverageSha256"])
+            self.assertEqual([p.name for p in (site / "radar" / "frames").iterdir()], [previous["frameId"]])
+
+    def test_run_fetch_failure_keeps_the_seeded_public_frame(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            raster_dir = root / "decoder"
+            raster_dir.mkdir()
+            self.make_rasters(raster_dir)
+            site = root / "site"
+            previous = publisher.publish(site, META, raster_dir)
+            with patch.object(publisher.decoder, "download_latest", side_effect=OSError("HTTP 503")):
+                with self.assertRaisesRegex(OSError, "HTTP 503"):
+                    publisher.run(site, root / "downloads")
+            manifest = json.loads((site / "radar" / "latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["fetchStatus"], "error")
+            self.assertEqual(manifest["frameId"], previous["frameId"])
+            self.assertTrue((site / "radar" / previous["rainImage"]).is_file())
+            self.assertTrue((site / "radar" / previous["coverageImage"]).is_file())
+
+    def test_unavailable_without_validated_previous_frame_has_no_images(self):
         with tempfile.TemporaryDirectory() as temp:
             site = Path(temp) / "site"
-            frames = site / "radar" / "frames" / "old"
-            frames.mkdir(parents=True)
-            (frames / "rain.png").write_bytes(b"old")
             error = publisher.unavailable(site, OSError("HTTP 503"), datetime(2026, 10, 27, tzinfo=timezone.utc))
-            self.assertTrue((site / "index.html").is_file())
             self.assertEqual(error["status"], "unavailable")
+            self.assertEqual(error["fetchStatus"], "error")
             self.assertIsNone(error["rainImage"])
             self.assertIsNone(error["coverageImage"])
-            self.assertFalse(frames.exists())
-            self.assertEqual(error["error"], "OSError: HTTP 503")
+            self.assertEqual(list((site / "radar" / "frames").iterdir()), [])
+
+    def test_older_product_cannot_replace_a_newer_last_good_frame(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            raster_dir = root / "decoder"
+            raster_dir.mkdir()
+            self.make_rasters(raster_dir)
+            site = root / "site"
+            previous = publisher.publish(site, META, raster_dir)
+            older = {**META, "productTime": "2026-10-27T20:35:00Z"}
+            with self.assertRaisesRegex(ValueError, "älter als der letzte"):
+                publisher.publish(site, older, raster_dir)
+            manifest = json.loads((site / "radar" / "latest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["frameId"], previous["frameId"])
+            self.assertTrue((site / "radar" / previous["rainImage"]).is_file())
 
 
 if __name__ == "__main__":
