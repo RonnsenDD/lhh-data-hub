@@ -43,7 +43,7 @@ def verify(page_url: str) -> dict:
         raise RuntimeError("Öffentliche Zellen-Datei ist keine GeoJSON-FeatureCollection")
     if manifest["status"] == "unavailable" and collection["features"]:
         raise RuntimeError("Unavailable darf keine historischen Zellfeatures ausliefern")
-    result = {key: manifest.get(key) for key in ("status", "referenceTime", "creationTime", "retrievedAt", "totalCells", "relevantCellCount", "cellResult")}
+    result = {key: manifest.get(key) for key in ("status", "fetchStatus", "error", "referenceTime", "creationTime", "retrievedAt", "lastAttemptAt", "publishedAt", "totalCells", "relevantCellCount", "cellResult")}
     result["geoJsonFeatureCount"] = len(collection["features"])
     print(json.dumps(result, ensure_ascii=False))
     return result

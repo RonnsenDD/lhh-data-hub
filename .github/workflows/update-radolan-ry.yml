@@ -48,13 +48,16 @@ jobs:
         run: npm ci --prefix tools/konrad3d --ignore-scripts
 
       - name: RADOLAN-Veröffentlichungsregressionen
-        run: python -B -m unittest discover -s tools/radolan-ry -p "test_publish*.py" -v
+        run: python -B -m unittest discover -s tools/radolan-ry -p "test_*.py" -v
 
       - name: KONRAD3D-Parser- und Veröffentlichungsregressionen
         run: node --test tools/konrad3d/tests/*.test.mjs
 
       - name: Vorheriges Build-Artefakt ausschließen
         run: rm -rf "$RUNNER_TEMP/radar-site" "$RUNNER_TEMP/radolan-download"
+
+      - name: Letzte geprüfte Pages-Daten je Produkt best-effort übernehmen
+        run: python -B tools/radolan-ry/restore_previous.py --site-dir "$RUNNER_TEMP/radar-site" --report-file "$RUNNER_TEMP/radar-restore-report.json"
 
       - name: Neueste DWD-RY-Datei laden, validieren und rendern
         id: radar
@@ -89,7 +92,7 @@ jobs:
                   path = root / manifest[key]
                   if not path.is_file() or path.stat().st_size == 0:
                       raise SystemExit(f"Radarressource fehlt: {key}")
-          print(f"RADOLAN status={manifest.get('status')} frame={manifest.get('frameId')}")
+          print(f"RADOLAN status={manifest.get('status')} fetchStatus={manifest.get('fetchStatus')} frame={manifest.get('frameId')} productTime={manifest.get('productTime')} error={manifest.get('error')}")
           PY
 
       - name: Neueste KONRAD3D-Datei abrufen und GeoJSON erstellen
@@ -124,8 +127,19 @@ jobs:
               raise SystemExit("GeoJSON-Prüfsumme passt nicht zum Manifest")
           if manifest.get("status") == "unavailable" and geo["features"]:
               raise SystemExit("Unavailable darf keine Zellgeometrien veröffentlichen")
-          print(f"KONRAD3D status={manifest['status']} reference={manifest.get('referenceTime')} features={len(geo['features'])}")
+          print(f"KONRAD3D status={manifest['status']} fetchStatus={manifest.get('fetchStatus')} reference={manifest.get('referenceTime')} features={len(geo['features'])} error={manifest.get('error')}")
           PY
+
+      - name: Bei Pages-Ausfall keinen unvollständigen Stand veröffentlichen
+        env:
+          RADAR_PRODUCER_OUTCOME: ${{ steps.radar.outcome }}
+          KONRAD_PRODUCER_OUTCOME: ${{ steps.konrad.outcome }}
+        run: |
+          python -B tools/radolan-ry/restore_previous.py \
+            --check-publish \
+            --report-file "$RUNNER_TEMP/radar-restore-report.json" \
+            --radar-outcome "$RADAR_PRODUCER_OUTCOME" \
+            --konrad-outcome "$KONRAD_PRODUCER_OUTCOME"
 
       - name: Pages-Artefakt hochladen (nur gemeinsamer aktueller Stand, 1 Tag Aufbewahrung)
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

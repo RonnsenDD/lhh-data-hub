@@ -27,8 +27,11 @@ def main():
         raise SystemExit(f"latest.json Content-Type unerwartet: {headers.get('Content-Type', '(fehlt)')}")
     data = json.loads(body)
     origin = headers.get("Access-Control-Allow-Origin", "")
-    print(json.dumps({"http": status, "status": data.get("status"), "productTime": data.get("productTime"),
-                      "frameId": data.get("frameId"), "accessControlAllowOrigin": origin}, ensure_ascii=False))
+    print(json.dumps({"http": status, "status": data.get("status"), "fetchStatus": data.get("fetchStatus"),
+                      "error": data.get("error"), "productTime": data.get("productTime"),
+                      "retrievedAt": data.get("retrievedAt"), "lastAttemptAt": data.get("lastAttemptAt"),
+                      "publishedAt": data.get("publishedAt"), "frameId": data.get("frameId"),
+                      "accessControlAllowOrigin": origin}, ensure_ascii=False))
     if data.get("status") not in ("current", "stale"):
         raise SystemExit("Radar feed ist nicht aktuell verfügbar; latest.json zeigt den Fehlerstatus.")
     if not data.get("frameId") or data["frameId"] not in str(data.get("rainImage")) or data["frameId"] not in str(data.get("coverageImage")):

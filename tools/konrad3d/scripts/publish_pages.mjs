@@ -1,5 +1,5 @@
-import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseKonrad3d } from './konradParser.mjs';
 
@@ -39,7 +39,8 @@ export function buildManifest(parsed, geojson, { retrievedAt, publishedAt = new 
   const ageMs = publication.getTime() - refMs;
   const status = ageMs < -5 * 60_000 ? 'unavailable' : ageMs > KONRAD_STALE_AFTER_MS ? 'stale' : 'current';
   return {
-    schemaVersion: 1, product: 'DWD KONRAD3D', status,
+    schemaVersion: 1, product: 'DWD KONRAD3D', status, fetchStatus: 'success',
+    lastAttemptAt: retrieval.toISOString(),
     error: status === 'unavailable' ? 'Referenzzeit liegt unzulässig in der Zukunft.' : null,
     referenceTime: parsed.referenceTime, creationTime: parsed.creationTime || null,
     retrievedAt: retrieval.toISOString(), publishedAt: publication.toISOString(),
@@ -60,6 +61,35 @@ async function atomicJson(file, value) {
   await rename(temp, file);
 }
 
+export async function replaceSnapshot(target, geoBytes, manifest, writeManifest = atomicJson) {
+  const geoPath = path.join(target, 'cells.geojson');
+  const staged = `${geoPath}.${randomUUID()}.tmp`;
+  const backup = `${geoPath}.${randomUUID()}.rollback`;
+  await writeFile(staged, geoBytes);
+  let hadPrevious = false;
+  try {
+    try {
+      await rename(geoPath, backup);
+      hadPrevious = true;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    await rename(staged, geoPath);
+    await writeManifest(path.join(target, 'latest.json'), manifest);
+  } catch (error) {
+    try {
+      await unlink(geoPath).catch(() => {});
+      if (hadPrevious) await rename(backup, geoPath);
+    } catch (restoreError) {
+      throw new AggregateError([error, restoreError], 'KONRAD3D-Snapshot konnte nach einem Schreibfehler nicht zurückgerollt werden.');
+    }
+    throw error;
+  } finally {
+    await unlink(staged).catch(() => {});
+  }
+  if (hadPrevious) await unlink(backup);
+}
+
 export async function latestDwdXml({ fetchImpl = fetch, now = new Date() } = {}) {
   const directory = await fetchImpl(DWD_KONRAD_DIRECTORY, { signal: AbortSignal.timeout(20_000), headers: { Accept: 'text/html' } });
   if (!directory.ok) throw new Error(`DWD-Verzeichnis HTTP ${directory.status}`);
@@ -77,33 +107,93 @@ export async function latestDwdXml({ fetchImpl = fetch, now = new Date() } = {})
   return { xml: bytes, url: String(url), retrievedAt: new Date().toISOString() };
 }
 
+async function validPrevious(target) {
+  try {
+    const manifest = JSON.parse(await readFile(path.join(target, 'latest.json'), 'utf8'));
+    const bytes = await readFile(path.join(target, 'cells.geojson'));
+    if (manifest.schemaVersion !== 1 || manifest.product !== 'DWD KONRAD3D' || !['current', 'stale'].includes(manifest.status)) return null;
+    if (manifest.cellsGeoJSON !== 'cells.geojson' || !manifest.referenceTime || digest(bytes) !== manifest.cellsGeoJSONSha256) return null;
+    const collection = JSON.parse(bytes.toString('utf8'));
+    if (collection.type !== 'FeatureCollection' || !Array.isArray(collection.features)) return null;
+    if (collection.properties?.referenceTime && collection.properties.referenceTime !== manifest.referenceTime) return null;
+    const refMs = Date.parse(manifest.referenceTime);
+    if (!Number.isFinite(refMs)) return null;
+    return { manifest, bytes, collection, refMs };
+  } catch {
+    return null;
+  }
+}
+
+async function publishFailure({ target, message, sourceUrl, now }) {
+  const safeMessage = String(message).replace(/\s+/g, ' ').slice(0, 300);
+  const previous = await validPrevious(target);
+  if (previous) {
+    const ageMs = now.getTime() - previous.refMs;
+    const status = ageMs < -5 * 60_000 ? 'unavailable' : ageMs > KONRAD_STALE_AFTER_MS ? 'stale' : 'current';
+    if (status !== 'unavailable') {
+      const manifest = {
+        ...previous.manifest,
+        status,
+        error: safeMessage,
+        fetchStatus: 'error',
+        fetchStatusReason: 'Letzter Abruf oder Validierung fehlgeschlagen; zuletzt checksum-validiertes GeoJSON bleibt erhalten. Referenzzeit bleibt unverändert.',
+        lastAttemptAt: now.toISOString(),
+        publishedAt: now.toISOString(),
+        ageMinutes: Math.max(0, Math.round(ageMs / 60_000)),
+        staleAfterMinutes: KONRAD_STALE_AFTER_MS / 60_000,
+        sourceUrl
+      };
+      await atomicJson(path.join(target, 'latest.json'), manifest);
+      return manifest;
+    }
+  }
+
+  const geojson = { type: 'FeatureCollection', properties: { product: 'DWD KONRAD3D', source: 'DWD' }, features: [] };
+  const geoBytes = Buffer.from(JSON.stringify(geojson) + '\n');
+  await writeFile(path.join(target, 'cells.geojson.tmp'), geoBytes);
+  await rename(path.join(target, 'cells.geojson.tmp'), path.join(target, 'cells.geojson'));
+  const manifest = {
+    schemaVersion: 1, product: 'DWD KONRAD3D', status: 'unavailable', error: safeMessage,
+    fetchStatus: 'error', fetchStatusReason: 'Kein checksum-validierter letzter Datensatz verfügbar.',
+    referenceTime: null, creationTime: null, retrievedAt: now.toISOString(), publishedAt: now.toISOString(), lastAttemptAt: now.toISOString(),
+    ageMinutes: null, staleAfterMinutes: 15, totalCells: null, relevantCellCount: null,
+    outOfAreaCount: null, cellResult: null, cellsGeoJSON: 'cells.geojson',
+    cellsGeoJSONSha256: digest(geoBytes), source: 'DWD', sourceUrl,
+    attribution: 'Datenquelle: Deutscher Wetterdienst (DWD), KONRAD3D.'
+  };
+  await atomicJson(path.join(target, 'latest.json'), manifest);
+  return manifest;
+}
+
 export async function publishKonrad({ siteDir, xml, sourceUrl = DWD_KONRAD_DIRECTORY, retrievedAt = new Date().toISOString(), now = new Date(), sourceError, parserOptions = {} }) {
   const target = path.join(siteDir, 'konrad3d');
   await mkdir(target, { recursive: true });
-  let manifest;
-  let geojson = { type: 'FeatureCollection', properties: { product: 'DWD KONRAD3D', source: 'DWD' }, features: [] };
   try {
     const parsed = parseKonrad3d(xml, { now, ...parserOptions });
-    geojson = geoJsonFor(parsed);
-    const geoBytes = Buffer.from(`${JSON.stringify(geojson)}\n`);
-    manifest = buildManifest(parsed, geojson, { retrievedAt, publishedAt: now, geoJsonSha256: digest(geoBytes) });
+    const geojson = geoJsonFor(parsed);
+    const geoBytes = Buffer.from(JSON.stringify(geojson) + '\n');
+    const manifest = buildManifest(parsed, geojson, { retrievedAt, publishedAt: now, geoJsonSha256: digest(geoBytes) });
     manifest.sourceUrl = sourceUrl;
-    await writeFile(path.join(target, 'cells.geojson.tmp'), geoBytes);
+    if (manifest.status === 'unavailable') {
+      return await publishFailure({ target, message: manifest.error || 'KONRAD3D-Zeitvalidierung fehlgeschlagen.', sourceUrl, now });
+    }
+    const previous = await validPrevious(target);
+    if (previous && Date.parse(manifest.referenceTime) < previous.refMs) {
+      return await publishFailure({
+        target,
+        message: 'Ausgewähltes KONRAD3D-Produkt ist älter als der letzte veröffentlichte gültige Datensatz.',
+        sourceUrl,
+        now
+      });
+    }
+    await replaceSnapshot(target, geoBytes, manifest);
+    return manifest;
   } catch (error) {
-    manifest = {
-      schemaVersion: 1, product: 'DWD KONRAD3D', status: 'unavailable',
-      error: `${sourceError ? 'FetchError' : error instanceof Error ? error.name : 'Error'}: ${String(sourceError || (error instanceof Error ? error.message : error)).replace(/\s+/g, ' ').slice(0, 300)}`,
-      referenceTime: null, creationTime: null, retrievedAt, publishedAt: now.toISOString(),
-      ageMinutes: null, staleAfterMinutes: 15, totalCells: null, relevantCellCount: null,
-      outOfAreaCount: null, cellResult: null, cellsGeoJSON: 'cells.geojson',
-      cellsGeoJSONSha256: digest(Buffer.from(`${JSON.stringify(geojson)}\n`)), source: 'DWD', sourceUrl,
-      attribution: 'Datenquelle: Deutscher Wetterdienst (DWD), KONRAD3D.'
-    };
-    await writeFile(path.join(target, 'cells.geojson.tmp'), `${JSON.stringify(geojson)}\n`);
+    const message = sourceError
+      ? 'FetchError: ' + String(sourceError).replace(/\s+/g, ' ').slice(0, 250)
+      : (error instanceof Error ? error.name : 'Error') + ': ' + String(error instanceof Error ? error.message : error).replace(/\s+/g, ' ').slice(0, 270);
+    return publishFailure({ target, message, sourceUrl, now });
   }
-  await rename(path.join(target, 'cells.geojson.tmp'), path.join(target, 'cells.geojson'));
-  await atomicJson(path.join(target, 'latest.json'), manifest);
-  return manifest;
 }
 
 export async function publishLatest({ siteDir, fetchImpl = fetch, now = new Date() }) {
@@ -127,5 +217,5 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     ? await publishKonrad({ siteDir, xml: await readFile(xmlFile), sourceUrl: `fixture:${path.basename(xmlFile)}`, now })
     : await publishLatest({ siteDir, now });
   process.stdout.write(`${JSON.stringify(manifest)}\n`);
-  if (manifest.status === 'unavailable') process.exitCode = 1;
+  if (manifest.status === 'unavailable' || manifest.fetchStatus === 'error') process.exitCode = 1;
 }

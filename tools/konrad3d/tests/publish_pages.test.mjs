@@ -4,7 +4,7 @@ import { mkdtemp, readFile, mkdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { DWD_KONRAD_DIRECTORY, latestDwdXml, publishKonrad } from '../scripts/publish_pages.mjs';
+import { DWD_KONRAD_DIRECTORY, latestDwdXml, publishKonrad, replaceSnapshot } from '../scripts/publish_pages.mjs';
 
 const fixture = await readFile(new URL('../data/KONRAD3D_historical_cells_fixture.xml', import.meta.url));
 const emptyXml = `<?xml version="1.0"?><konrad3d data_model_version="1.7"><head><metadata><reference_time>2026-10-27T19:55:00Z</reference_time></metadata><product><creation-date>2026-10-27T19:59:46Z</creation-date></product></head><cells reference_time="2026-10-27T19:55:00Z" ensemble_member_id="0"/></konrad3d>`;
@@ -16,7 +16,7 @@ test('publishes historic cell geometry with an explicitly stale status and match
   try {
     await mkdir(path.join(root, 'radar'), { recursive: true });
     await import('node:fs/promises').then(fs => fs.writeFile(path.join(root, 'radar/latest.json'), '{"product":"RADOLAN-RY"}'));
-    const manifest = await publishKonrad({ siteDir: root, xml: fixture, retrievedAt: '2026-10-27T20:00:00.000Z', now: new Date('2026-10-27T20:00:00.000Z'), parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 } });
+    const manifest = await publishKonrad({ siteDir: root, xml: fixture, retrievedAt: '2026-10-17T20:00:00.000Z', now: new Date('2026-10-17T20:00:00.000Z'), parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 } });
     const geojson = JSON.parse(await readFile(path.join(root, 'konrad3d/cells.geojson'), 'utf8'));
     const bytes = await readFile(path.join(root, 'konrad3d/cells.geojson'));
     assert.equal(manifest.status, 'stale');
@@ -36,9 +36,85 @@ test('publishes an empty but fresh product as current with a successful empty-ce
   try {
     const manifest = await publishKonrad({ siteDir: root, xml: emptyXml, now: new Date('2026-10-27T20:00:00Z') });
     assert.equal(manifest.status, 'current');
+    assert.equal(manifest.fetchStatus, 'success');
     assert.equal(manifest.cellResult, 'no-cells-detected');
     assert.equal(manifest.totalCells, 0);
     assert.deepEqual(JSON.parse(await readFile(path.join(root, 'konrad3d/cells.geojson'), 'utf8')).features, []);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('rolls back GeoJSON if manifest publication fails after staging a new product', async () => {
+  const root = await site();
+  try {
+    const first = await publishKonrad({
+      siteDir: root, xml: fixture, retrievedAt: '2026-10-17T20:00:00.000Z',
+      now: new Date('2026-10-17T20:00:00.000Z'),
+      parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 }
+    });
+    const geoPath = path.join(root, 'konrad3d/cells.geojson');
+    const beforeGeo = await readFile(geoPath);
+    const beforeManifest = await readFile(path.join(root, 'konrad3d/latest.json'));
+    const replacement = Buffer.from(JSON.stringify({ type: 'FeatureCollection', features: [] }) + '\n');
+
+    await assert.rejects(
+      replaceSnapshot(root + '/konrad3d', replacement, { status: 'current' }, async () => {
+        throw new Error('simulated manifest disk error');
+      }),
+      /simulated manifest disk error/
+    );
+
+    assert.deepEqual(await readFile(geoPath), beforeGeo);
+    assert.deepEqual(await readFile(path.join(root, 'konrad3d/latest.json')), beforeManifest);
+    assert.equal(JSON.parse(beforeManifest).referenceTime, first.referenceTime);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('retains the last checksum-valid cells when the next source validation fails', async () => {
+  const root = await site();
+  try {
+    const first = await publishKonrad({
+      siteDir: root, xml: fixture, retrievedAt: '2026-10-17T20:00:00.000Z',
+      now: new Date('2026-10-17T20:00:00.000Z'),
+      parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 }
+    });
+    const geoPath = path.join(root, 'konrad3d/cells.geojson');
+    const geoBefore = await readFile(geoPath);
+    assert.ok(JSON.parse(geoBefore.toString()).features.length > 0);
+
+    const retained = await publishKonrad({
+      siteDir: root, xml: '<konrad3d><cells>',
+      now: new Date('2026-10-27T20:20:00.000Z')
+    });
+
+    const geoAfter = await readFile(geoPath);
+    assert.equal(retained.status, 'stale');
+    assert.equal(retained.fetchStatus, 'error');
+    assert.match(retained.error, /Ungültige XML-Struktur/);
+    assert.equal(retained.referenceTime, first.referenceTime);
+    assert.equal(retained.cellsGeoJSONSha256, createHash('sha256').update(geoBefore).digest('hex'));
+    assert.deepEqual(geoAfter, geoBefore);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('an older valid DWD product cannot replace the newer last-good GeoJSON', async () => {
+  const root = await site();
+  try {
+    const first = await publishKonrad({
+      siteDir: root, xml: fixture, retrievedAt: '2026-10-17T20:00:00.000Z',
+      now: new Date('2026-10-17T20:00:00.000Z'),
+      parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 }
+    });
+    const geoPath = path.join(root, 'konrad3d/cells.geojson');
+    const before = await readFile(geoPath);
+    const olderXml = fixture.toString().replaceAll('2026-10-17T19:35:00Z', '2026-10-17T19:30:00Z');
+    const retained = await publishKonrad({
+      siteDir: root, xml: olderXml, now: new Date('2026-10-17T20:00:00.000Z'),
+      parserOptions: { target: { lat: 53.3175, lon: 6.60288 }, radiusKm: 80 }
+    });
+    assert.equal(retained.fetchStatus, 'error');
+    assert.match(retained.error, /älter als der letzte/);
+    assert.equal(retained.referenceTime, first.referenceTime);
+    assert.deepEqual(await readFile(geoPath), before);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
