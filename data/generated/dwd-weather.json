@@ -19,11 +19,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute air temperature / relative humidity / dew point / station pressure",
-      "measuredAt": "2026-10-30T14:50:00Z",
-      "measuredAtLocal": "2026-10-30T15:50:00+01:00",
-      "retrievedAt": "2026-10-30T15:44:08Z",
-      "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-      "ageMinutes": 54.1,
+      "measuredAt": "2026-10-30T19:20:00Z",
+      "measuredAtLocal": "2026-10-30T20:20:00+01:00",
+      "retrievedAt": "2026-10-30T20:09:43Z",
+      "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+      "ageMinutes": 49.7,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -32,9 +32,9 @@
         "dewPointC": "°C"
       },
       "values": {
-        "temperatureC": 9.9,
-        "relativeHumidityPercent": 78.7,
-        "dewPointC": 6.4
+        "temperatureC": 7.7,
+        "relativeHumidityPercent": 92.5,
+        "dewPointC": 6.6
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -54,18 +54,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute station pressure",
-      "measuredAt": "2026-10-30T14:50:00Z",
-      "measuredAtLocal": "2026-10-30T15:50:00+01:00",
-      "retrievedAt": "2026-10-30T15:44:08Z",
-      "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-      "ageMinutes": 54.1,
+      "measuredAt": "2026-10-30T19:20:00Z",
+      "measuredAtLocal": "2026-10-30T20:20:00+01:00",
+      "retrievedAt": "2026-10-30T20:09:43Z",
+      "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+      "ageMinutes": 49.7,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "stationPressureHpa": "hPa"
       },
       "values": {
-        "stationPressureHpa": 1020.1
+        "stationPressureHpa": 1020.0
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -85,11 +85,11 @@
         "distanceKm": 23.5
       },
       "product": "10-minute wind speed and direction",
-      "measuredAt": "2026-10-30T14:50:00Z",
-      "measuredAtLocal": "2026-10-30T15:50:00+01:00",
-      "retrievedAt": "2026-10-30T15:44:08Z",
-      "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-      "ageMinutes": 54.1,
+      "measuredAt": "2026-10-30T19:20:00Z",
+      "measuredAtLocal": "2026-10-30T20:20:00+01:00",
+      "retrievedAt": "2026-10-30T20:09:43Z",
+      "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+      "ageMinutes": 49.7,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -97,8 +97,8 @@
         "windDirectionDeg": "degree"
       },
       "values": {
-        "windSpeedKmh": 8.64,
-        "windDirectionDeg": 300.0
+        "windSpeedKmh": 6.48,
+        "windDirectionDeg": 290.0
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -118,18 +118,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute extreme wind (maximum gust)",
-      "measuredAt": "2026-10-30T14:50:00Z",
-      "measuredAtLocal": "2026-10-30T15:50:00+01:00",
-      "retrievedAt": "2026-10-30T15:44:08Z",
-      "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-      "ageMinutes": 54.1,
+      "measuredAt": "2026-10-30T19:20:00Z",
+      "measuredAtLocal": "2026-10-30T20:20:00+01:00",
+      "retrievedAt": "2026-10-30T20:09:43Z",
+      "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+      "ageMinutes": 49.7,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "windGustKmh": "km/h"
       },
       "values": {
-        "windGustKmh": 11.88
+        "windGustKmh": 8.64
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -149,11 +149,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute precipitation sum",
-      "measuredAt": "2026-10-30T15:20:00Z",
-      "measuredAtLocal": "2026-10-30T16:20:00+01:00",
-      "retrievedAt": "2026-10-30T15:44:08Z",
-      "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-      "ageMinutes": 24.1,
+      "measuredAt": "2026-10-30T19:20:00Z",
+      "measuredAtLocal": "2026-10-30T20:20:00+01:00",
+      "retrievedAt": "2026-10-30T20:09:43Z",
+      "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+      "ageMinutes": 49.7,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -181,15 +181,15 @@
       "longitude": 14.0
     },
     "distanceKm": 17.34,
-    "issuedAt": "2026-10-30T09:00:00Z",
-    "issuedAtLocal": "2026-10-30T10:00:00+01:00",
-    "retrievedAt": "2026-10-30T15:44:08Z",
-    "retrievedAtLocal": "2026-10-30T16:44:08+01:00",
-    "ageHours": 6.74,
+    "issuedAt": "2026-10-30T15:00:00Z",
+    "issuedAtLocal": "2026-10-30T16:00:00+01:00",
+    "retrievedAt": "2026-10-30T20:09:43Z",
+    "retrievedAtLocal": "2026-10-30T21:09:43+01:00",
+    "ageHours": 5.16,
     "models": [
       {
         "name": "ICON",
-        "referenceTime": "2026-10-30T00:00:00Z"
+        "referenceTime": "2026-10-30T12:00:00Z"
       },
       {
         "name": "ECMWF/IFS",
@@ -198,99 +198,15 @@
     ],
     "points": [
       {
-        "validAt": "2026-10-30T10:00:00Z",
-        "validAtLocal": "2026-10-30T11:00:00+01:00",
-        "values": {
-          "temperatureC": 9.9,
-          "windDirectionDeg": 353,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-10-30T11:00:00Z",
-        "validAtLocal": "2026-10-30T12:00:00+01:00",
-        "values": {
-          "temperatureC": 10.4,
-          "windDirectionDeg": 346,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.1,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-10-30T12:00:00Z",
-        "validAtLocal": "2026-10-30T13:00:00+01:00",
-        "values": {
-          "temperatureC": 10.6,
-          "windDirectionDeg": 336,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.7,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-10-30T13:00:00Z",
-        "validAtLocal": "2026-10-30T14:00:00+01:00",
-        "values": {
-          "temperatureC": 10.9,
-          "windDirectionDeg": 332,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-10-30T14:00:00Z",
-        "validAtLocal": "2026-10-30T15:00:00+01:00",
-        "values": {
-          "temperatureC": 10.7,
-          "windDirectionDeg": 333,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-10-30T15:00:00Z",
-        "validAtLocal": "2026-10-30T16:00:00+01:00",
-        "values": {
-          "temperatureC": 10.2,
-          "windDirectionDeg": 337,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
         "validAt": "2026-10-30T16:00:00Z",
         "validAtLocal": "2026-10-30T17:00:00+01:00",
         "values": {
-          "temperatureC": 9.6,
-          "windDirectionDeg": 338,
+          "temperatureC": 10.3,
+          "windDirectionDeg": 336,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1031.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -299,8 +215,22 @@
         "validAt": "2026-10-30T17:00:00Z",
         "validAtLocal": "2026-10-30T18:00:00+01:00",
         "values": {
+          "temperatureC": 9.6,
+          "windDirectionDeg": 330,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-10-30T18:00:00Z",
+        "validAtLocal": "2026-10-30T19:00:00+01:00",
+        "values": {
           "temperatureC": 8.9,
-          "windDirectionDeg": 339,
+          "windDirectionDeg": 315,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
@@ -310,29 +240,15 @@
         }
       },
       {
-        "validAt": "2026-10-30T18:00:00Z",
-        "validAtLocal": "2026-10-30T19:00:00+01:00",
-        "values": {
-          "temperatureC": 8.4,
-          "windDirectionDeg": 332,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
         "validAt": "2026-10-30T19:00:00Z",
         "validAtLocal": "2026-10-30T20:00:00+01:00",
         "values": {
-          "temperatureC": 8.3,
-          "windDirectionDeg": 326,
+          "temperatureC": 8.7,
+          "windDirectionDeg": 321,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.2,
+          "pressureHpa": 1032.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -341,12 +257,12 @@
         "validAt": "2026-10-30T20:00:00Z",
         "validAtLocal": "2026-10-30T21:00:00+01:00",
         "values": {
-          "temperatureC": 8.2,
+          "temperatureC": 8.6,
           "windDirectionDeg": 317,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -355,12 +271,12 @@
         "validAt": "2026-10-30T21:00:00Z",
         "validAtLocal": "2026-10-30T22:00:00+01:00",
         "values": {
-          "temperatureC": 8.1,
-          "windDirectionDeg": 318,
+          "temperatureC": 8.4,
+          "windDirectionDeg": 315,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -369,12 +285,12 @@
         "validAt": "2026-10-30T22:00:00Z",
         "validAtLocal": "2026-10-30T23:00:00+01:00",
         "values": {
-          "temperatureC": 7.8,
-          "windDirectionDeg": 319,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 324,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -383,12 +299,12 @@
         "validAt": "2026-10-30T23:00:00Z",
         "validAtLocal": "2026-10-31T00:00:00+01:00",
         "values": {
-          "temperatureC": 7.8,
-          "windDirectionDeg": 325,
+          "temperatureC": 8.0,
+          "windDirectionDeg": 320,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -397,12 +313,12 @@
         "validAt": "2026-10-31T00:00:00Z",
         "validAtLocal": "2026-10-31T01:00:00+01:00",
         "values": {
-          "temperatureC": 7.6,
-          "windDirectionDeg": 321,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "temperatureC": 7.9,
+          "windDirectionDeg": 318,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.5,
+          "pressureHpa": 1032.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -411,12 +327,12 @@
         "validAt": "2026-10-31T01:00:00Z",
         "validAtLocal": "2026-10-31T02:00:00+01:00",
         "values": {
-          "temperatureC": 7.4,
-          "windDirectionDeg": 320,
+          "temperatureC": 7.8,
+          "windDirectionDeg": 316,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.3,
+          "pressureHpa": 1032.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -425,12 +341,12 @@
         "validAt": "2026-10-31T02:00:00Z",
         "validAtLocal": "2026-10-31T03:00:00+01:00",
         "values": {
-          "temperatureC": 7.4,
-          "windDirectionDeg": 315,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "temperatureC": 7.8,
+          "windDirectionDeg": 314,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.0,
+          "pressureHpa": 1031.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -439,12 +355,12 @@
         "validAt": "2026-10-31T03:00:00Z",
         "validAtLocal": "2026-10-31T04:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 312,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "temperatureC": 7.9,
+          "windDirectionDeg": 309,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.7,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -453,12 +369,12 @@
         "validAt": "2026-10-31T04:00:00Z",
         "validAtLocal": "2026-10-31T05:00:00+01:00",
         "values": {
-          "temperatureC": 7.6,
-          "windDirectionDeg": 312,
+          "temperatureC": 8.0,
+          "windDirectionDeg": 311,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1031.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -467,12 +383,12 @@
         "validAt": "2026-10-31T05:00:00Z",
         "validAtLocal": "2026-10-31T06:00:00+01:00",
         "values": {
-          "temperatureC": 7.6,
-          "windDirectionDeg": 309,
-          "windSpeedKmh": 5.54,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 313,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1031.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -481,26 +397,26 @@
         "validAt": "2026-10-31T06:00:00Z",
         "validAtLocal": "2026-10-31T07:00:00+01:00",
         "values": {
-          "temperatureC": 7.8,
-          "windDirectionDeg": 314,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 317,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
-          "weatherCode": 61,
-          "weatherSymbol": "rain"
+          "pressureHpa": 1031.3,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
         }
       },
       {
         "validAt": "2026-10-31T07:00:00Z",
         "validAtLocal": "2026-10-31T08:00:00+01:00",
         "values": {
-          "temperatureC": 7.7,
-          "windDirectionDeg": 319,
-          "windSpeedKmh": 7.42,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 326,
+          "windSpeedKmh": 9.25,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.7,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -509,26 +425,26 @@
         "validAt": "2026-10-31T08:00:00Z",
         "validAtLocal": "2026-10-31T09:00:00+01:00",
         "values": {
-          "temperatureC": 8.0,
-          "windDirectionDeg": 321,
+          "temperatureC": 8.4,
+          "windDirectionDeg": 328,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
-          "weatherCode": 61,
-          "weatherSymbol": "rain"
+          "pressureHpa": 1031.4,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
         }
       },
       {
         "validAt": "2026-10-31T09:00:00Z",
         "validAtLocal": "2026-10-31T10:00:00+01:00",
         "values": {
-          "temperatureC": 8.5,
+          "temperatureC": 8.6,
           "windDirectionDeg": 334,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -539,10 +455,10 @@
         "values": {
           "temperatureC": 9.1,
           "windDirectionDeg": 338,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.4,
+          "pressureHpa": 1031.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -551,12 +467,12 @@
         "validAt": "2026-10-31T11:00:00Z",
         "validAtLocal": "2026-10-31T12:00:00+01:00",
         "values": {
-          "temperatureC": 9.4,
+          "temperatureC": 9.7,
           "windDirectionDeg": 336,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.2,
+          "pressureHpa": 1031.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -565,10 +481,10 @@
         "validAt": "2026-10-31T12:00:00Z",
         "validAtLocal": "2026-10-31T13:00:00+01:00",
         "values": {
-          "temperatureC": 9.7,
-          "windDirectionDeg": 338,
+          "temperatureC": 10.1,
+          "windDirectionDeg": 340,
           "windSpeedKmh": 12.96,
-          "windGustKmh": 22.21,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.6,
           "weatherCode": 3,
@@ -579,12 +495,12 @@
         "validAt": "2026-10-31T13:00:00Z",
         "validAtLocal": "2026-10-31T14:00:00+01:00",
         "values": {
-          "temperatureC": 10.0,
-          "windDirectionDeg": 339,
+          "temperatureC": 10.3,
+          "windDirectionDeg": 338,
           "windSpeedKmh": 12.96,
-          "windGustKmh": 22.21,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.5,
+          "pressureHpa": 1030.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -593,12 +509,12 @@
         "validAt": "2026-10-31T14:00:00Z",
         "validAtLocal": "2026-10-31T15:00:00+01:00",
         "values": {
-          "temperatureC": 10.1,
+          "temperatureC": 10.2,
           "windDirectionDeg": 338,
-          "windSpeedKmh": 11.12,
+          "windSpeedKmh": 12.96,
           "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.1,
+          "pressureHpa": 1030.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -608,25 +524,25 @@
         "validAtLocal": "2026-10-31T16:00:00+01:00",
         "values": {
           "temperatureC": 9.7,
-          "windDirectionDeg": 340,
+          "windDirectionDeg": 341,
           "windSpeedKmh": 11.12,
           "windGustKmh": 18.5,
-          "precipitation1hMm": 0.1,
-          "pressureHpa": 1030.0,
-          "weatherCode": 61,
-          "weatherSymbol": "rain"
+          "precipitation1hMm": 0,
+          "pressureHpa": 1029.9,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
         }
       },
       {
         "validAt": "2026-10-31T16:00:00Z",
         "validAtLocal": "2026-10-31T17:00:00+01:00",
         "values": {
-          "temperatureC": 9.1,
-          "windDirectionDeg": 341,
+          "temperatureC": 8.9,
+          "windDirectionDeg": 344,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1029.9,
+          "pressureHpa": 1029.8,
           "weatherCode": 61,
           "weatherSymbol": "rain"
         }
@@ -635,8 +551,8 @@
         "validAt": "2026-10-31T17:00:00Z",
         "validAtLocal": "2026-10-31T18:00:00+01:00",
         "values": {
-          "temperatureC": 8.2,
-          "windDirectionDeg": 344,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 349,
           "windSpeedKmh": 9.25,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -649,10 +565,10 @@
         "validAt": "2026-10-31T18:00:00Z",
         "validAtLocal": "2026-10-31T19:00:00+01:00",
         "values": {
-          "temperatureC": 7.7,
-          "windDirectionDeg": 346,
+          "temperatureC": 7.6,
+          "windDirectionDeg": 347,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.0,
           "weatherCode": 3,
@@ -664,11 +580,11 @@
         "validAtLocal": "2026-10-31T20:00:00+01:00",
         "values": {
           "temperatureC": 7.4,
-          "windDirectionDeg": 347,
+          "windDirectionDeg": 348,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.3,
+          "pressureHpa": 1030.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -677,10 +593,10 @@
         "validAt": "2026-10-31T20:00:00Z",
         "validAtLocal": "2026-10-31T21:00:00+01:00",
         "values": {
-          "temperatureC": 7.1,
-          "windDirectionDeg": 350,
+          "temperatureC": 6.9,
+          "windDirectionDeg": 352,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.5,
           "weatherCode": 3,
@@ -691,12 +607,12 @@
         "validAt": "2026-10-31T21:00:00Z",
         "validAtLocal": "2026-10-31T22:00:00+01:00",
         "values": {
-          "temperatureC": 6.8,
-          "windDirectionDeg": 357,
-          "windSpeedKmh": 12.96,
-          "windGustKmh": 22.21,
+          "temperatureC": 6.6,
+          "windDirectionDeg": 359,
+          "windSpeedKmh": 11.12,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.4,
+          "pressureHpa": 1030.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -705,10 +621,10 @@
         "validAt": "2026-10-31T22:00:00Z",
         "validAtLocal": "2026-10-31T23:00:00+01:00",
         "values": {
-          "temperatureC": 6.5,
-          "windDirectionDeg": 358,
+          "temperatureC": 6.4,
+          "windDirectionDeg": 2,
           "windSpeedKmh": 12.96,
-          "windGustKmh": 22.21,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.6,
           "weatherCode": 3,
@@ -719,10 +635,10 @@
         "validAt": "2026-10-31T23:00:00Z",
         "validAtLocal": "2026-11-01T00:00:00+01:00",
         "values": {
-          "temperatureC": 6.3,
-          "windDirectionDeg": 4,
-          "windSpeedKmh": 12.96,
-          "windGustKmh": 22.21,
+          "temperatureC": 6.2,
+          "windDirectionDeg": 7,
+          "windSpeedKmh": 11.12,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.5,
           "weatherCode": 3,
@@ -733,12 +649,12 @@
         "validAt": "2026-11-01T00:00:00Z",
         "validAtLocal": "2026-11-01T01:00:00+01:00",
         "values": {
-          "temperatureC": 5.7,
-          "windDirectionDeg": 9,
+          "temperatureC": 5.8,
+          "windDirectionDeg": 13,
           "windSpeedKmh": 11.12,
           "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.6,
+          "pressureHpa": 1030.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -748,9 +664,9 @@
         "validAtLocal": "2026-11-01T02:00:00+01:00",
         "values": {
           "temperatureC": 5.7,
-          "windDirectionDeg": 12,
+          "windDirectionDeg": 19,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.2,
           "weatherCode": 3,
@@ -761,12 +677,12 @@
         "validAt": "2026-11-01T02:00:00Z",
         "validAtLocal": "2026-11-01T03:00:00+01:00",
         "values": {
-          "temperatureC": 5.7,
-          "windDirectionDeg": 9,
-          "windSpeedKmh": 11.12,
+          "temperatureC": 5.6,
+          "windDirectionDeg": 15,
+          "windSpeedKmh": 9.25,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.8,
+          "pressureHpa": 1030.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -775,12 +691,12 @@
         "validAt": "2026-11-01T03:00:00Z",
         "validAtLocal": "2026-11-01T04:00:00+01:00",
         "values": {
-          "temperatureC": 5.4,
-          "windDirectionDeg": 16,
+          "temperatureC": 5.3,
+          "windDirectionDeg": 23,
           "windSpeedKmh": 9.25,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.2,
+          "pressureHpa": 1030.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -789,22 +705,8 @@
         "validAt": "2026-11-01T04:00:00Z",
         "validAtLocal": "2026-11-01T05:00:00+01:00",
         "values": {
-          "temperatureC": 5.8,
-          "windDirectionDeg": 17,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1030.7,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-01T05:00:00Z",
-        "validAtLocal": "2026-11-01T06:00:00+01:00",
-        "values": {
-          "temperatureC": 5.7,
-          "windDirectionDeg": 21,
+          "temperatureC": 5.5,
+          "windDirectionDeg": 23,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
@@ -814,15 +716,29 @@
         }
       },
       {
+        "validAt": "2026-11-01T05:00:00Z",
+        "validAtLocal": "2026-11-01T06:00:00+01:00",
+        "values": {
+          "temperatureC": 5.6,
+          "windDirectionDeg": 26,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.3,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-01T06:00:00Z",
         "validAtLocal": "2026-11-01T07:00:00+01:00",
         "values": {
           "temperatureC": 5.6,
-          "windDirectionDeg": 28,
-          "windSpeedKmh": 9.25,
+          "windDirectionDeg": 33,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.8,
+          "pressureHpa": 1031.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -831,12 +747,12 @@
         "validAt": "2026-11-01T07:00:00Z",
         "validAtLocal": "2026-11-01T08:00:00+01:00",
         "values": {
-          "temperatureC": 6.3,
-          "windDirectionDeg": 38,
+          "temperatureC": 5.8,
+          "windDirectionDeg": 43,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1031.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -845,12 +761,12 @@
         "validAt": "2026-11-01T08:00:00Z",
         "validAtLocal": "2026-11-01T09:00:00+01:00",
         "values": {
-          "temperatureC": 6.5,
-          "windDirectionDeg": 47,
+          "temperatureC": 6.2,
+          "windDirectionDeg": 50,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1032.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -859,8 +775,8 @@
         "validAt": "2026-11-01T09:00:00Z",
         "validAtLocal": "2026-11-01T10:00:00+01:00",
         "values": {
-          "temperatureC": 7.1,
-          "windDirectionDeg": 57,
+          "temperatureC": 7.0,
+          "windDirectionDeg": 60,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -873,8 +789,8 @@
         "validAt": "2026-11-01T10:00:00Z",
         "validAtLocal": "2026-11-01T11:00:00+01:00",
         "values": {
-          "temperatureC": 7.9,
-          "windDirectionDeg": 63,
+          "temperatureC": 7.7,
+          "windDirectionDeg": 68,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -887,12 +803,12 @@
         "validAt": "2026-11-01T11:00:00Z",
         "validAtLocal": "2026-11-01T12:00:00+01:00",
         "values": {
-          "temperatureC": 8.3,
-          "windDirectionDeg": 63,
+          "temperatureC": 8.2,
+          "windDirectionDeg": 69,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -901,8 +817,8 @@
         "validAt": "2026-11-01T12:00:00Z",
         "validAtLocal": "2026-11-01T13:00:00+01:00",
         "values": {
-          "temperatureC": 8.5,
-          "windDirectionDeg": 61,
+          "temperatureC": 8.6,
+          "windDirectionDeg": 64,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -916,9 +832,9 @@
         "validAtLocal": "2026-11-01T14:00:00+01:00",
         "values": {
           "temperatureC": 8.7,
-          "windDirectionDeg": 57,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windDirectionDeg": 61,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
           "pressureHpa": 1032.2,
           "weatherCode": 3,
@@ -930,21 +846,7 @@
         "validAtLocal": "2026-11-01T15:00:00+01:00",
         "values": {
           "temperatureC": 8.5,
-          "windDirectionDeg": 53,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-01T15:00:00Z",
-        "validAtLocal": "2026-11-01T16:00:00+01:00",
-        "values": {
-          "temperatureC": 8.1,
-          "windDirectionDeg": 48,
+          "windDirectionDeg": 54,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
@@ -954,15 +856,29 @@
         }
       },
       {
+        "validAt": "2026-11-01T15:00:00Z",
+        "validAtLocal": "2026-11-01T16:00:00+01:00",
+        "values": {
+          "temperatureC": 8.0,
+          "windDirectionDeg": 49,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1032.0,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-01T16:00:00Z",
         "validAtLocal": "2026-11-01T17:00:00+01:00",
         "values": {
-          "temperatureC": 7.4,
-          "windDirectionDeg": 60,
+          "temperatureC": 7.3,
+          "windDirectionDeg": 54,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.2,
+          "pressureHpa": 1032.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -971,8 +887,22 @@
         "validAt": "2026-11-01T17:00:00Z",
         "validAtLocal": "2026-11-01T18:00:00+01:00",
         "values": {
-          "temperatureC": 6.8,
-          "windDirectionDeg": 60,
+          "temperatureC": 6.9,
+          "windDirectionDeg": 56,
+          "windSpeedKmh": 3.71,
+          "windGustKmh": 7.42,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1032.4,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-01T18:00:00Z",
+        "validAtLocal": "2026-11-01T19:00:00+01:00",
+        "values": {
+          "temperatureC": 6.1,
+          "windDirectionDeg": 56,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -982,29 +912,15 @@
         }
       },
       {
-        "validAt": "2026-11-01T18:00:00Z",
-        "validAtLocal": "2026-11-01T19:00:00+01:00",
-        "values": {
-          "temperatureC": 5.8,
-          "windDirectionDeg": 59,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 5.54,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.6,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
         "validAt": "2026-11-01T19:00:00Z",
         "validAtLocal": "2026-11-01T20:00:00+01:00",
         "values": {
-          "temperatureC": 5.1,
-          "windDirectionDeg": 59,
+          "temperatureC": 5.5,
+          "windDirectionDeg": 55,
           "windSpeedKmh": 3.71,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1032.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1013,12 +929,12 @@
         "validAt": "2026-11-01T20:00:00Z",
         "validAtLocal": "2026-11-01T21:00:00+01:00",
         "values": {
-          "temperatureC": 4.0,
-          "windDirectionDeg": 46,
+          "temperatureC": 4.8,
+          "windDirectionDeg": 43,
           "windSpeedKmh": 1.84,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1032.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1027,12 +943,12 @@
         "validAt": "2026-11-01T21:00:00Z",
         "validAtLocal": "2026-11-01T22:00:00+01:00",
         "values": {
-          "temperatureC": 3.4,
-          "windDirectionDeg": 34,
+          "temperatureC": 4.3,
+          "windDirectionDeg": 25,
           "windSpeedKmh": 1.84,
-          "windGustKmh": 3.71,
+          "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.7,
+          "pressureHpa": 1032.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1041,12 +957,12 @@
         "validAt": "2026-11-01T22:00:00Z",
         "validAtLocal": "2026-11-01T23:00:00+01:00",
         "values": {
-          "temperatureC": 3.1,
+          "temperatureC": 4.0,
           "windDirectionDeg": 21,
           "windSpeedKmh": 1.84,
-          "windGustKmh": 3.71,
+          "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1032.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1055,10 +971,10 @@
         "validAt": "2026-11-01T23:00:00Z",
         "validAtLocal": "2026-11-02T00:00:00+01:00",
         "values": {
-          "temperatureC": 3.0,
-          "windDirectionDeg": 37,
+          "temperatureC": 3.6,
+          "windDirectionDeg": 26,
           "windSpeedKmh": 1.84,
-          "windGustKmh": 3.71,
+          "windGustKmh": 5.54,
           "precipitation1hMm": 0,
           "pressureHpa": 1032.7,
           "weatherCode": 3,
@@ -1069,9 +985,9 @@
         "validAt": "2026-11-02T00:00:00Z",
         "validAtLocal": "2026-11-02T01:00:00+01:00",
         "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 20,
-          "windSpeedKmh": 1.84,
+          "temperatureC": 3.4,
+          "windDirectionDeg": 5,
+          "windSpeedKmh": 3.71,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
           "pressureHpa": 1032.5,
@@ -1083,9 +999,9 @@
         "validAt": "2026-11-02T01:00:00Z",
         "validAtLocal": "2026-11-02T02:00:00+01:00",
         "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 35,
-          "windSpeedKmh": 1.84,
+          "temperatureC": 3.3,
+          "windDirectionDeg": 12,
+          "windSpeedKmh": 3.71,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
           "pressureHpa": 1032.4,
@@ -1097,12 +1013,12 @@
         "validAt": "2026-11-02T02:00:00Z",
         "validAtLocal": "2026-11-02T03:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 10,
-          "windSpeedKmh": 1.84,
+          "temperatureC": 2.8,
+          "windDirectionDeg": 9,
+          "windSpeedKmh": 3.71,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.1,
+          "pressureHpa": 1031.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1111,12 +1027,12 @@
         "validAt": "2026-11-02T03:00:00Z",
         "validAtLocal": "2026-11-02T04:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 46,
+          "temperatureC": 2.7,
+          "windDirectionDeg": 23,
           "windSpeedKmh": 3.71,
-          "windGustKmh": 5.54,
+          "windGustKmh": 7.42,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1031.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1125,12 +1041,12 @@
         "validAt": "2026-11-02T04:00:00Z",
         "validAtLocal": "2026-11-02T05:00:00+01:00",
         "values": {
-          "temperatureC": 2.6,
-          "windDirectionDeg": 53,
+          "temperatureC": 3.0,
+          "windDirectionDeg": 30,
           "windSpeedKmh": 3.71,
           "windGustKmh": 5.54,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1139,36 +1055,8 @@
         "validAt": "2026-11-02T05:00:00Z",
         "validAtLocal": "2026-11-02T06:00:00+01:00",
         "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 139,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 5.54,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.6,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-02T06:00:00Z",
-        "validAtLocal": "2026-11-02T07:00:00+01:00",
-        "values": {
-          "temperatureC": 3.3,
-          "windDirectionDeg": 95,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 7.42,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-02T07:00:00Z",
-        "validAtLocal": "2026-11-02T08:00:00+01:00",
-        "values": {
-          "temperatureC": 3.9,
-          "windDirectionDeg": 79,
+          "temperatureC": 3.2,
+          "windDirectionDeg": 48,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -1178,13 +1066,41 @@
         }
       },
       {
+        "validAt": "2026-11-02T06:00:00Z",
+        "validAtLocal": "2026-11-02T07:00:00+01:00",
+        "values": {
+          "temperatureC": 3.5,
+          "windDirectionDeg": 45,
+          "windSpeedKmh": 3.71,
+          "windGustKmh": 5.54,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.5,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-02T07:00:00Z",
+        "validAtLocal": "2026-11-02T08:00:00+01:00",
+        "values": {
+          "temperatureC": 4.1,
+          "windDirectionDeg": 44,
+          "windSpeedKmh": 3.71,
+          "windGustKmh": 7.42,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-02T08:00:00Z",
         "validAtLocal": "2026-11-02T09:00:00+01:00",
         "values": {
           "temperatureC": 4.9,
-          "windDirectionDeg": 65,
+          "windDirectionDeg": 27,
           "windSpeedKmh": 3.71,
-          "windGustKmh": 7.42,
+          "windGustKmh": 5.54,
           "precipitation1hMm": 0,
           "pressureHpa": 1031.6,
           "weatherCode": 3,
@@ -1196,11 +1112,11 @@
         "validAtLocal": "2026-11-02T10:00:00+01:00",
         "values": {
           "temperatureC": 5.9,
-          "windDirectionDeg": 79,
+          "windDirectionDeg": 50,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.7,
+          "pressureHpa": 1031.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1209,10 +1125,10 @@
         "validAt": "2026-11-02T10:00:00Z",
         "validAtLocal": "2026-11-02T11:00:00+01:00",
         "values": {
-          "temperatureC": 6.7,
-          "windDirectionDeg": 48,
+          "temperatureC": 6.8,
+          "windDirectionDeg": 41,
           "windSpeedKmh": 3.71,
-          "windGustKmh": 9.25,
+          "windGustKmh": 7.42,
           "precipitation1hMm": 0,
           "pressureHpa": 1031.4,
           "weatherCode": 3,
@@ -1223,12 +1139,12 @@
         "validAt": "2026-11-02T11:00:00Z",
         "validAtLocal": "2026-11-02T12:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 71,
+          "temperatureC": 7.6,
+          "windDirectionDeg": 46,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.2,
+          "pressureHpa": 1031.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1237,8 +1153,8 @@
         "validAt": "2026-11-02T12:00:00Z",
         "validAtLocal": "2026-11-02T13:00:00+01:00",
         "values": {
-          "temperatureC": 8.0,
-          "windDirectionDeg": 16,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 30,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
@@ -1251,12 +1167,12 @@
         "validAt": "2026-11-02T13:00:00Z",
         "validAtLocal": "2026-11-02T14:00:00+01:00",
         "values": {
-          "temperatureC": 8.2,
-          "windDirectionDeg": 351,
+          "temperatureC": 8.1,
+          "windDirectionDeg": 25,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.6,
+          "pressureHpa": 1030.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1266,11 +1182,11 @@
         "validAtLocal": "2026-11-02T15:00:00+01:00",
         "values": {
           "temperatureC": 8.1,
-          "windDirectionDeg": 20,
-          "windSpeedKmh": 3.71,
+          "windDirectionDeg": 31,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.4,
+          "pressureHpa": 1030.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1279,10 +1195,10 @@
         "validAt": "2026-11-02T15:00:00Z",
         "validAtLocal": "2026-11-02T16:00:00+01:00",
         "values": {
-          "temperatureC": 7.6,
-          "windDirectionDeg": 68,
+          "temperatureC": 7.5,
+          "windDirectionDeg": 60,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
           "pressureHpa": 1030.3,
           "weatherCode": 3,
@@ -1293,8 +1209,8 @@
         "validAt": "2026-11-02T16:00:00Z",
         "validAtLocal": "2026-11-02T17:00:00+01:00",
         "values": {
-          "temperatureC": 6.5,
-          "windDirectionDeg": 65,
+          "temperatureC": 6.4,
+          "windDirectionDeg": 51,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -1308,7 +1224,7 @@
         "validAtLocal": "2026-11-02T18:00:00+01:00",
         "values": {
           "temperatureC": 6.0,
-          "windDirectionDeg": 56,
+          "windDirectionDeg": 48,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -1321,8 +1237,8 @@
         "validAt": "2026-11-02T18:00:00Z",
         "validAtLocal": "2026-11-02T19:00:00+01:00",
         "values": {
-          "temperatureC": 5.3,
-          "windDirectionDeg": 41,
+          "temperatureC": 5.5,
+          "windDirectionDeg": 39,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -1335,12 +1251,12 @@
         "validAt": "2026-11-02T19:00:00Z",
         "validAtLocal": "2026-11-02T20:00:00+01:00",
         "values": {
-          "temperatureC": 5.0,
-          "windDirectionDeg": 42,
+          "temperatureC": 5.4,
+          "windDirectionDeg": 50,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.9,
+          "pressureHpa": 1031.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1349,22 +1265,8 @@
         "validAt": "2026-11-02T20:00:00Z",
         "validAtLocal": "2026-11-02T21:00:00+01:00",
         "values": {
-          "temperatureC": 4.0,
-          "windDirectionDeg": 19,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 7.42,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-02T21:00:00Z",
-        "validAtLocal": "2026-11-02T22:00:00+01:00",
-        "values": {
-          "temperatureC": 3.4,
-          "windDirectionDeg": 25,
+          "temperatureC": 4.3,
+          "windDirectionDeg": 34,
           "windSpeedKmh": 3.71,
           "windGustKmh": 7.42,
           "precipitation1hMm": 0,
@@ -1374,15 +1276,29 @@
         }
       },
       {
+        "validAt": "2026-11-02T21:00:00Z",
+        "validAtLocal": "2026-11-02T22:00:00+01:00",
+        "values": {
+          "temperatureC": 3.9,
+          "windDirectionDeg": 31,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-02T22:00:00Z",
         "validAtLocal": "2026-11-02T23:00:00+01:00",
         "values": {
-          "temperatureC": 3.2,
+          "temperatureC": 3.7,
           "windDirectionDeg": 31,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 7.42,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
+          "pressureHpa": 1031.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1391,12 +1307,12 @@
         "validAt": "2026-11-02T23:00:00Z",
         "validAtLocal": "2026-11-03T00:00:00+01:00",
         "values": {
-          "temperatureC": 3.0,
-          "windDirectionDeg": 17,
-          "windSpeedKmh": 3.71,
-          "windGustKmh": 7.42,
+          "temperatureC": 3.4,
+          "windDirectionDeg": 28,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1031.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1405,8 +1321,22 @@
         "validAt": "2026-11-03T00:00:00Z",
         "validAtLocal": "2026-11-03T01:00:00+01:00",
         "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 18,
+          "temperatureC": 3.2,
+          "windDirectionDeg": 27,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1031.7,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-03T01:00:00Z",
+        "validAtLocal": "2026-11-03T02:00:00+01:00",
+        "values": {
+          "temperatureC": 3.1,
+          "windDirectionDeg": 25,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
@@ -1416,25 +1346,11 @@
         }
       },
       {
-        "validAt": "2026-11-03T01:00:00Z",
-        "validAtLocal": "2026-11-03T02:00:00+01:00",
-        "values": {
-          "temperatureC": 2.4,
-          "windDirectionDeg": 21,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
         "validAt": "2026-11-03T02:00:00Z",
         "validAtLocal": "2026-11-03T03:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 20,
+          "temperatureC": 2.8,
+          "windDirectionDeg": 24,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
@@ -1447,8 +1363,8 @@
         "validAt": "2026-11-03T03:00:00Z",
         "validAtLocal": "2026-11-03T04:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 23,
+          "temperatureC": 2.8,
+          "windDirectionDeg": 24,
           "windSpeedKmh": 5.54,
           "windGustKmh": 9.25,
           "precipitation1hMm": 0,
@@ -1461,12 +1377,12 @@
         "validAt": "2026-11-03T04:00:00Z",
         "validAtLocal": "2026-11-03T05:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 23,
+          "temperatureC": 2.7,
+          "windDirectionDeg": 22,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1475,12 +1391,12 @@
         "validAt": "2026-11-03T05:00:00Z",
         "validAtLocal": "2026-11-03T06:00:00+01:00",
         "values": {
-          "temperatureC": 2.4,
+          "temperatureC": 2.8,
           "windDirectionDeg": 28,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1489,12 +1405,12 @@
         "validAt": "2026-11-03T06:00:00Z",
         "validAtLocal": "2026-11-03T07:00:00+01:00",
         "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 22,
+          "temperatureC": 3.4,
+          "windDirectionDeg": 18,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.7,
+          "pressureHpa": 1031.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1503,9 +1419,9 @@
         "validAt": "2026-11-03T07:00:00Z",
         "validAtLocal": "2026-11-03T08:00:00+01:00",
         "values": {
-          "temperatureC": 3.3,
-          "windDirectionDeg": 24,
-          "windSpeedKmh": 5.54,
+          "temperatureC": 3.6,
+          "windDirectionDeg": 19,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
           "pressureHpa": 1031.8,
@@ -1518,11 +1434,11 @@
         "validAtLocal": "2026-11-03T09:00:00+01:00",
         "values": {
           "temperatureC": 4.4,
-          "windDirectionDeg": 27,
+          "windDirectionDeg": 19,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1031.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1531,12 +1447,12 @@
         "validAt": "2026-11-03T09:00:00Z",
         "validAtLocal": "2026-11-03T10:00:00+01:00",
         "values": {
-          "temperatureC": 5.5,
-          "windDirectionDeg": 25,
+          "temperatureC": 5.3,
+          "windDirectionDeg": 19,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.0,
+          "pressureHpa": 1032.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1546,9 +1462,9 @@
         "validAtLocal": "2026-11-03T11:00:00+01:00",
         "values": {
           "temperatureC": 6.3,
-          "windDirectionDeg": 32,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windDirectionDeg": 26,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
           "pressureHpa": 1032.2,
           "weatherCode": 3,
@@ -1562,9 +1478,9 @@
           "temperatureC": 7.2,
           "windDirectionDeg": 29,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1031.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1573,12 +1489,12 @@
         "validAt": "2026-11-03T12:00:00Z",
         "validAtLocal": "2026-11-03T13:00:00+01:00",
         "values": {
-          "temperatureC": 7.8,
-          "windDirectionDeg": 23,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 18.5,
+          "temperatureC": 7.7,
+          "windDirectionDeg": 26,
+          "windSpeedKmh": 11.12,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
+          "pressureHpa": 1031.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1587,12 +1503,12 @@
         "validAt": "2026-11-03T13:00:00Z",
         "validAtLocal": "2026-11-03T14:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 19,
+          "temperatureC": 7.6,
+          "windDirectionDeg": 22,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1031.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1601,12 +1517,12 @@
         "validAt": "2026-11-03T14:00:00Z",
         "validAtLocal": "2026-11-03T15:00:00+01:00",
         "values": {
-          "temperatureC": 7.4,
-          "windDirectionDeg": 16,
+          "temperatureC": 7.6,
+          "windDirectionDeg": 21,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1031.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1615,12 +1531,12 @@
         "validAt": "2026-11-03T15:00:00Z",
         "validAtLocal": "2026-11-03T16:00:00+01:00",
         "values": {
-          "temperatureC": 6.7,
-          "windDirectionDeg": 13,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "temperatureC": 6.8,
+          "windDirectionDeg": 23,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1031.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1630,11 +1546,11 @@
         "validAtLocal": "2026-11-03T17:00:00+01:00",
         "values": {
           "temperatureC": 6.2,
-          "windDirectionDeg": 15,
+          "windDirectionDeg": 22,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.4,
+          "pressureHpa": 1031.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1643,12 +1559,12 @@
         "validAt": "2026-11-03T17:00:00Z",
         "validAtLocal": "2026-11-03T18:00:00+01:00",
         "values": {
-          "temperatureC": 5.6,
-          "windDirectionDeg": 7,
+          "temperatureC": 5.7,
+          "windDirectionDeg": 16,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1032.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1657,12 +1573,12 @@
         "validAt": "2026-11-03T18:00:00Z",
         "validAtLocal": "2026-11-03T19:00:00+01:00",
         "values": {
-          "temperatureC": 5.2,
-          "windDirectionDeg": 5,
+          "temperatureC": 5.3,
+          "windDirectionDeg": 21,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.8,
+          "pressureHpa": 1032.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1671,12 +1587,12 @@
         "validAt": "2026-11-03T19:00:00Z",
         "validAtLocal": "2026-11-03T20:00:00+01:00",
         "values": {
-          "temperatureC": 4.4,
-          "windDirectionDeg": 2,
-          "windSpeedKmh": 7.42,
+          "temperatureC": 4.6,
+          "windDirectionDeg": 16,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.3,
+          "pressureHpa": 1032.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1685,12 +1601,12 @@
         "validAt": "2026-11-03T20:00:00Z",
         "validAtLocal": "2026-11-03T21:00:00+01:00",
         "values": {
-          "temperatureC": 4.2,
-          "windDirectionDeg": 3,
-          "windSpeedKmh": 7.42,
+          "temperatureC": 4.3,
+          "windDirectionDeg": 14,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1032.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1699,12 +1615,12 @@
         "validAt": "2026-11-03T21:00:00Z",
         "validAtLocal": "2026-11-03T22:00:00+01:00",
         "values": {
-          "temperatureC": 3.5,
-          "windDirectionDeg": 3,
-          "windSpeedKmh": 7.42,
+          "temperatureC": 3.7,
+          "windDirectionDeg": 15,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.7,
+          "pressureHpa": 1032.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1713,12 +1629,12 @@
         "validAt": "2026-11-03T22:00:00Z",
         "validAtLocal": "2026-11-03T23:00:00+01:00",
         "values": {
-          "temperatureC": 3.2,
-          "windDirectionDeg": 5,
+          "temperatureC": 3.4,
+          "windDirectionDeg": 15,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.7,
+          "pressureHpa": 1032.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1727,12 +1643,12 @@
         "validAt": "2026-11-03T23:00:00Z",
         "validAtLocal": "2026-11-04T00:00:00+01:00",
         "values": {
-          "temperatureC": 3.0,
-          "windDirectionDeg": 6,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "temperatureC": 3.2,
+          "windDirectionDeg": 20,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1742,11 +1658,11 @@
         "validAtLocal": "2026-11-04T01:00:00+01:00",
         "values": {
           "temperatureC": 2.9,
-          "windDirectionDeg": 6,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
+          "windDirectionDeg": 10,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.1,
+          "pressureHpa": 1033.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1756,11 +1672,11 @@
         "validAtLocal": "2026-11-04T02:00:00+01:00",
         "values": {
           "temperatureC": 2.8,
-          "windDirectionDeg": 3,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
+          "windDirectionDeg": 9,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.1,
+          "pressureHpa": 1033.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1769,12 +1685,12 @@
         "validAt": "2026-11-04T02:00:00Z",
         "validAtLocal": "2026-11-04T03:00:00+01:00",
         "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 5,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
+          "temperatureC": 2.6,
+          "windDirectionDeg": 13,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.1,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1783,12 +1699,12 @@
         "validAt": "2026-11-04T03:00:00Z",
         "validAtLocal": "2026-11-04T04:00:00+01:00",
         "values": {
-          "temperatureC": 2.9,
-          "windDirectionDeg": 9,
-          "windSpeedKmh": 9.25,
+          "temperatureC": 2.7,
+          "windDirectionDeg": 16,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1797,12 +1713,12 @@
         "validAt": "2026-11-04T04:00:00Z",
         "validAtLocal": "2026-11-04T05:00:00+01:00",
         "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 9,
-          "windSpeedKmh": 9.25,
+          "temperatureC": 2.3,
+          "windDirectionDeg": 16,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.6,
+          "pressureHpa": 1033.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1811,12 +1727,12 @@
         "validAt": "2026-11-04T05:00:00Z",
         "validAtLocal": "2026-11-04T06:00:00+01:00",
         "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 10,
+          "temperatureC": 2.3,
+          "windDirectionDeg": 20,
           "windSpeedKmh": 9.25,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1825,12 +1741,12 @@
         "validAt": "2026-11-04T06:00:00Z",
         "validAtLocal": "2026-11-04T07:00:00+01:00",
         "values": {
-          "temperatureC": 2.9,
-          "windDirectionDeg": 13,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "temperatureC": 2.3,
+          "windDirectionDeg": 23,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.0,
+          "pressureHpa": 1033.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1839,12 +1755,12 @@
         "validAt": "2026-11-04T07:00:00Z",
         "validAtLocal": "2026-11-04T08:00:00+01:00",
         "values": {
-          "temperatureC": 3.6,
-          "windDirectionDeg": 16,
-          "windSpeedKmh": 11.12,
+          "temperatureC": 2.8,
+          "windDirectionDeg": 27,
+          "windSpeedKmh": 9.25,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1853,12 +1769,12 @@
         "validAt": "2026-11-04T08:00:00Z",
         "validAtLocal": "2026-11-04T09:00:00+01:00",
         "values": {
-          "temperatureC": 4.6,
-          "windDirectionDeg": 24,
+          "temperatureC": 3.8,
+          "windDirectionDeg": 33,
           "windSpeedKmh": 11.12,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
+          "pressureHpa": 1033.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1867,12 +1783,12 @@
         "validAt": "2026-11-04T09:00:00Z",
         "validAtLocal": "2026-11-04T10:00:00+01:00",
         "values": {
-          "temperatureC": 5.3,
-          "windDirectionDeg": 40,
+          "temperatureC": 4.9,
+          "windDirectionDeg": 52,
           "windSpeedKmh": 11.12,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
+          "pressureHpa": 1033.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1881,12 +1797,12 @@
         "validAt": "2026-11-04T10:00:00Z",
         "validAtLocal": "2026-11-04T11:00:00+01:00",
         "values": {
-          "temperatureC": 6.6,
-          "windDirectionDeg": 28,
+          "temperatureC": 5.8,
+          "windDirectionDeg": 52,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.1,
+          "pressureHpa": 1033.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1895,12 +1811,12 @@
         "validAt": "2026-11-04T11:00:00Z",
         "validAtLocal": "2026-11-04T12:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 32,
+          "temperatureC": 6.5,
+          "windDirectionDeg": 51,
           "windSpeedKmh": 11.12,
           "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1909,12 +1825,12 @@
         "validAt": "2026-11-04T12:00:00Z",
         "validAtLocal": "2026-11-04T13:00:00+01:00",
         "values": {
-          "temperatureC": 8.1,
-          "windDirectionDeg": 25,
+          "temperatureC": 7.3,
+          "windDirectionDeg": 45,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1923,12 +1839,12 @@
         "validAt": "2026-11-04T13:00:00Z",
         "validAtLocal": "2026-11-04T14:00:00+01:00",
         "values": {
-          "temperatureC": 8.5,
-          "windDirectionDeg": 25,
+          "temperatureC": 7.7,
+          "windDirectionDeg": 43,
           "windSpeedKmh": 11.12,
-          "windGustKmh": 18.5,
+          "windGustKmh": 20.38,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
+          "pressureHpa": 1033.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1937,12 +1853,12 @@
         "validAt": "2026-11-04T14:00:00Z",
         "validAtLocal": "2026-11-04T15:00:00+01:00",
         "values": {
-          "temperatureC": 8.1,
-          "windDirectionDeg": 29,
+          "temperatureC": 7.6,
+          "windDirectionDeg": 42,
           "windSpeedKmh": 9.25,
           "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.5,
+          "pressureHpa": 1032.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1951,12 +1867,12 @@
         "validAt": "2026-11-04T15:00:00Z",
         "validAtLocal": "2026-11-04T16:00:00+01:00",
         "values": {
-          "temperatureC": 7.8,
-          "windDirectionDeg": 32,
+          "temperatureC": 6.9,
+          "windDirectionDeg": 41,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.5,
+          "pressureHpa": 1032.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1965,12 +1881,12 @@
         "validAt": "2026-11-04T16:00:00Z",
         "validAtLocal": "2026-11-04T17:00:00+01:00",
         "values": {
-          "temperatureC": 7.0,
-          "windDirectionDeg": 38,
+          "temperatureC": 6.5,
+          "windDirectionDeg": 47,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.4,
+          "pressureHpa": 1033.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1979,12 +1895,12 @@
         "validAt": "2026-11-04T17:00:00Z",
         "validAtLocal": "2026-11-04T18:00:00+01:00",
         "values": {
-          "temperatureC": 6.2,
-          "windDirectionDeg": 45,
+          "temperatureC": 5.7,
+          "windDirectionDeg": 57,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -1993,12 +1909,12 @@
         "validAt": "2026-11-04T18:00:00Z",
         "validAtLocal": "2026-11-04T19:00:00+01:00",
         "values": {
-          "temperatureC": 5.3,
-          "windDirectionDeg": 40,
+          "temperatureC": 5.0,
+          "windDirectionDeg": 47,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.0,
+          "pressureHpa": 1033.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2007,12 +1923,12 @@
         "validAt": "2026-11-04T19:00:00Z",
         "validAtLocal": "2026-11-04T20:00:00+01:00",
         "values": {
-          "temperatureC": 4.8,
-          "windDirectionDeg": 41,
+          "temperatureC": 4.6,
+          "windDirectionDeg": 47,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
+          "pressureHpa": 1033.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2021,12 +1937,12 @@
         "validAt": "2026-11-04T20:00:00Z",
         "validAtLocal": "2026-11-04T21:00:00+01:00",
         "values": {
-          "temperatureC": 4.1,
-          "windDirectionDeg": 24,
+          "temperatureC": 3.8,
+          "windDirectionDeg": 45,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.0,
+          "pressureHpa": 1033.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2035,12 +1951,12 @@
         "validAt": "2026-11-04T21:00:00Z",
         "validAtLocal": "2026-11-04T22:00:00+01:00",
         "values": {
-          "temperatureC": 3.6,
-          "windDirectionDeg": 32,
-          "windSpeedKmh": 5.54,
+          "temperatureC": 3.4,
+          "windDirectionDeg": 35,
+          "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
+          "pressureHpa": 1033.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2049,8 +1965,120 @@
         "validAt": "2026-11-04T22:00:00Z",
         "validAtLocal": "2026-11-04T23:00:00+01:00",
         "values": {
-          "temperatureC": 3.2,
+          "temperatureC": 3.1,
           "windDirectionDeg": 30,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1033.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-04T23:00:00Z",
+        "validAtLocal": "2026-11-05T00:00:00+01:00",
+        "values": {
+          "temperatureC": 2.8,
+          "windDirectionDeg": 33,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1034.2,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T00:00:00Z",
+        "validAtLocal": "2026-11-05T01:00:00+01:00",
+        "values": {
+          "temperatureC": 2.6,
+          "windDirectionDeg": 29,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1034.2,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T01:00:00Z",
+        "validAtLocal": "2026-11-05T02:00:00+01:00",
+        "values": {
+          "temperatureC": 2.4,
+          "windDirectionDeg": 32,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1033.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T02:00:00Z",
+        "validAtLocal": "2026-11-05T03:00:00+01:00",
+        "values": {
+          "temperatureC": 2.2,
+          "windDirectionDeg": 28,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 9.25,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1034.0,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T03:00:00Z",
+        "validAtLocal": "2026-11-05T04:00:00+01:00",
+        "values": {
+          "temperatureC": 2.1,
+          "windDirectionDeg": 33,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1033.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T04:00:00Z",
+        "validAtLocal": "2026-11-05T05:00:00+01:00",
+        "values": {
+          "temperatureC": 2.1,
+          "windDirectionDeg": 44,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1033.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T05:00:00Z",
+        "validAtLocal": "2026-11-05T06:00:00+01:00",
+        "values": {
+          "temperatureC": 2.3,
+          "windDirectionDeg": 54,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1033.9,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-05T06:00:00Z",
+        "validAtLocal": "2026-11-05T07:00:00+01:00",
+        "values": {
+          "temperatureC": 2.6,
+          "windDirectionDeg": 56,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
@@ -2060,127 +2088,15 @@
         }
       },
       {
-        "validAt": "2026-11-04T23:00:00Z",
-        "validAtLocal": "2026-11-05T00:00:00+01:00",
-        "values": {
-          "temperatureC": 3.1,
-          "windDirectionDeg": 34,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.7,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T00:00:00Z",
-        "validAtLocal": "2026-11-05T01:00:00+01:00",
-        "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 29,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.8,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T01:00:00Z",
-        "validAtLocal": "2026-11-05T02:00:00+01:00",
-        "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 34,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.3,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T02:00:00Z",
-        "validAtLocal": "2026-11-05T03:00:00+01:00",
-        "values": {
-          "temperatureC": 2.5,
-          "windDirectionDeg": 29,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T03:00:00Z",
-        "validAtLocal": "2026-11-05T04:00:00+01:00",
-        "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 35,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.0,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T04:00:00Z",
-        "validAtLocal": "2026-11-05T05:00:00+01:00",
-        "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 44,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T05:00:00Z",
-        "validAtLocal": "2026-11-05T06:00:00+01:00",
-        "values": {
-          "temperatureC": 2.5,
-          "windDirectionDeg": 49,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1033.0,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T06:00:00Z",
-        "validAtLocal": "2026-11-05T07:00:00+01:00",
-        "values": {
-          "temperatureC": 2.8,
-          "windDirectionDeg": 50,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1032.8,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
         "validAt": "2026-11-05T07:00:00Z",
         "validAtLocal": "2026-11-05T08:00:00+01:00",
         "values": {
-          "temperatureC": 3.4,
-          "windDirectionDeg": 60,
+          "temperatureC": 3.3,
+          "windDirectionDeg": 65,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.6,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2189,12 +2105,12 @@
         "validAt": "2026-11-05T08:00:00Z",
         "validAtLocal": "2026-11-05T09:00:00+01:00",
         "values": {
-          "temperatureC": 4.1,
-          "windDirectionDeg": 54,
+          "temperatureC": 4.0,
+          "windDirectionDeg": 73,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.9,
+          "pressureHpa": 1033.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2203,12 +2119,12 @@
         "validAt": "2026-11-05T09:00:00Z",
         "validAtLocal": "2026-11-05T10:00:00+01:00",
         "values": {
-          "temperatureC": 5.5,
-          "windDirectionDeg": 47,
+          "temperatureC": 5.3,
+          "windDirectionDeg": 74,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1033.2,
+          "pressureHpa": 1033.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2217,13 +2133,13 @@
         "validAt": "2026-11-05T10:00:00Z",
         "validAtLocal": "2026-11-05T11:00:00+01:00",
         "values": {
-          "temperatureC": 6.9,
-          "windDirectionDeg": 49,
+          "temperatureC": 6.7,
+          "windDirectionDeg": 83,
           "windSpeedKmh": 9.25,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.5,
-          "weatherCode": 2,
+          "pressureHpa": 1033.1,
+          "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
       },
@@ -2231,12 +2147,12 @@
         "validAt": "2026-11-05T11:00:00Z",
         "validAtLocal": "2026-11-05T12:00:00+01:00",
         "values": {
-          "temperatureC": 7.7,
-          "windDirectionDeg": 48,
+          "temperatureC": 7.5,
+          "windDirectionDeg": 81,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.3,
+          "pressureHpa": 1032.6,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2245,12 +2161,12 @@
         "validAt": "2026-11-05T12:00:00Z",
         "validAtLocal": "2026-11-05T13:00:00+01:00",
         "values": {
-          "temperatureC": 8.1,
-          "windDirectionDeg": 42,
+          "temperatureC": 8.0,
+          "windDirectionDeg": 71,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1032.1,
+          "pressureHpa": 1032.2,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2259,8 +2175,8 @@
         "validAt": "2026-11-05T13:00:00Z",
         "validAtLocal": "2026-11-05T14:00:00+01:00",
         "values": {
-          "temperatureC": 8.4,
-          "windDirectionDeg": 31,
+          "temperatureC": 8.2,
+          "windDirectionDeg": 59,
           "windSpeedKmh": 7.42,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
@@ -2273,12 +2189,12 @@
         "validAt": "2026-11-05T14:00:00Z",
         "validAtLocal": "2026-11-05T15:00:00+01:00",
         "values": {
-          "temperatureC": 8.2,
-          "windDirectionDeg": 40,
+          "temperatureC": 8.0,
+          "windDirectionDeg": 59,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.5,
+          "pressureHpa": 1031.6,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2287,12 +2203,12 @@
         "validAt": "2026-11-05T15:00:00Z",
         "validAtLocal": "2026-11-05T16:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 48,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
+          "temperatureC": 7.3,
+          "windDirectionDeg": 63,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1031.2,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2301,12 +2217,12 @@
         "validAt": "2026-11-05T16:00:00Z",
         "validAtLocal": "2026-11-05T17:00:00+01:00",
         "values": {
-          "temperatureC": 6.5,
-          "windDirectionDeg": 67,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "temperatureC": 6.2,
+          "windDirectionDeg": 75,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.9,
+          "pressureHpa": 1031.0,
           "weatherCode": 1,
           "weatherSymbol": "cloud"
         }
@@ -2315,10 +2231,10 @@
         "validAt": "2026-11-05T17:00:00Z",
         "validAtLocal": "2026-11-05T18:00:00+01:00",
         "values": {
-          "temperatureC": 5.6,
-          "windDirectionDeg": 62,
+          "temperatureC": 5.5,
+          "windDirectionDeg": 80,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
           "pressureHpa": 1031.0,
           "weatherCode": 1,
@@ -2329,12 +2245,12 @@
         "validAt": "2026-11-05T18:00:00Z",
         "validAtLocal": "2026-11-05T19:00:00+01:00",
         "values": {
-          "temperatureC": 4.7,
-          "windDirectionDeg": 57,
+          "temperatureC": 4.6,
+          "windDirectionDeg": 65,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1030.9,
           "weatherCode": 1,
           "weatherSymbol": "cloud"
         }
@@ -2344,11 +2260,11 @@
         "validAtLocal": "2026-11-05T20:00:00+01:00",
         "values": {
           "temperatureC": 4.4,
-          "windDirectionDeg": 66,
+          "windDirectionDeg": 71,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.1,
+          "pressureHpa": 1030.9,
           "weatherCode": 1,
           "weatherSymbol": "cloud"
         }
@@ -2357,12 +2273,12 @@
         "validAt": "2026-11-05T20:00:00Z",
         "validAtLocal": "2026-11-05T21:00:00+01:00",
         "values": {
-          "temperatureC": 3.8,
-          "windDirectionDeg": 67,
+          "temperatureC": 3.9,
+          "windDirectionDeg": 49,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1031.4,
+          "pressureHpa": 1031.1,
           "weatherCode": 1,
           "weatherSymbol": "cloud"
         }
@@ -2371,50 +2287,8 @@
         "validAt": "2026-11-05T21:00:00Z",
         "validAtLocal": "2026-11-05T22:00:00+01:00",
         "values": {
-          "temperatureC": 3.3,
-          "windDirectionDeg": 22,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.4,
-          "weatherCode": 1,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T22:00:00Z",
-        "validAtLocal": "2026-11-05T23:00:00+01:00",
-        "values": {
-          "temperatureC": 3.0,
-          "windDirectionDeg": 33,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.4,
-          "weatherCode": 1,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-05T23:00:00Z",
-        "validAtLocal": "2026-11-06T00:00:00+01:00",
-        "values": {
-          "temperatureC": 2.7,
-          "windDirectionDeg": 145,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1031.3,
-          "weatherCode": 1,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T00:00:00Z",
-        "validAtLocal": "2026-11-06T01:00:00+01:00",
-        "values": {
-          "temperatureC": 2.6,
-          "windDirectionDeg": 125,
+          "temperatureC": 3.6,
+          "windDirectionDeg": 32,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
@@ -2424,11 +2298,11 @@
         }
       },
       {
-        "validAt": "2026-11-06T01:00:00Z",
-        "validAtLocal": "2026-11-06T02:00:00+01:00",
+        "validAt": "2026-11-05T22:00:00Z",
+        "validAtLocal": "2026-11-05T23:00:00+01:00",
         "values": {
-          "temperatureC": 2.4,
-          "windDirectionDeg": 103,
+          "temperatureC": 3.2,
+          "windDirectionDeg": 40,
           "windSpeedKmh": 7.42,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
@@ -2438,15 +2312,57 @@
         }
       },
       {
-        "validAt": "2026-11-06T02:00:00Z",
-        "validAtLocal": "2026-11-06T03:00:00+01:00",
+        "validAt": "2026-11-05T23:00:00Z",
+        "validAtLocal": "2026-11-06T00:00:00+01:00",
         "values": {
-          "temperatureC": 2.1,
-          "windDirectionDeg": 104,
+          "temperatureC": 3.0,
+          "windDirectionDeg": 130,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1030.8,
+          "weatherCode": 2,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T00:00:00Z",
+        "validAtLocal": "2026-11-06T01:00:00+01:00",
+        "values": {
+          "temperatureC": 3.0,
+          "windDirectionDeg": 84,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.7,
+          "pressureHpa": 1030.6,
+          "weatherCode": 1,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T01:00:00Z",
+        "validAtLocal": "2026-11-06T02:00:00+01:00",
+        "values": {
+          "temperatureC": 2.9,
+          "windDirectionDeg": 82,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1030.4,
+          "weatherCode": 1,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T02:00:00Z",
+        "validAtLocal": "2026-11-06T03:00:00+01:00",
+        "values": {
+          "temperatureC": 2.7,
+          "windDirectionDeg": 87,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1030.1,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2455,12 +2371,12 @@
         "validAt": "2026-11-06T03:00:00Z",
         "validAtLocal": "2026-11-06T04:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 119,
+          "temperatureC": 2.6,
+          "windDirectionDeg": 101,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.3,
+          "pressureHpa": 1029.7,
           "weatherCode": 2,
           "weatherSymbol": "cloud"
         }
@@ -2469,12 +2385,12 @@
         "validAt": "2026-11-06T04:00:00Z",
         "validAtLocal": "2026-11-06T05:00:00+01:00",
         "values": {
-          "temperatureC": 2.2,
-          "windDirectionDeg": 118,
+          "temperatureC": 2.5,
+          "windDirectionDeg": 100,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.2,
+          "pressureHpa": 1029.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2484,11 +2400,11 @@
         "validAtLocal": "2026-11-06T06:00:00+01:00",
         "values": {
           "temperatureC": 2.5,
-          "windDirectionDeg": 121,
+          "windDirectionDeg": 106,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.3,
+          "pressureHpa": 1029.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2498,11 +2414,11 @@
         "validAtLocal": "2026-11-06T07:00:00+01:00",
         "values": {
           "temperatureC": 2.6,
-          "windDirectionDeg": 113,
+          "windDirectionDeg": 98,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.3,
+          "pressureHpa": 1029.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2512,11 +2428,11 @@
         "validAtLocal": "2026-11-06T08:00:00+01:00",
         "values": {
           "temperatureC": 3.2,
-          "windDirectionDeg": 111,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "windDirectionDeg": 100,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.1,
+          "pressureHpa": 1029.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2525,12 +2441,12 @@
         "validAt": "2026-11-06T08:00:00Z",
         "validAtLocal": "2026-11-06T09:00:00+01:00",
         "values": {
-          "temperatureC": 3.5,
-          "windDirectionDeg": 117,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
+          "temperatureC": 3.8,
+          "windDirectionDeg": 105,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1030.1,
+          "pressureHpa": 1029.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2540,11 +2456,11 @@
         "validAtLocal": "2026-11-06T10:00:00+01:00",
         "values": {
           "temperatureC": 4.6,
-          "windDirectionDeg": 118,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 11.12,
+          "windDirectionDeg": 108,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1029.9,
+          "pressureHpa": 1028.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2554,11 +2470,11 @@
         "validAtLocal": "2026-11-06T11:00:00+01:00",
         "values": {
           "temperatureC": 5.8,
-          "windDirectionDeg": 118,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windDirectionDeg": 108,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1029.6,
+          "pressureHpa": 1028.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2567,12 +2483,12 @@
         "validAt": "2026-11-06T11:00:00Z",
         "validAtLocal": "2026-11-06T12:00:00+01:00",
         "values": {
-          "temperatureC": 6.9,
-          "windDirectionDeg": 112,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "temperatureC": 6.8,
+          "windDirectionDeg": 91,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1029.1,
+          "pressureHpa": 1028.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2582,11 +2498,11 @@
         "validAtLocal": "2026-11-06T13:00:00+01:00",
         "values": {
           "temperatureC": 7.5,
-          "windDirectionDeg": 113,
+          "windDirectionDeg": 93,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1028.6,
+          "pressureHpa": 1027.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2595,12 +2511,12 @@
         "validAt": "2026-11-06T13:00:00Z",
         "validAtLocal": "2026-11-06T14:00:00+01:00",
         "values": {
-          "temperatureC": 8.0,
-          "windDirectionDeg": 99,
+          "temperatureC": 7.9,
+          "windDirectionDeg": 76,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
+          "windGustKmh": 18.5,
           "precipitation1hMm": 0,
-          "pressureHpa": 1028.2,
+          "pressureHpa": 1026.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2609,12 +2525,12 @@
         "validAt": "2026-11-06T14:00:00Z",
         "validAtLocal": "2026-11-06T15:00:00+01:00",
         "values": {
-          "temperatureC": 7.5,
-          "windDirectionDeg": 95,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 14.83,
+          "temperatureC": 7.8,
+          "windDirectionDeg": 65,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1027.8,
+          "pressureHpa": 1026.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2623,12 +2539,12 @@
         "validAt": "2026-11-06T15:00:00Z",
         "validAtLocal": "2026-11-06T16:00:00+01:00",
         "values": {
-          "temperatureC": 7.2,
-          "windDirectionDeg": 87,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
+          "temperatureC": 7.3,
+          "windDirectionDeg": 66,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1027.5,
+          "pressureHpa": 1026.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2638,148 +2554,8 @@
         "validAtLocal": "2026-11-06T17:00:00+01:00",
         "values": {
           "temperatureC": 6.6,
-          "windDirectionDeg": 104,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 11.12,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1028.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T17:00:00Z",
-        "validAtLocal": "2026-11-06T18:00:00+01:00",
-        "values": {
-          "temperatureC": 6.2,
-          "windDirectionDeg": 107,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 9.25,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1028.3,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T18:00:00Z",
-        "validAtLocal": "2026-11-06T19:00:00+01:00",
-        "values": {
-          "temperatureC": 6.0,
-          "windDirectionDeg": 107,
+          "windDirectionDeg": 74,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1028.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T19:00:00Z",
-        "validAtLocal": "2026-11-06T20:00:00+01:00",
-        "values": {
-          "temperatureC": 5.8,
-          "windDirectionDeg": 111,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1028.1,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T20:00:00Z",
-        "validAtLocal": "2026-11-06T21:00:00+01:00",
-        "values": {
-          "temperatureC": 5.6,
-          "windDirectionDeg": 128,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1028.0,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T21:00:00Z",
-        "validAtLocal": "2026-11-06T22:00:00+01:00",
-        "values": {
-          "temperatureC": 5.2,
-          "windDirectionDeg": 102,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1027.8,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T22:00:00Z",
-        "validAtLocal": "2026-11-06T23:00:00+01:00",
-        "values": {
-          "temperatureC": 4.8,
-          "windDirectionDeg": 88,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1027.7,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-06T23:00:00Z",
-        "validAtLocal": "2026-11-07T00:00:00+01:00",
-        "values": {
-          "temperatureC": 4.7,
-          "windDirectionDeg": 105,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1027.4,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-07T00:00:00Z",
-        "validAtLocal": "2026-11-07T01:00:00+01:00",
-        "values": {
-          "temperatureC": 4.6,
-          "windDirectionDeg": 102,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1027.3,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-07T01:00:00Z",
-        "validAtLocal": "2026-11-07T02:00:00+01:00",
-        "values": {
-          "temperatureC": 4.2,
-          "windDirectionDeg": 105,
-          "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1026.9,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-07T02:00:00Z",
-        "validAtLocal": "2026-11-07T03:00:00+01:00",
-        "values": {
-          "temperatureC": 4.0,
-          "windDirectionDeg": 119,
-          "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
           "pressureHpa": 1026.6,
@@ -2788,15 +2564,155 @@
         }
       },
       {
-        "validAt": "2026-11-07T03:00:00Z",
-        "validAtLocal": "2026-11-07T04:00:00+01:00",
+        "validAt": "2026-11-06T17:00:00Z",
+        "validAtLocal": "2026-11-06T18:00:00+01:00",
         "values": {
-          "temperatureC": 3.9,
-          "windDirectionDeg": 116,
+          "temperatureC": 5.9,
+          "windDirectionDeg": 87,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 11.12,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1026.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T18:00:00Z",
+        "validAtLocal": "2026-11-06T19:00:00+01:00",
+        "values": {
+          "temperatureC": 5.5,
+          "windDirectionDeg": 84,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1025.4,
+          "pressureHpa": 1026.7,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T19:00:00Z",
+        "validAtLocal": "2026-11-06T20:00:00+01:00",
+        "values": {
+          "temperatureC": 5.3,
+          "windDirectionDeg": 88,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1026.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T20:00:00Z",
+        "validAtLocal": "2026-11-06T21:00:00+01:00",
+        "values": {
+          "temperatureC": 4.9,
+          "windDirectionDeg": 119,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1026.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T21:00:00Z",
+        "validAtLocal": "2026-11-06T22:00:00+01:00",
+        "values": {
+          "temperatureC": 4.5,
+          "windDirectionDeg": 77,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1026.4,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T22:00:00Z",
+        "validAtLocal": "2026-11-06T23:00:00+01:00",
+        "values": {
+          "temperatureC": 4.1,
+          "windDirectionDeg": 74,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1026.0,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-06T23:00:00Z",
+        "validAtLocal": "2026-11-07T00:00:00+01:00",
+        "values": {
+          "temperatureC": 3.9,
+          "windDirectionDeg": 85,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1025.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-07T00:00:00Z",
+        "validAtLocal": "2026-11-07T01:00:00+01:00",
+        "values": {
+          "temperatureC": 3.8,
+          "windDirectionDeg": 80,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1025.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-07T01:00:00Z",
+        "validAtLocal": "2026-11-07T02:00:00+01:00",
+        "values": {
+          "temperatureC": 3.4,
+          "windDirectionDeg": 98,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1025.5,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-07T02:00:00Z",
+        "validAtLocal": "2026-11-07T03:00:00+01:00",
+        "values": {
+          "temperatureC": 3.3,
+          "windDirectionDeg": 96,
+          "windSpeedKmh": 5.54,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1025.2,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-07T03:00:00Z",
+        "validAtLocal": "2026-11-07T04:00:00+01:00",
+        "values": {
+          "temperatureC": 3.2,
+          "windDirectionDeg": 93,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1024.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2805,12 +2721,12 @@
         "validAt": "2026-11-07T04:00:00Z",
         "validAtLocal": "2026-11-07T05:00:00+01:00",
         "values": {
-          "temperatureC": 3.4,
-          "windDirectionDeg": 84,
+          "temperatureC": 2.9,
+          "windDirectionDeg": 106,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1025.0,
+          "pressureHpa": 1024.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2819,12 +2735,12 @@
         "validAt": "2026-11-07T05:00:00Z",
         "validAtLocal": "2026-11-07T06:00:00+01:00",
         "values": {
-          "temperatureC": 3.4,
-          "windDirectionDeg": 91,
+          "temperatureC": 3.1,
+          "windDirectionDeg": 76,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1024.9,
+          "pressureHpa": 1024.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2833,12 +2749,12 @@
         "validAt": "2026-11-07T06:00:00Z",
         "validAtLocal": "2026-11-07T07:00:00+01:00",
         "values": {
-          "temperatureC": 3.2,
-          "windDirectionDeg": 86,
+          "temperatureC": 3.1,
+          "windDirectionDeg": 75,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1024.8,
+          "pressureHpa": 1024.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2847,12 +2763,12 @@
         "validAt": "2026-11-07T07:00:00Z",
         "validAtLocal": "2026-11-07T08:00:00+01:00",
         "values": {
-          "temperatureC": 3.7,
-          "windDirectionDeg": 107,
+          "temperatureC": 3.5,
+          "windDirectionDeg": 97,
           "windSpeedKmh": 5.54,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1024.2,
+          "pressureHpa": 1023.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2861,12 +2777,12 @@
         "validAt": "2026-11-07T08:00:00Z",
         "validAtLocal": "2026-11-07T09:00:00+01:00",
         "values": {
-          "temperatureC": 4.5,
-          "windDirectionDeg": 123,
+          "temperatureC": 4.4,
+          "windDirectionDeg": 117,
           "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1024.4,
+          "pressureHpa": 1023.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2875,12 +2791,12 @@
         "validAt": "2026-11-07T09:00:00Z",
         "validAtLocal": "2026-11-07T10:00:00+01:00",
         "values": {
-          "temperatureC": 5.3,
-          "windDirectionDeg": 130,
+          "temperatureC": 5.2,
+          "windDirectionDeg": 124,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1024.2,
+          "pressureHpa": 1023.8,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2890,21 +2806,7 @@
         "validAtLocal": "2026-11-07T11:00:00+01:00",
         "values": {
           "temperatureC": 6.2,
-          "windDirectionDeg": 124,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1023.9,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-07T11:00:00Z",
-        "validAtLocal": "2026-11-07T12:00:00+01:00",
-        "values": {
-          "temperatureC": 7.1,
-          "windDirectionDeg": 116,
+          "windDirectionDeg": 121,
           "windSpeedKmh": 9.25,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -2914,15 +2816,29 @@
         }
       },
       {
+        "validAt": "2026-11-07T11:00:00Z",
+        "validAtLocal": "2026-11-07T12:00:00+01:00",
+        "values": {
+          "temperatureC": 7.1,
+          "windDirectionDeg": 110,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1022.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-07T12:00:00Z",
         "validAtLocal": "2026-11-07T13:00:00+01:00",
         "values": {
           "temperatureC": 7.5,
-          "windDirectionDeg": 133,
+          "windDirectionDeg": 136,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1023.1,
+          "pressureHpa": 1022.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2932,11 +2848,11 @@
         "validAtLocal": "2026-11-07T14:00:00+01:00",
         "values": {
           "temperatureC": 7.8,
-          "windDirectionDeg": 135,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windDirectionDeg": 118,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.8,
+          "pressureHpa": 1022.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2946,11 +2862,11 @@
         "validAtLocal": "2026-11-07T15:00:00+01:00",
         "values": {
           "temperatureC": 7.6,
-          "windDirectionDeg": 120,
+          "windDirectionDeg": 119,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.5,
+          "pressureHpa": 1021.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2960,11 +2876,11 @@
         "validAtLocal": "2026-11-07T16:00:00+01:00",
         "values": {
           "temperatureC": 7.0,
-          "windDirectionDeg": 122,
+          "windDirectionDeg": 98,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.5,
+          "pressureHpa": 1021.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2974,11 +2890,11 @@
         "validAtLocal": "2026-11-07T17:00:00+01:00",
         "values": {
           "temperatureC": 6.3,
-          "windDirectionDeg": 137,
+          "windDirectionDeg": 118,
           "windSpeedKmh": 5.54,
           "windGustKmh": 11.12,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.6,
+          "pressureHpa": 1022.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -2988,11 +2904,11 @@
         "validAtLocal": "2026-11-07T18:00:00+01:00",
         "values": {
           "temperatureC": 5.8,
-          "windDirectionDeg": 128,
+          "windDirectionDeg": 116,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.7,
+          "pressureHpa": 1022.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3002,11 +2918,11 @@
         "validAtLocal": "2026-11-07T19:00:00+01:00",
         "values": {
           "temperatureC": 5.4,
-          "windDirectionDeg": 155,
+          "windDirectionDeg": 141,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.5,
+          "pressureHpa": 1022.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3016,11 +2932,11 @@
         "validAtLocal": "2026-11-07T20:00:00+01:00",
         "values": {
           "temperatureC": 5.2,
-          "windDirectionDeg": 155,
+          "windDirectionDeg": 148,
           "windSpeedKmh": 9.25,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.5,
+          "pressureHpa": 1022.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3030,11 +2946,11 @@
         "validAtLocal": "2026-11-07T21:00:00+01:00",
         "values": {
           "temperatureC": 4.7,
-          "windDirectionDeg": 182,
+          "windDirectionDeg": 180,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.6,
+          "pressureHpa": 1022.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3044,11 +2960,11 @@
         "validAtLocal": "2026-11-07T22:00:00+01:00",
         "values": {
           "temperatureC": 4.4,
-          "windDirectionDeg": 173,
+          "windDirectionDeg": 170,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.6,
+          "pressureHpa": 1022.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3058,11 +2974,11 @@
         "validAtLocal": "2026-11-07T23:00:00+01:00",
         "values": {
           "temperatureC": 4.4,
-          "windDirectionDeg": 178,
+          "windDirectionDeg": 176,
           "windSpeedKmh": 7.42,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1022.4,
+          "pressureHpa": 1022.1,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3072,35 +2988,7 @@
         "validAtLocal": "2026-11-08T00:00:00+01:00",
         "values": {
           "temperatureC": 4.3,
-          "windDirectionDeg": 181,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1022.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T00:00:00Z",
-        "validAtLocal": "2026-11-08T01:00:00+01:00",
-        "values": {
-          "temperatureC": 4.0,
-          "windDirectionDeg": 186,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1022.2,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T01:00:00Z",
-        "validAtLocal": "2026-11-08T02:00:00+01:00",
-        "values": {
-          "temperatureC": 3.6,
-          "windDirectionDeg": 182,
+          "windDirectionDeg": 180,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3110,53 +2998,39 @@
         }
       },
       {
+        "validAt": "2026-11-08T00:00:00Z",
+        "validAtLocal": "2026-11-08T01:00:00+01:00",
+        "values": {
+          "temperatureC": 4.0,
+          "windDirectionDeg": 179,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1021.2,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-08T01:00:00Z",
+        "validAtLocal": "2026-11-08T02:00:00+01:00",
+        "values": {
+          "temperatureC": 3.6,
+          "windDirectionDeg": 184,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1021.1,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-08T02:00:00Z",
         "validAtLocal": "2026-11-08T03:00:00+01:00",
         "values": {
           "temperatureC": 3.3,
-          "windDirectionDeg": 172,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1021.8,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T03:00:00Z",
-        "validAtLocal": "2026-11-08T04:00:00+01:00",
-        "values": {
-          "temperatureC": 3.3,
           "windDirectionDeg": 175,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1021.6,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T04:00:00Z",
-        "validAtLocal": "2026-11-08T05:00:00+01:00",
-        "values": {
-          "temperatureC": 3.1,
-          "windDirectionDeg": 171,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1021.5,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T05:00:00Z",
-        "validAtLocal": "2026-11-08T06:00:00+01:00",
-        "values": {
-          "temperatureC": 3.0,
-          "windDirectionDeg": 176,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3166,11 +3040,53 @@
         }
       },
       {
+        "validAt": "2026-11-08T03:00:00Z",
+        "validAtLocal": "2026-11-08T04:00:00+01:00",
+        "values": {
+          "temperatureC": 3.3,
+          "windDirectionDeg": 177,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1020.8,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-08T04:00:00Z",
+        "validAtLocal": "2026-11-08T05:00:00+01:00",
+        "values": {
+          "temperatureC": 3.1,
+          "windDirectionDeg": 169,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1020.7,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-08T05:00:00Z",
+        "validAtLocal": "2026-11-08T06:00:00+01:00",
+        "values": {
+          "temperatureC": 3.0,
+          "windDirectionDeg": 174,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1020.7,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-08T06:00:00Z",
         "validAtLocal": "2026-11-08T07:00:00+01:00",
         "values": {
           "temperatureC": 3.0,
-          "windDirectionDeg": 177,
+          "windDirectionDeg": 174,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3184,7 +3100,7 @@
         "validAtLocal": "2026-11-08T08:00:00+01:00",
         "values": {
           "temperatureC": 3.8,
-          "windDirectionDeg": 182,
+          "windDirectionDeg": 181,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3198,11 +3114,11 @@
         "validAtLocal": "2026-11-08T09:00:00+01:00",
         "values": {
           "temperatureC": 4.5,
-          "windDirectionDeg": 194,
+          "windDirectionDeg": 191,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.6,
+          "pressureHpa": 1020.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3212,7 +3128,7 @@
         "validAtLocal": "2026-11-08T10:00:00+01:00",
         "values": {
           "temperatureC": 5.2,
-          "windDirectionDeg": 204,
+          "windDirectionDeg": 208,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
@@ -3226,11 +3142,11 @@
         "validAtLocal": "2026-11-08T11:00:00+01:00",
         "values": {
           "temperatureC": 6.3,
-          "windDirectionDeg": 203,
+          "windDirectionDeg": 214,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.8,
+          "pressureHpa": 1020.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3240,7 +3156,7 @@
         "validAtLocal": "2026-11-08T12:00:00+01:00",
         "values": {
           "temperatureC": 6.9,
-          "windDirectionDeg": 207,
+          "windDirectionDeg": 211,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
@@ -3254,11 +3170,11 @@
         "validAtLocal": "2026-11-08T13:00:00+01:00",
         "values": {
           "temperatureC": 7.7,
-          "windDirectionDeg": 209,
+          "windDirectionDeg": 214,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.5,
+          "pressureHpa": 1020.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3268,11 +3184,11 @@
         "validAtLocal": "2026-11-08T14:00:00+01:00",
         "values": {
           "temperatureC": 7.9,
-          "windDirectionDeg": 210,
+          "windDirectionDeg": 214,
           "windSpeedKmh": 9.25,
           "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.3,
+          "pressureHpa": 1020.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3282,7 +3198,7 @@
         "validAtLocal": "2026-11-08T15:00:00+01:00",
         "values": {
           "temperatureC": 7.8,
-          "windDirectionDeg": 209,
+          "windDirectionDeg": 215,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3296,7 +3212,7 @@
         "validAtLocal": "2026-11-08T16:00:00+01:00",
         "values": {
           "temperatureC": 7.3,
-          "windDirectionDeg": 207,
+          "windDirectionDeg": 212,
           "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
@@ -3310,8 +3226,8 @@
         "validAtLocal": "2026-11-08T17:00:00+01:00",
         "values": {
           "temperatureC": 6.7,
-          "windDirectionDeg": 205,
-          "windSpeedKmh": 7.42,
+          "windDirectionDeg": 209,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
           "pressureHpa": 1020.1,
@@ -3324,7 +3240,7 @@
         "validAtLocal": "2026-11-08T18:00:00+01:00",
         "values": {
           "temperatureC": 6.3,
-          "windDirectionDeg": 183,
+          "windDirectionDeg": 173,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
@@ -3338,21 +3254,7 @@
         "validAtLocal": "2026-11-08T19:00:00+01:00",
         "values": {
           "temperatureC": 5.8,
-          "windDirectionDeg": 183,
-          "windSpeedKmh": 7.42,
-          "windGustKmh": 12.96,
-          "precipitation1hMm": 0,
-          "pressureHpa": 1020.4,
-          "weatherCode": 3,
-          "weatherSymbol": "cloud"
-        }
-      },
-      {
-        "validAt": "2026-11-08T19:00:00Z",
-        "validAtLocal": "2026-11-08T20:00:00+01:00",
-        "values": {
-          "temperatureC": 5.5,
-          "windDirectionDeg": 188,
+          "windDirectionDeg": 178,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
@@ -3362,15 +3264,29 @@
         }
       },
       {
+        "validAt": "2026-11-08T19:00:00Z",
+        "validAtLocal": "2026-11-08T20:00:00+01:00",
+        "values": {
+          "temperatureC": 5.5,
+          "windDirectionDeg": 187,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1020.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
         "validAt": "2026-11-08T20:00:00Z",
         "validAtLocal": "2026-11-08T21:00:00+01:00",
         "values": {
           "temperatureC": 5.3,
-          "windDirectionDeg": 198,
+          "windDirectionDeg": 206,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.5,
+          "pressureHpa": 1020.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3380,11 +3296,11 @@
         "validAtLocal": "2026-11-08T22:00:00+01:00",
         "values": {
           "temperatureC": 5.0,
-          "windDirectionDeg": 207,
+          "windDirectionDeg": 213,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.5,
+          "pressureHpa": 1020.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3398,7 +3314,7 @@
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1020.4,
+          "pressureHpa": 1020.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3412,7 +3328,7 @@
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.8,
+          "pressureHpa": 1019.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3422,11 +3338,11 @@
         "validAtLocal": "2026-11-09T01:00:00+01:00",
         "values": {
           "temperatureC": 4.2,
-          "windDirectionDeg": 199,
-          "windSpeedKmh": 7.42,
+          "windDirectionDeg": 203,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.6,
+          "pressureHpa": 1019.7,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3436,11 +3352,11 @@
         "validAtLocal": "2026-11-09T02:00:00+01:00",
         "values": {
           "temperatureC": 4.0,
-          "windDirectionDeg": 168,
-          "windSpeedKmh": 7.42,
+          "windDirectionDeg": 159,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.4,
+          "pressureHpa": 1019.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3450,11 +3366,11 @@
         "validAtLocal": "2026-11-09T03:00:00+01:00",
         "values": {
           "temperatureC": 4.1,
-          "windDirectionDeg": 171,
-          "windSpeedKmh": 7.42,
+          "windDirectionDeg": 159,
+          "windSpeedKmh": 5.54,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.2,
+          "pressureHpa": 1019.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3464,11 +3380,11 @@
         "validAtLocal": "2026-11-09T04:00:00+01:00",
         "values": {
           "temperatureC": 4.0,
-          "windDirectionDeg": 172,
+          "windDirectionDeg": 164,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.0,
+          "pressureHpa": 1019.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3478,11 +3394,11 @@
         "validAtLocal": "2026-11-09T05:00:00+01:00",
         "values": {
           "temperatureC": 4.0,
-          "windDirectionDeg": 168,
+          "windDirectionDeg": 162,
           "windSpeedKmh": 7.42,
           "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1018.9,
+          "pressureHpa": 1019.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3492,11 +3408,11 @@
         "validAtLocal": "2026-11-09T06:00:00+01:00",
         "values": {
           "temperatureC": 4.0,
-          "windDirectionDeg": 149,
+          "windDirectionDeg": 145,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 14.83,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.4,
+          "pressureHpa": 1018.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3505,12 +3421,12 @@
         "validAt": "2026-11-09T06:00:00Z",
         "validAtLocal": "2026-11-09T07:00:00+01:00",
         "values": {
-          "temperatureC": 4.3,
-          "windDirectionDeg": 151,
+          "temperatureC": 4.2,
+          "windDirectionDeg": 142,
           "windSpeedKmh": 7.42,
           "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.5,
+          "pressureHpa": 1018.3,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3520,11 +3436,11 @@
         "validAtLocal": "2026-11-09T08:00:00+01:00",
         "values": {
           "temperatureC": 4.6,
-          "windDirectionDeg": 155,
+          "windDirectionDeg": 144,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 16.67,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.7,
+          "pressureHpa": 1018.5,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3534,11 +3450,11 @@
         "validAtLocal": "2026-11-09T09:00:00+01:00",
         "values": {
           "temperatureC": 5.1,
-          "windDirectionDeg": 149,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 16.67,
+          "windDirectionDeg": 142,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.8,
+          "pressureHpa": 1018.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3548,11 +3464,11 @@
         "validAtLocal": "2026-11-09T10:00:00+01:00",
         "values": {
           "temperatureC": 5.8,
-          "windDirectionDeg": 159,
+          "windDirectionDeg": 152,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 18.5,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.9,
+          "pressureHpa": 1018.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3562,11 +3478,11 @@
         "validAtLocal": "2026-11-09T11:00:00+01:00",
         "values": {
           "temperatureC": 6.9,
-          "windDirectionDeg": 171,
+          "windDirectionDeg": 162,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 18.5,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1019.8,
+          "pressureHpa": 1018.6,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3576,11 +3492,11 @@
         "validAtLocal": "2026-11-09T12:00:00+01:00",
         "values": {
           "temperatureC": 7.6,
-          "windDirectionDeg": 176,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 20.38,
+          "windDirectionDeg": 164,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.7,
+          "pressureHpa": 1018.4,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3590,11 +3506,11 @@
         "validAtLocal": "2026-11-09T13:00:00+01:00",
         "values": {
           "temperatureC": 8.0,
-          "windDirectionDeg": 177,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 22.21,
+          "windDirectionDeg": 158,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.5,
+          "pressureHpa": 1018.2,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3604,11 +3520,11 @@
         "validAtLocal": "2026-11-09T14:00:00+01:00",
         "values": {
           "temperatureC": 8.1,
-          "windDirectionDeg": 171,
-          "windSpeedKmh": 11.12,
-          "windGustKmh": 22.21,
+          "windDirectionDeg": 155,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 16.67,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.3,
+          "pressureHpa": 1018.0,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3618,11 +3534,11 @@
         "validAtLocal": "2026-11-09T15:00:00+01:00",
         "values": {
           "temperatureC": 8.0,
-          "windDirectionDeg": 166,
+          "windDirectionDeg": 151,
           "windSpeedKmh": 9.25,
-          "windGustKmh": 20.38,
+          "windGustKmh": 14.83,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.3,
+          "pressureHpa": 1017.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3632,11 +3548,11 @@
         "validAtLocal": "2026-11-09T16:00:00+01:00",
         "values": {
           "temperatureC": 7.5,
-          "windDirectionDeg": 160,
-          "windSpeedKmh": 9.25,
-          "windGustKmh": 18.5,
+          "windDirectionDeg": 152,
+          "windSpeedKmh": 7.42,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.2,
+          "pressureHpa": 1017.9,
           "weatherCode": 3,
           "weatherSymbol": "cloud"
         }
@@ -3646,11 +3562,95 @@
         "validAtLocal": "2026-11-09T17:00:00+01:00",
         "values": {
           "temperatureC": 6.9,
-          "windDirectionDeg": 160,
+          "windDirectionDeg": 151,
           "windSpeedKmh": 7.42,
-          "windGustKmh": 16.67,
+          "windGustKmh": 12.96,
           "precipitation1hMm": 0,
-          "pressureHpa": 1017.3
+          "pressureHpa": 1017.9,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T17:00:00Z",
+        "validAtLocal": "2026-11-09T18:00:00+01:00",
+        "values": {
+          "temperatureC": 7.5,
+          "windDirectionDeg": 184,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.2,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T18:00:00Z",
+        "validAtLocal": "2026-11-09T19:00:00+01:00",
+        "values": {
+          "temperatureC": 7.0,
+          "windDirectionDeg": 183,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.3,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T19:00:00Z",
+        "validAtLocal": "2026-11-09T20:00:00+01:00",
+        "values": {
+          "temperatureC": 6.7,
+          "windDirectionDeg": 190,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.5,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T20:00:00Z",
+        "validAtLocal": "2026-11-09T21:00:00+01:00",
+        "values": {
+          "temperatureC": 6.7,
+          "windDirectionDeg": 208,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T21:00:00Z",
+        "validAtLocal": "2026-11-09T22:00:00+01:00",
+        "values": {
+          "temperatureC": 6.3,
+          "windDirectionDeg": 208,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.6,
+          "weatherCode": 3,
+          "weatherSymbol": "cloud"
+        }
+      },
+      {
+        "validAt": "2026-11-09T22:00:00Z",
+        "validAtLocal": "2026-11-09T23:00:00+01:00",
+        "values": {
+          "temperatureC": 6.0,
+          "windDirectionDeg": 213,
+          "windSpeedKmh": 9.25,
+          "windGustKmh": 14.83,
+          "precipitation1hMm": 0,
+          "pressureHpa": 1018.6
         }
       }
     ],
@@ -3659,6 +3659,6 @@
       "license": "DWD Open Data; CC BY 4.0 attribution applies"
     }
   },
-  "lastAttemptAt": "2026-10-30T15:44:08Z",
+  "lastAttemptAt": "2026-10-30T20:09:43Z",
   "sourceNote": "Messwerte und MOSMIX-Prognosen sind getrennt. Fehlende Werte bleiben null; CDC-now-Daten sind noch nicht abschließend qualitätsgesichert."
 }
