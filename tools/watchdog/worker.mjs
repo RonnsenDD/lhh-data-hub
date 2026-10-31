@@ -10,15 +10,15 @@ export const WORKFLOWS = [
     graceMinutes: 30, minDispatchMinutes: 60, maxDispatchesPerDay: 3,
     feeds: [{
       key: 'weather', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather.json',
-      kind: 'weather', maxAgeMinutes: 45, forecastMaxAgeHours: 12
+      publicationPath: 'data/generated/dwd-weather.json', kind: 'weather', maxAgeMinutes: 45, forecastMaxAgeHours: 12
     }]
   },
   {
     key: 'levels', file: 'update-levels.yml', expectedUtcMinutes: [11, 26, 41, 56],
     graceMinutes: 30, minDispatchMinutes: 60, maxDispatchesPerDay: 3,
     feeds: [
-      { key: 'level-lauchhammer', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-lauchhammer.json', kind: 'level', maxAgeMinutes: 45 },
-      { key: 'level-biehlen-1', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-biehlen-1.json', kind: 'level', maxAgeMinutes: 45 }
+      { key: 'level-lauchhammer', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-lauchhammer.json', publicationPath: 'data/generated/pegel-lauchhammer.json', kind: 'level', maxAgeMinutes: 45 },
+      { key: 'level-biehlen-1', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-biehlen-1.json', publicationPath: 'data/generated/pegel-biehlen-1.json', kind: 'level', maxAgeMinutes: 45 }
     ]
   },
   {
@@ -34,7 +34,7 @@ export const WORKFLOWS = [
     graceMinutes: 120, minDispatchMinutes: 360, maxDispatchesPerDay: 1,
     feeds: [{
       key: 'grassland', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/graslandfeuerindex.json',
-      kind: 'grassland', maxAgeHours: 36
+      publicationPath: 'data/generated/graslandfeuerindex.json', kind: 'grassland', maxAgeHours: 36
     }]
   },
   {
@@ -42,7 +42,7 @@ export const WORKFLOWS = [
     graceMinutes: 60, minDispatchMinutes: 360, maxDispatchesPerDay: 1,
     feeds: [{
       key: 'wildfire-osl', url: 'https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/waldbrandgefahrenstufe-osl.json',
-      kind: 'wildfire', validityTimeZone: 'Europe/Berlin', validityStartHour: 8
+      publicationPath: 'data/generated/waldbrandgefahrenstufe-osl.json', kind: 'wildfire', validityTimeZone: 'Europe/Berlin', validityStartHour: 8
     }]
   }
 ];
@@ -273,14 +273,14 @@ export function workflowAvailability(entries, workflow) {
 
 export function reportStatus(feed, automation) {
   if (feed.fetchError || feed.dataStatus === 'error' || feed.dataStatus === 'unavailable') return 'Abruf fehlgeschlagen';
-  if (automation.producerFailed || automation.state === 'producer_failed' || automation.workflowActive !== true || automation.repositoryDefaultBranch !== 'main' || automation.overdue || automation.state === 'late' || automation.state === 'no_run') return 'Automatik ausgefallen';
+  if (automation.publicationLookupFailed || automation.producerFailed || automation.state === 'producer_failed' || automation.workflowActive !== true || automation.repositoryDefaultBranch !== 'main' || automation.overdue || automation.state === 'late' || automation.state === 'no_run') return 'Automatik ausgefallen';
   if (feed.dataStatus !== 'current') return 'veraltet';
   return 'aktuell';
 }
 
 export function decisionForWorkflow(workflow, feedReports, automation, nowMs, mode) {
   const running = automation.pending;
-  const unknownFeed = feedReports.some(report => report.fetchError || ['error', 'unavailable'].includes(report.dataStatus));
+  const unknownFeed = feedReports.some(report => report.fetchError || report.publicationLookupFailed || ['error', 'unavailable'].includes(report.dataStatus));
   const due = automation.overdue || automation.state === 'producer_failed' ||
     feedReports.some(report => report.dataStatus === 'stale' && !report.fetchError);
   return {
@@ -388,7 +388,7 @@ async function mintInstallationToken(env, mode, nowMs, fetcher = fetch) {
       'X-GitHub-Api-Version': '2022-11-28',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ permissions: { actions: permission } }),
+    body: JSON.stringify({ permissions: { actions: permission, contents: 'read' } }),
     signal: AbortSignal.timeout(10000)
   });
   if (!response.ok) throw new HttpFailure(response.status, retryTime(response, nowMs), 'installation_token');
@@ -473,12 +473,27 @@ async function getJson(url, nowMs, fetcher = fetch) {
   return response.json();
 }
 
-async function inspectFeeds(workflow, nowMs, fetcher) {
+async function latestFileCommitAt(path, token, nowMs, fetcher) {
+  const query = encodeURIComponent(path);
+  const response = await githubJson(
+    API + '/repos/' + OWNER + '/' + REPO + '/commits?path=' + query + '&per_page=1&sha=main',
+    token, 'file_publication_' + path, nowMs, fetcher
+  );
+  const commit = Array.isArray(response) ? response[0]?.commit : null;
+  return commit?.committer?.date || commit?.author?.date || null;
+}
+
+async function inspectFeeds(workflow, nowMs, fetcher, publicationTimes = new Map(), lastPublicVerificationAt = null) {
   return Promise.all(workflow.feeds.map(async spec => {
     try {
       const payload = await getJson(spec.url, nowMs, fetcher);
       const evaluated = evaluateFeed(spec, payload, nowMs);
-      return { sourceKey: spec.key, feed: evaluated, payloadStatus: payload.status || null, fetchError: false };
+      const publishedAt = spec.publicationPath ? publicationTimes.get(spec.publicationPath) || null : null;
+      const publicationEvidence = spec.publicationPath ? (publishedAt ? 'github_file_commit' : 'github_file_commit_missing') :
+        workflow.key === 'radar' ? (lastPublicVerificationAt ? 'successful_workflow_after_public_url_verification' : 'public_verification_not_available') : 'not_applicable';
+      return { sourceKey: spec.key, feed: evaluated, payloadStatus: payload.status || null, fetchError: false,
+        publishedAt, publicationEvidence, publicationLookupFailed: Boolean(spec.publicationPath && !publishedAt),
+        lastPublicVerificationAt: workflow.key === 'radar' ? lastPublicVerificationAt : null };
     } catch (error) {
       return {
         sourceKey: spec.key,
@@ -497,7 +512,7 @@ function runStatusForWorkflow(runs, workflow, nowMs) {
   return {
     ...automation,
     latestRunConclusion: latest?.conclusion || null,
-    lastSuccessfulWorkflowCompletedAt: matching.find(run => run.conclusion === 'success')?.updated_at || null,
+    lastSuccessfulWorkflowCompletedAt: matching.find(run => run.conclusion === 'success')?.completed_at || matching.find(run => run.conclusion === 'success')?.updated_at || null,
     producerFailed: latest?.conclusion === 'failure'
   };
 }
@@ -532,6 +547,7 @@ export async function runScheduledCheck(controller, env, ctx, options = {}) {
   let workflowEntries;
   let runsByWorkflow;
   let repositoryDefaultBranch;
+  let publicationTimes;
   const missingConfig = ['GH_APP_ID', 'GH_INSTALLATION_ID', 'GH_APP_PRIVATE_KEY'].filter(key => !env[key]);
   if (missingConfig.length) {
     try {
@@ -560,6 +576,11 @@ export async function runScheduledCheck(controller, env, ctx, options = {}) {
       return [workflow.key, Array.isArray(response?.workflow_runs) ? response.workflow_runs : []];
     }));
     for (const [key, values] of runLists) runsByWorkflow.set(key, values);
+    const paths = [...new Set(workflows.flatMap(workflow => workflow.feeds.map(feed => feed.publicationPath).filter(Boolean)))];
+    const publicationEntries = await Promise.all(paths.map(async path => [
+      path, await latestFileCommitAt(path, token, nowMs, fetcher)
+    ]));
+    publicationTimes = new Map(publicationEntries);
   } catch (error) {
     const status = Number.isInteger(error?.status) ? error.status : 0;
     const until = Number.isFinite(error?.retryAtMs) ? error.retryAtMs : nowMs + 5 * 60000;
@@ -587,12 +608,12 @@ export async function runScheduledCheck(controller, env, ctx, options = {}) {
     const workflowRunsForKey = runsByWorkflow.get(workflow.key) || [];
     const runtimeWorkflow = { ...workflow, id: workflowEntries.find(entry => entry.path?.endsWith(workflow.file))?.id };
     const automation = { ...runStatusForWorkflow(workflowRunsForKey, runtimeWorkflow, nowMs), ...workflowAvailability(workflowEntries, workflow), repositoryDefaultBranch };
-    const inspected = await inspectFeeds(workflow, nowMs, fetcher);
+    const inspected = await inspectFeeds(workflow, nowMs, fetcher, publicationTimes, automation.lastSuccessfulWorkflowCompletedAt);
     const reports = inspected.map(item => {
       const feed = item.feed;
       const status = item.fetchError || feed.dataStatus === 'error' || feed.dataStatus === 'unavailable'
         ? 'Abruf fehlgeschlagen'
-        : automation.producerFailed || automation.state === 'producer_failed' || automation.workflowActive !== true || automation.repositoryDefaultBranch !== 'main' || automation.overdue || automation.state === 'late' || automation.state === 'no_run'
+        : item.publicationLookupFailed || automation.producerFailed || automation.state === 'producer_failed' || automation.workflowActive !== true || automation.repositoryDefaultBranch !== 'main' || automation.overdue || automation.state === 'late' || automation.state === 'no_run'
           ? 'Automatik ausgefallen'
           : feed.dataStatus === 'current' ? 'aktuell' : 'veraltet';
       const report = {
@@ -602,7 +623,9 @@ export async function runScheduledCheck(controller, env, ctx, options = {}) {
         lastAutomaticStartAt: automation.lastAutomaticRunAt, lastAutomaticResult: automation.lastAutomaticRunResult,
         repositoryDefaultBranch: automation.repositoryDefaultBranch, workflowActive: automation.workflowActive, workflowState: automation.workflowDefinitionState, workflowStateReason: automation.availabilityReason,
         scheduleSlotAt: automation.scheduleSlotAt, scheduleStartDelayMinutes: automation.scheduleStartDelayMinutes, scheduleGapMinutes: automation.scheduleGapMinutes,
-        sourceTimestamp: feed.sourceTimestamp || null, publishedAt: feed.publishedAt || null, retrievedAt: feed.retrievedAt || null,
+        sourceTimestamp: feed.sourceTimestamp || null, publishedAt: item.publishedAt || feed.publishedAt || null,
+        publicationEvidence: item.publicationEvidence || null, lastPublicVerificationAt: item.lastPublicVerificationAt || null,
+        publicationLookupFailed: Boolean(item.publicationLookupFailed), retrievedAt: feed.retrievedAt || null,
         lastSuccessfulSourceAt: feed.lastSuccessfulAt || null, lastSourceAttemptAt: feed.lastAttemptAt || null,
         lastSuccessfulWorkflowCompletedAt: automation.lastSuccessfulWorkflowCompletedAt || null,
         sourceAgeMinutes: Number.isFinite(feed.ageMinutes) ? Math.round(feed.ageMinutes) : null,
