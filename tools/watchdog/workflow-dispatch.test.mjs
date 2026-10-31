@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import { createGitHubAppClient } from "./github-app-adapter.js";
-import { dispatchStaleSources, WatchdogDispatchCoordinator } from "./worker.js";
+import { dispatchCoordinatorStub, dispatchStaleSources, planDispatchObservation, WatchdogDispatchCoordinator } from "./worker.js";
 
 const NOW = Date.parse("2026-10-31T20:00:00Z");
 
@@ -48,6 +48,76 @@ test("current feeds never request workflow dispatch", async () => {
   assert.deepEqual(result, []);
   assert.equal(snapshots, 0);
   assert.equal(coordinator.calls.length, 0);
+});
+
+test("Durable Object namespace is resolved to one stable object stub before use", () => {
+  const calls = [];
+  const stub = { fetch: async () => Response.json({}) };
+  const namespace = {
+    idFromName(name) { calls.push(["idFromName", name]); return "id:" + name; },
+    get(id) { calls.push(["get", id]); return stub; },
+  };
+  assert.equal(dispatchCoordinatorStub(namespace), stub);
+  assert.deepEqual(calls, [
+    ["idFromName", "weather-radar-dispatch-v1"],
+    ["get", "id:weather-radar-dispatch-v1"],
+  ]);
+  assert.equal(dispatchCoordinatorStub({ fetch: async () => {} }), null);
+});
+
+test("observe-only planning reports a partial weather candidate without calling GitHub or the coordinator", () => {
+  const observed = planDispatchObservation(report({ sources: [{
+    key: "weather",
+    status: "STALE",
+    ageMinutes: 61,
+    thresholdMinutes: 45,
+    products: { observations: [
+      { field: "temperatureC", status: "STALE", measuredAt: "2026-10-31T18:50:00Z" },
+      { field: "windSpeedKmh", status: "OK", measuredAt: "2026-10-31T19:20:00Z" },
+    ] },
+  }]}));
+  assert.equal(observed[0].workflowFile, "update-dwd-weather.yml");
+  assert.equal(observed[0].decision, "stale_candidate_dispatch_disabled");
+  assert.equal(observed[0].runState, "not_checked_read_disabled");
+  assert.deepEqual(observed[0].sources[0].staleFields, ["temperatureC"]);
+  assert.equal(observed[0].sources[0].freshObservationCount, 1);
+});
+
+test("observation mode uses read-only active-run state when supplied", () => {
+  const stale = report({ sources: [{ key: "weather", status: "STALE", ageMinutes: 60, products: { observations: [{ field: "temperatureC", status: "STALE", measuredAt: "2026-10-31T18:50:00Z" }] } }] });
+  const running = planDispatchObservation(stale, { queryStatus: "OK", workflows: [{ file: "update-dwd-weather.yml", queryStatus: "OK", activeRuns: [{ id: 7, status: "in_progress" }] }] });
+  assert.equal(running[0].decision, "already_running");
+  assert.equal(running[0].runState, "already_running");
+  const unknown = planDispatchObservation(stale, { queryStatus: "ERROR", workflows: [] });
+  assert.equal(unknown[0].decision, "blocked_github_status");
+});
+
+test("oldest stale weather measurement preserves retry fingerprint when sibling fields change", async () => {
+  const original = report({ sources: [{
+    key: "weather", status: "STALE", ageMinutes: 70,
+    products: { observations: [
+      { field: "temperatureC", status: "STALE", measuredAt: "2026-10-31T18:50:00Z" },
+      { field: "windSpeedKmh", status: "STALE", measuredAt: "2026-10-31T19:00:00Z" },
+    ] },
+  }] });
+  const oneSiblingRefreshed = report({ sources: [{
+    key: "weather", status: "STALE", ageMinutes: 70,
+    products: { observations: [
+      { field: "temperatureC", status: "STALE", measuredAt: "2026-10-31T18:50:00Z" },
+      { field: "windSpeedKmh", status: "OK", measuredAt: "2026-10-31T19:55:00Z" },
+    ] },
+  }] });
+  const coordinator = fakeCoordinator({ granted: false });
+  let dispatches = 0;
+  const client = { getWorkflowSnapshot: async ({ files }) => snapshot(files[0]), dispatchWorkflow: async () => { dispatches++; } };
+  const a = await dispatchStaleSources({ report: original, client, coordinator, nowMs: NOW });
+  const b = await dispatchStaleSources({ report: oneSiblingRefreshed, client, coordinator, nowMs: NOW + 31 * 60_000 });
+  assert.equal(a[0].outcome, "suppressed");
+  assert.equal(b[0].outcome, "suppressed");
+  assert.equal(coordinator.calls.filter((call) => call.action === "reserve").length, 2);
+  const fingerprints = coordinator.calls.filter((call) => call.action === "reserve").map((call) => call.body.sourceFingerprint);
+  assert.equal(fingerprints[0], fingerprints[1]);
+  assert.equal(dispatches, 0);
 });
 
 test("stale weather is dispatched only after two clean active-run checks and a reservation", async () => {

@@ -166,6 +166,19 @@ test("all seven real feed paths are individually evaluated", async () => {
   assert.equal(r.overallStatus, "OK");
   assert.equal(find(r, "konrad3d").jsonPublishedAt, "2026-10-31T10:59:00Z");
 });
+test("opt-in diagnostics separate body size, decode, JSON parse, and evaluator time without values", async () => {
+  const { fetcher } = mocked(fixtures());
+  const report = await collectStatus({ nowMs: NOW, fetcher, includeDiagnostics: true });
+  assert.equal(report.diagnostics.length, 7);
+  const weather = report.diagnostics.find((item) => item.key === "weather");
+  assert.ok(weather.bodyBytes > 0);
+  for (const key of ["decodeMs", "jsonParseMs", "evaluationMs", "bodyReadWallMs", "fetchWallMs"]) {
+    assert.ok(Number.isFinite(weather[key]));
+  }
+  assert.equal(JSON.stringify(report.diagnostics).includes("temperatureC"), false);
+  const publicShape = await collectStatus({ nowMs: NOW, fetcher });
+  assert.equal("diagnostics" in publicShape, false);
+});
 test("fresh retrieval does not refresh old observation", async () => {
   const d = fixtures();
   d[URLS.weather].observations.wind.measuredAt = "2026-10-31T08:00:00Z";
@@ -419,22 +432,65 @@ test("scheduled logs contain structured status, not feed URLs or payload values"
   const { fetcher } = mocked(fixtures());
   const originalFetch = globalThis.fetch;
   const originalLog = console.log;
-  let logLine = "";
+  const logLines = [];
   globalThis.fetch = fetcher;
-  console.log = (line) => { logLine = String(line); };
+  console.log = (line) => { logLines.push(String(line)); };
   try {
     await m.default.scheduled({ cron: "*/5 * * * *", scheduledTime: NOW });
   } finally {
     globalThis.fetch = originalFetch;
     console.log = originalLog;
   }
-  const log = JSON.parse(logLine);
+  const logLine = logLines.join("\n");
+  const log = logLines.map((line) => JSON.parse(line)).find((item) => item.event === "feed_watchdog_check");
+  assert.ok(log);
   assert.equal(log.event, "feed_watchdog_check");
   assert.equal(log.sources.length, 7);
   assert.equal(logLine.includes("raw.githubusercontent.com"), false);
   assert.equal(logLine.includes("rain-ry1.png"), false);
   assert.equal(logLine.includes('"waterLevelCm"'), false);
   assert.equal(logLine.includes("Authorization"), false);
+});
+
+test("observe-only cron logs stale candidates without GitHub or Durable Object access", async () => {
+  const data = fixtures();
+  data[URLS.weather].observations.wind.measuredAt = "2026-10-31T08:00:00Z";
+  data[URLS.radar].productTime = "2026-10-31T08:00:00Z";
+  const { fetcher } = mocked(data);
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  const calls = [];
+  const logs = [];
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(url);
+    if (url.origin === "https://api.github.com") throw new Error("observe-only must not call GitHub");
+    return fetcher(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    await m.default.scheduled(
+      { cron: "*/5 * * * *", scheduledTime: NOW },
+      {
+        GITHUB_APP_READ_ENABLED: "false",
+        WORKFLOW_DISPATCH_ENABLED: "false",
+        WATCHDOG_DISPATCH_COORDINATOR: {
+          idFromName() { assert.fail("observe-only must not resolve a Durable Object"); },
+          get() { assert.fail("observe-only must not access a Durable Object"); },
+        },
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+  }
+  const observation = logs.map((line) => JSON.parse(line)).find((item) => item.event === "workflow_dispatch_observation");
+  assert.ok(observation);
+  assert.equal(observation.mode, "observe_only");
+  assert.equal(observation.dispatchEnabled, false);
+  assert.equal(observation.githubRunStateChecked, false);
+  assert.deepEqual(observation.candidates.map((item) => item.workflowFile), ["update-dwd-weather.yml", "update-radolan-ry.yml"]);
+  assert.equal(calls.length, 7);
 });
 
 test("GitHub App reads remain disabled unless the exact true flag is set", async () => {

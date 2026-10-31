@@ -1,11 +1,12 @@
 import { generateKeyPairSync } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { readFile } from "node:fs/promises";
-import worker, { URLS } from "./worker.js";
+import worker, { collectStatus, URLS } from "./worker.js";
 
-const NOW = Date.parse("2026-10-31T11:00:00Z");
+const NOW = Date.parse(process.env.WATCHDOG_BENCH_NOW || "2026-10-31T11:00:00Z");
 const WARMUP = Number(process.env.WATCHDOG_BENCH_WARMUP || 20);
 const ITERATIONS = Number(process.env.WATCHDOG_BENCH_ITERATIONS || 100);
+const PROFILE_ITERATIONS = Number(process.env.WATCHDOG_PROFILE_ITERATIONS || 50);
 
 function makeFeeds() {
   const points = Array.from({ length: 168 }, (_, index) => ({
@@ -112,10 +113,16 @@ async function benchmark(mode) {
     GITHUB_INSTALLATION_ID: "177220128",
     GITHUB_APP_PRIVATE_KEY: privateKey,
     ...(dispatchEnabled ? { WATCHDOG_DISPATCH_COORDINATOR: {
-      async fetch(request) {
-        const action = new URL(request.url).pathname.slice(1);
-        if (action === "reserve") return Response.json({ granted: true, leaseId: "bench-lease" });
-        return Response.json({ completed: true });
+      idFromName(name) { return name; },
+      get(id) {
+        if (id !== "weather-radar-dispatch-v1") throw new Error("unexpected Durable Object id");
+        return {
+          async fetch(request) {
+            const action = new URL(request.url).pathname.slice(1);
+            if (action === "reserve") return Response.json({ granted: true, leaseId: "bench-lease" });
+            return Response.json({ completed: true });
+          },
+        };
       },
     } } : {}),
   } : {};
@@ -162,4 +169,30 @@ async function benchmark(mode) {
   }
 }
 
-console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, results: [await benchmark("disabled"), await benchmark("enabled"), await benchmark("dispatch")] }, null, 2));
+async function profileComponents() {
+  activeFeedBodies = feedBodies;
+  const samples = new Map();
+  for (let i = 0; i < PROFILE_ITERATIONS; i++) {
+    const report = await collectStatus({ nowMs: NOW, includeDiagnostics: true });
+    for (const row of report.diagnostics) {
+      if (!samples.has(row.key)) samples.set(row.key, []);
+      samples.get(row.key).push(row);
+    }
+  }
+  const stats = (rows, key) => {
+    const sorted = rows.map((row) => row[key] ?? 0).sort((a, b) => a - b);
+    return {
+      medianMs: Number(percentile(sorted, 0.5).toFixed(4)),
+      p95Ms: Number(percentile(sorted, 0.95).toFixed(4)),
+    };
+  };
+  return [...samples.entries()].map(([feed, rows]) => ({
+    feed,
+    bytes: rows[0].bodyBytes,
+    decode: stats(rows, "decodeMs"),
+    jsonParse: stats(rows, "jsonParseMs"),
+    evaluation: stats(rows, "evaluationMs"),
+  }));
+}
+
+console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, componentProfileIterations: PROFILE_ITERATIONS, componentProfile: await profileComponents(), results: [await benchmark("disabled"), await benchmark("enabled"), await benchmark("dispatch")] }, null, 2));

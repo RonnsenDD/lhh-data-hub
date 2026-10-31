@@ -143,7 +143,12 @@ async function textBody(res) {
     b.set(c, o);
     o += c.length;
   }
-  return FEED_DECODER.decode(b);
+  const decodeStartedAt = performance.now();
+  return {
+    text: FEED_DECODER.decode(b),
+    byteLength: n,
+    decodeMs: performance.now() - decodeStartedAt,
+  };
 }
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 3;
@@ -153,6 +158,7 @@ async function get(feed, now, fetcher) {
   const allowedOrigin = initialUrl.origin;
   const controller = new AbortController();
   const start = Date.now();
+  const fetchStartedAt = performance.now();
   const timer = setTimeout(() => controller.abort(), LIMITS.timeoutMs);
   try {
     let currentUrl = initialUrl;
@@ -174,6 +180,8 @@ async function get(feed, now, fetcher) {
           Pragma: "no-cache",
         },
       });
+      // Fetch duration is wall time; it includes network wait and is not CPU.
+      // Keep it separate from the synchronous JSON and schema work below.
       if (!REDIRECT_STATUSES.has(response.status)) break;
       const location = response.headers.get("location");
       if (response.body) {
@@ -202,6 +210,7 @@ async function get(feed, now, fetcher) {
       currentUrl = nextUrl;
       redirectCount++;
     }
+    const fetchWallMs = performance.now() - fetchStartedAt;
     const ageHeader = response.headers.get("age");
     const ageSeconds =
       ageHeader === null ? Number.NaN : Number(ageHeader);
@@ -229,16 +238,35 @@ async function get(feed, now, fetcher) {
               : "UPSTREAM_HTTP_ERROR",
         ),
       };
-    let j;
+    let j, body;
+    const bodyReadStartedAt = performance.now();
     try {
-      j = JSON.parse(await textBody(response));
+      body = await textBody(response);
+    } catch (e) {
+      throw Error(e.message || "INVALID_BODY");
+    }
+    const bodyReadMs = performance.now() - bodyReadStartedAt;
+    const parseStartedAt = performance.now();
+    try {
+      j = JSON.parse(body.text);
     } catch (e) {
       throw Error(
         e instanceof SyntaxError ? "INVALID_JSON" : e.message || "INVALID_BODY",
       );
     }
     if (!obj(j)) throw Error("INVALID_SCHEMA");
-    return { j, transport, durationMs: Date.now() - start };
+    return {
+      j,
+      transport,
+      durationMs: Date.now() - start,
+      diagnostics: {
+        fetchWallMs,
+        bodyReadWallMs: bodyReadMs,
+        decodeMs: body.decodeMs,
+        jsonParseMs: performance.now() - parseStartedAt,
+        bodyBytes: body.byteLength,
+      },
+    };
   } catch (e) {
     const knownCodes = [
       "INVALID_JSON",
@@ -277,7 +305,7 @@ async function get(feed, now, fetcher) {
     clearTimeout(timer);
   }
 }
-function obs(o, field, now) {
+function obs(o, field, now, ageCache) {
   if (!obj(o))
     return state(
       { field, measuredAt: null, retrievedAt: null },
@@ -301,7 +329,8 @@ function obs(o, field, now) {
         ? o.freshnessThresholdMinutes
         : 45,
     ),
-    a = age(o.measuredAt, lim * 60000, now);
+    a = ageCache?.get(o) ?? age(o.measuredAt, lim * 60000, now);
+  ageCache?.set(o, a);
   return state(
     { ...base, ageMinutes: a.ageMinutes, thresholdMinutes: lim },
     a.status,
@@ -376,7 +405,8 @@ function weather(j, c, now) {
       ["windGust", "windGustKmh"],
       ["precipitation", "precipitation10MinMm"],
     ],
-    products = fields.map(([p, f]) => obs(j.observations[p], f, now)),
+    ageCache = new WeakMap(),
+    products = fields.map(([p, f]) => obs(j.observations[p], f, now, ageCache)),
     forecast = mos(j.forecast, now);
   const producer =
     j.status === "error"
@@ -625,14 +655,19 @@ const times = (j) => ({
 export async function collectStatus({
   nowMs = Date.now(),
   fetcher = fetch,
+  includeDiagnostics = false,
 } = {}) {
   const checkedAt = new Date(nowMs).toISOString(),
+    diagnostics = [],
     sources = await mapLimit(
       feeds,
       LIMITS.concurrency,
       async ([key, label, url, evalFn]) => {
         const r = await get({ key, label, url }, nowMs, fetcher);
-        if (r.failure) return r.failure;
+        if (r.failure) {
+          if (includeDiagnostics) diagnostics.push({ key, failure: r.failure.reasonCode ?? "FETCH_FAILED" });
+          return r.failure;
+        }
         const c = {
           key,
           label,
@@ -646,13 +681,21 @@ export async function collectStatus({
           ...times(r.j),
         };
         try {
-          return evalFn(r.j, c, nowMs);
+          const evaluationStartedAt = performance.now();
+          const evaluated = evalFn(r.j, c, nowMs);
+          if (includeDiagnostics) diagnostics.push({
+            key,
+            ...r.diagnostics,
+            // Evaluation timing is synchronous wall time, a practical CPU proxy.
+            evaluationMs: performance.now() - evaluationStartedAt,
+          });
+          return evaluated;
         } catch {
           return state({ key, label, checkedAt }, "ERROR", "EVALUATION_FAILED");
         }
       },
     );
-  return {
+  const result = {
     schemaVersion: 1,
     mode: "observe-only",
     checkedAt,
@@ -666,6 +709,8 @@ export async function collectStatus({
       freshnessFromSourceTimes: true,
     },
   };
+  if (includeDiagnostics) result.diagnostics = diagnostics;
+  return result;
 }
 const DISPATCH_TARGETS = Object.freeze([
   { workflowFile: "update-dwd-weather.yml", sourceKeys: ["weather"] },
@@ -682,18 +727,90 @@ function staleSourceFingerprint(source) {
       if (item?.status !== "STALE") continue;
       const measuredAt = item.measuredAt;
       if (typeof measuredAt === "string" && Number.isFinite(Date.parse(measuredAt))) {
-        stamps.push(String(item.field ?? "observation") + "=" + measuredAt);
+        stamps.push(Date.parse(measuredAt));
       }
     }
     const forecast = source.products?.forecast;
     if (forecast?.status === "STALE" && typeof forecast.issuedAt === "string" && Number.isFinite(Date.parse(forecast.issuedAt))) {
-      stamps.push("forecast=" + forecast.issuedAt);
+      stamps.push(Date.parse(forecast.issuedAt));
     }
   } else {
     const sourceTime = source.sourceTime ?? source.measuredAt;
-    if (typeof sourceTime === "string" && Number.isFinite(Date.parse(sourceTime))) stamps.push(sourceTime);
+    if (typeof sourceTime === "string" && Number.isFinite(Date.parse(sourceTime))) stamps.push(Date.parse(sourceTime));
   }
-  return stamps.length ? source.key + ":" + stamps.sort().join("|") : null;
+  // Use the oldest stale product time as the snapshot identity. Freshness
+  // changes in sibling fields must not create a new retry identity while the
+  // same oldest stale measurement remains unresolved.
+  return stamps.length ? source.key + ":oldest=" + Math.min(...stamps) : null;
+}
+
+/** Pure observation used while dispatch is disabled. Makes no API/DO calls. */
+export function planDispatchObservation(report, snapshot = null) {
+  return DISPATCH_TARGETS.map((target) => {
+    const sources = report.sources.filter((source) => target.sourceKeys.includes(source.key));
+    const stale = sources.filter((source) => source.status === "STALE");
+    const detail = (source) => {
+      const staleProducts = source.key === "weather"
+        ? (source.products?.observations ?? []).filter((item) => item?.status === "STALE")
+        : [];
+      const timestamps = staleProducts.map((item) => item?.measuredAt).filter((value) => typeof value === "string" && Number.isFinite(Date.parse(value)));
+      const forecast = source.key === "weather" && source.products?.forecast?.status === "STALE"
+        ? source.products.forecast.issuedAt
+        : null;
+      if (forecast && Number.isFinite(Date.parse(forecast))) timestamps.push(forecast);
+      return {
+        key: source.key,
+        status: source.status,
+        reasonCode: source.reasonCode ?? null,
+        ageMinutes: source.ageMinutes ?? null,
+        thresholdMinutes: source.thresholdMinutes ?? null,
+        sourceTime: timestamps.length ? timestamps.sort()[0] : source.sourceTime ?? source.measuredAt ?? null,
+        staleFields: staleProducts.map((item) => item.field ?? "observation"),
+        freshObservationCount: source.key === "weather"
+          ? (source.products?.observations ?? []).filter((item) => item?.status === "OK").length
+          : null,
+      };
+    };
+    if (!stale.length) return { workflowFile: target.workflowFile, decision: "no_stale_source", sources: sources.map(detail) };
+    const fingerprints = stale.map(staleSourceFingerprint);
+    const workflow = snapshot?.workflows?.find((item) => item.file === target.workflowFile);
+    let runState = "not_checked_read_disabled";
+    if (snapshot) {
+      if (snapshot.queryStatus !== "OK" || workflow?.queryStatus !== "OK") runState = "unavailable";
+      else if (workflow.activeRuns?.length) runState = "already_running";
+      else runState = "no_active_run";
+    }
+    return {
+      workflowFile: target.workflowFile,
+      decision: fingerprints.some((value) => !value)
+        ? "blocked_missing_source_time"
+        : runState === "unavailable"
+          ? "blocked_github_status"
+          : runState === "already_running"
+            ? "already_running"
+            : runState === "no_active_run"
+              ? "would_dispatch_if_enabled"
+              : "stale_candidate_dispatch_disabled",
+      runState,
+      sources: stale.map(detail),
+    };
+  });
+}
+
+function logDispatchObservation(report, snapshot = null, logFn = console.log) {
+  const decisions = planDispatchObservation(report, snapshot);
+  const candidates = decisions.filter((item) => item.decision !== "no_stale_source");
+  if (!candidates.length) return;
+  logFn(JSON.stringify({
+    event: "workflow_dispatch_observation",
+    requestId: crypto.randomUUID(),
+    repository: "RonnsenDD/lhh-data-hub",
+    checkedAt: report.checkedAt,
+    mode: "observe_only",
+    dispatchEnabled: false,
+    githubRunStateChecked: Boolean(snapshot),
+    candidates,
+  }));
 }
 
 function logGitHubError(error) {
@@ -762,6 +879,11 @@ async function coordinatorRequest(coordinator, action, payload) {
   }));
   if (!response.ok) throw new Error("COORDINATOR_HTTP_" + response.status);
   return response.json();
+}
+
+export function dispatchCoordinatorStub(namespace) {
+  if (!namespace || typeof namespace.idFromName !== "function" || typeof namespace.get !== "function") return null;
+  return namespace.get(namespace.idFromName("weather-radar-dispatch-v1"));
 }
 
 /**
@@ -958,7 +1080,8 @@ export default {
     });
   },
   async scheduled(event, env) {
-    const r = await collectStatus();
+    const diagnosticsEnabled = env?.WATCHDOG_DIAGNOSTICS_ENABLED === "true";
+    const r = await collectStatus({ includeDiagnostics: diagnosticsEnabled });
     console.log(
       JSON.stringify({
         event: "feed_watchdog_check",
@@ -989,12 +1112,16 @@ export default {
             validUntil: validUntil ?? null,
           }),
         ),
+        ...(diagnosticsEnabled ? { sourceTimings: r.diagnostics } : {}),
       }),
     );
 
     const readEnabled = env?.GITHUB_APP_READ_ENABLED === "true";
     const dispatchEnabled = env?.WORKFLOW_DISPATCH_ENABLED === "true";
-    if (!readEnabled && !dispatchEnabled) return;
+    if (!readEnabled && !dispatchEnabled) {
+      logDispatchObservation(r);
+      return;
+    }
 
     let client;
     try {
@@ -1004,19 +1131,23 @@ export default {
       return;
     }
 
+    let observedSnapshot = null;
     if (readEnabled) {
-      let snapshot;
       try {
-        snapshot = await client.getWorkflowSnapshot();
+        observedSnapshot = await client.getWorkflowSnapshot();
       } catch (error) {
         logGitHubError(error);
-        snapshot = null;
+        observedSnapshot = { queryStatus: "ERROR", workflows: [] };
       }
-      if (snapshot) logWorkflowObservation(snapshot);
+      if (observedSnapshot) logWorkflowObservation(observedSnapshot);
     }
 
-    if (!dispatchEnabled) return;
-    if (!env?.WATCHDOG_DISPATCH_COORDINATOR) {
+    if (!dispatchEnabled) {
+      logDispatchObservation(r, observedSnapshot);
+      return;
+    }
+    const namespace = env?.WATCHDOG_DISPATCH_COORDINATOR;
+    if (!namespace) {
       console.log(JSON.stringify({
         event: "workflow_dispatch_check",
         requestId: crypto.randomUUID(),
@@ -1024,10 +1155,24 @@ export default {
       }));
       return;
     }
+    let coordinator;
+    try {
+      coordinator = dispatchCoordinatorStub(namespace);
+    } catch {
+      coordinator = null;
+    }
+    if (!coordinator || typeof coordinator.fetch !== "function") {
+      console.log(JSON.stringify({
+        event: "workflow_dispatch_check",
+        requestId: crypto.randomUUID(),
+        outcome: "disabled_invalid_coordinator_binding",
+      }));
+      return;
+    }
     await dispatchStaleSources({
       report: r,
       client,
-      coordinator: env.WATCHDOG_DISPATCH_COORDINATOR,
+      coordinator,
       nowMs: Date.parse(r.checkedAt) || Date.now(),
       logFn: (line) => console.log(line),
     });
