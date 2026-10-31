@@ -101,10 +101,13 @@ For the first controlled live test, use the existing scheduled-event-only flag a
 
 ## Test command
 
-From `tools/watchdog`:
+From the repository root:
 ```sh
-node --check github-app-adapter.js
-node --test *.test.mjs
+node tools/watchdog/build-editor-bundle.mjs --check
+node --check tools/watchdog/worker.js
+node --check tools/watchdog/github-app-adapter.js
+node --check tools/watchdog/worker.bundle.js
+node --test tools/watchdog/*.test.mjs
 ```
 
 The tests use only generated ephemeral keys and mocked HTTP responses; they never contact GitHub or Cloudflare and never use the real App private key.
