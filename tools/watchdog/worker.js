@@ -154,7 +154,8 @@ async function get(feed, now, fetcher) {
         Pragma: "no-cache",
       },
     });
-    const a = Number(r.headers.get("age")),
+    const ageHeader = r.headers.get("age"),
+      a = ageHeader === null ? Number.NaN : Number(ageHeader),
       transport = {
         httpDate: r.headers.get("date"),
         httpLastModified: r.headers.get("last-modified"),
@@ -316,11 +317,23 @@ function weather(j, c, now) {
     ],
     products = fields.map(([p, f]) => obs(j.observations[p], f, now)),
     forecast = mos(j.forecast, now);
+  const producer =
+    j.status === "error"
+      ? "ERROR"
+      : j.status === "stale"
+        ? "STALE"
+        : ["ok", "partial"].includes(j.status)
+          ? null
+          : "UNKNOWN";
   return {
     ...c,
     sourceStatus: j.status ?? null,
     products: { observations: products, forecast },
-    status: worst([...products, forecast]),
+    status: worst([
+      ...products,
+      forecast,
+      ...(producer ? [{ status: producer }] : []),
+    ]),
   };
 }
 function level(j, c, station, now) {
@@ -362,6 +375,18 @@ function level(j, c, station, now) {
   );
 }
 function radar(j, c, now) {
+  if (j.status === "unavailable")
+    return state(
+      { ...c, sourceTime: j.productTime ?? null },
+      "UNAVAILABLE",
+      "PRODUCT_UNAVAILABLE",
+    );
+  if (j.status === "error")
+    return state(
+      { ...c, sourceTime: j.productTime ?? null },
+      "ERROR",
+      "PRODUCER_ERROR",
+    );
   if (
     typeof j.productTime !== "string" ||
     typeof j.frameId !== "string" ||
@@ -381,9 +406,6 @@ function radar(j, c, now) {
       ageMinutes: a.ageMinutes,
       thresholdMinutes: 15,
     };
-  if (j.status === "unavailable")
-    return state(base, "UNAVAILABLE", "PRODUCT_UNAVAILABLE");
-  if (j.status === "error") return state(base, "ERROR", "PRODUCER_ERROR");
   if (!["ok", "current", "stale"].includes(j.status))
     return state(base, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
   if (a.status !== "OK") return state(base, a.status, a.reasonCode);
@@ -394,6 +416,22 @@ function radar(j, c, now) {
   );
 }
 function konrad(j, c, now) {
+  if (
+    j.schemaVersion === 1 &&
+    j.product === "DWD KONRAD3D" &&
+    j.source === "DWD" &&
+    j.status === "unavailable"
+  )
+    return state(
+      {
+        ...c,
+        sourceTime: j.referenceTime ?? null,
+        retrievedAt: j.retrievedAt ?? null,
+        jsonPublishedAt: j.publishedAt ?? null,
+      },
+      "UNAVAILABLE",
+      "PRODUCT_UNAVAILABLE",
+    );
   if (
     j.schemaVersion !== 1 ||
     j.product !== "DWD KONRAD3D" ||
@@ -411,8 +449,6 @@ function konrad(j, c, now) {
       ageMinutes: a.ageMinutes,
       thresholdMinutes: 15,
     };
-  if (j.status === "unavailable")
-    return state(base, "UNAVAILABLE", "PRODUCT_UNAVAILABLE");
   if (j.status === "error") return state(base, "ERROR", "PRODUCER_ERROR");
   if (!["current", "stale"].includes(j.status))
     return state(base, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
