@@ -28,4 +28,3 @@ Workers Free currently documents 100k requests/day, 50 subrequests/invocation, 5
 To update existing installation later: backup current script/version; open existing Worker in Cloudflare Dashboard; replace editor module with full `tools/watchdog/worker.js`; preview `GET /status`; check CPU, seven statuses, CORS and logs; publish only after approval; verify exactly the existing Cron still runs; rollback to saved deployment if any free limit/error appears. Do not create another Worker/Cron.
 
 Pilot: 48 h (~576 cron checks); all seven feeds show a status each tick; compare source times with JSON; no writes/API calls; verify Berlin 08:00 boundary and DST fixtures; confirm no Free limits. Without storage there is no persisted history or workflow restart, just logs and per-request report. Active workflow dispatch is excluded and would need a separate project.
-
