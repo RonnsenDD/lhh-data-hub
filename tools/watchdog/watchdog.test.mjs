@@ -355,3 +355,34 @@ test("producer-declared stale/error states cannot be upgraded by a fresh timesta
   assert.equal(find(r, "weather").status, "STALE");
   assert.equal(find(r, "konrad3d").status, "ERROR");
 });
+
+test("unavailable products stay unavailable without invented timestamps", async () => {
+  const d = fixtures();
+  d[URLS.konrad] = {
+    schemaVersion: 1,
+    product: "DWD KONRAD3D",
+    source: "DWD",
+    status: "unavailable",
+    referenceTime: null,
+    publishedAt: "2026-10-31T11:00:00Z",
+  };
+  const { fetcher } = mocked(d);
+  const row = find(await collectStatus({ nowMs: NOW, fetcher }), "konrad3d");
+  assert.equal(row.status, "UNAVAILABLE");
+  assert.equal(row.sourceTime, null);
+});
+test("missing CDN Age is reported as unavailable, not zero", async () => {
+  const d = fixtures();
+  const { fetcher } = mocked(d);
+  const wrapper = async (input, init) => {
+    const response = await fetcher(input, init);
+    const headers = new Headers(response.headers);
+    headers.delete("age");
+    return new Response(response.body, { status: response.status, headers });
+  };
+  const row = find(
+    await collectStatus({ nowMs: NOW, fetcher: wrapper }),
+    "weather",
+  );
+  assert.equal(row.transport.httpAgeSeconds, null);
+});
