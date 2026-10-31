@@ -299,6 +299,36 @@ function expectedTickAtOrBefore(nowMs, workflow) {
   return latest;
 }
 
+const MAX_TICK_COUNT_SCAN = 10_000;
+
+function countExpectedTicksBetween(afterMs, throughMs, workflow) {
+  if (!Number.isFinite(afterMs) || !Number.isFinite(throughMs) || throughMs <= afterMs) return 0;
+  let count = 0;
+  if (workflow.kind === "daily") {
+    const step = 24 * 60 * 60 * 1000;
+    let tick = expectedTickAtOrBefore(afterMs, workflow);
+    if (tick <= afterMs) tick += step;
+    while (tick <= throughMs) {
+      count++;
+      if (count > MAX_TICK_COUNT_SCAN) return null;
+      tick += step;
+    }
+    return count;
+  }
+
+  const hourMs = 60 * 60 * 1000;
+  const firstHour = Math.floor(afterMs / hourMs) * hourMs;
+  const lastHour = Math.floor(throughMs / hourMs) * hourMs;
+  if ((lastHour - firstHour) / hourMs > MAX_TICK_COUNT_SCAN) return null;
+  for (let hourStart = firstHour; hourStart <= lastHour; hourStart += hourMs) {
+    for (const minute of workflow.minutes) {
+      const tick = hourStart + minute * 60_000;
+      if (tick > afterMs && tick <= throughMs) count++;
+    }
+  }
+  return count;
+}
+
 function validRunsPayload(value) {
   return value && typeof value === "object" && Array.isArray(value.workflow_runs);
 }
@@ -308,7 +338,7 @@ function summarizeWorkflow(workflow, runsPayload, nowMs) {
     throw new GitHubAppAdapterError("GITHUB_INVALID_RESPONSE", { stage: "workflow_runs" });
   }
   const runs = runsPayload.workflow_runs
-    .filter((run) => run && typeof run === "object" && typeof run.created_at === "string")
+    .filter((run) => run && typeof run === "object" && typeof run.created_at === "string" && Number.isFinite(Date.parse(run.created_at)))
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   const lastSuccess = runs.find((run) => run.conclusion === "success");
   const failureConclusions = new Set(["failure", "timed_out", "action_required", "startup_failure", "stale"]);
@@ -318,17 +348,34 @@ function summarizeWorkflow(workflow, runsPayload, nowMs) {
     .filter((run) => activeStatuses.has(run.status))
     .map((run) => ({ id: run.id ?? null, status: run.status, createdAt: run.created_at }))
     .slice(0, 10);
-  const lastAutomatic = runs.find((run) => run.event === "schedule");
-  const lastAutomaticMs = lastAutomatic ? Date.parse(lastAutomatic.created_at) : Number.NaN;
-  const expectedTick = expectedTickAtOrBefore(nowMs, workflow);
-  const overdueMinutes =
-    Number.isFinite(lastAutomaticMs) && lastAutomaticMs >= expectedTick
+  const automaticRuns = runs.filter((run) => run.event === "schedule");
+  const lastAutomatic = automaticRuns[0] ?? null;
+  const previousAutomatic = automaticRuns[1] ?? null;
+  const lastAutomaticCreatedMs = lastAutomatic ? Date.parse(lastAutomatic.created_at) : Number.NaN;
+  const lastAutomaticStartedMs = lastAutomatic && typeof lastAutomatic.run_started_at === "string"
+    ? Date.parse(lastAutomatic.run_started_at)
+    : Number.NaN;
+  const previousAutomaticCreatedMs = previousAutomatic ? Date.parse(previousAutomatic.created_at) : Number.NaN;
+  const latestExpectedTick = expectedTickAtOrBefore(nowMs, workflow);
+  const lastRunExpectedTick = Number.isFinite(lastAutomaticCreatedMs)
+    ? expectedTickAtOrBefore(lastAutomaticCreatedMs, workflow)
+    : Number.NaN;
+  const latestExpectedTickOverdueMinutes =
+    Number.isFinite(lastAutomaticCreatedMs) && lastAutomaticCreatedMs >= latestExpectedTick
       ? 0
-      : Math.max(0, Math.floor((nowMs - expectedTick) / 60_000));
-  const startDelay =
-    Number.isFinite(lastAutomaticMs)
-      ? Math.max(0, Math.floor((lastAutomaticMs - expectedTickAtOrBefore(lastAutomaticMs, workflow)) / 60_000))
+      : Math.max(0, Math.floor((nowMs - latestExpectedTick) / 60_000));
+  const expectedTicksBetweenRuns =
+    Number.isFinite(previousAutomaticCreatedMs) && Number.isFinite(lastRunExpectedTick)
+      ? countExpectedTicksBetween(previousAutomaticCreatedMs, lastRunExpectedTick, workflow)
       : null;
+  const missingExpectedTicksBetweenRuns =
+    expectedTicksBetweenRuns === null ? null : Math.max(0, expectedTicksBetweenRuns - 1);
+  const creationDelayMinutes = Number.isFinite(lastAutomaticCreatedMs) && Number.isFinite(lastRunExpectedTick)
+    ? Math.max(0, Math.floor((lastAutomaticCreatedMs - lastRunExpectedTick) / 60_000))
+    : null;
+  const actualStartDelayMinutes = Number.isFinite(lastAutomaticStartedMs) && Number.isFinite(lastRunExpectedTick)
+    ? Math.max(0, Math.floor((lastAutomaticStartedMs - lastRunExpectedTick) / 60_000))
+    : null;
   return {
     file: workflow.file,
     cron: workflow.cron,
@@ -337,13 +384,22 @@ function summarizeWorkflow(workflow, runsPayload, nowMs) {
     lastSuccess: lastRunFields(lastSuccess),
     lastFailure: lastRunFields(lastFailure),
     activeRuns,
-    lastAutomaticStartAt: lastAutomatic ? lastAutomatic.created_at : null,
-    minutesSinceAutomaticStart: Number.isFinite(lastAutomaticMs)
-      ? Math.max(0, Math.floor((nowMs - lastAutomaticMs) / 60_000))
+    lastAutomaticRunCreatedAt: lastAutomatic ? lastAutomatic.created_at : null,
+    lastAutomaticRunStartedAt: Number.isFinite(lastAutomaticStartedMs)
+      ? lastAutomatic.run_started_at
       : null,
-    latestExpectedScheduleAt: new Date(expectedTick).toISOString(),
-    scheduleOverdueMinutes: overdueMinutes,
-    lastObservedStartDelayMinutes: startDelay,
+    minutesSinceLastAutomaticRunCreated: Number.isFinite(lastAutomaticCreatedMs)
+      ? Math.max(0, Math.floor((nowMs - lastAutomaticCreatedMs) / 60_000))
+      : null,
+    minutesSinceLastAutomaticRunStarted: Number.isFinite(lastAutomaticStartedMs)
+      ? Math.max(0, Math.floor((nowMs - lastAutomaticStartedMs) / 60_000))
+      : null,
+    latestExpectedScheduleTickAt: new Date(latestExpectedTick).toISOString(),
+    latestExpectedTickOverdueMinutes,
+    lastAutomaticScheduleCreationDelayMinutes: creationDelayMinutes,
+    lastAutomaticRunStartDelayMinutes: actualStartDelayMinutes,
+    scheduleStartDelayAttribution: "inferred_nearest_cron_tick_before_run_creation",
+    missingExpectedScheduleTicksBetweenLatestAutomaticRuns: missingExpectedTicksBetweenRuns,
   };
 }
 
