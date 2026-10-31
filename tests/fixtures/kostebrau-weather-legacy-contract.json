@@ -1,0 +1,37 @@
+{
+  "location": {
+    "name": "Kostebrau, Lauchhammer",
+    "city": "Lauchhammer",
+    "latitude": 51.527833,
+    "longitude": 13.831333
+  },
+  "station": {
+    "name": "DB0LS, Kostebrau",
+    "software": "WeeWX",
+    "hardware": "WS1080"
+  },
+  "source": {
+    "provider": "Wetterstation Kostebrau / Lausitzlink",
+    "url": "https://wetter.lausitzlink.de/"
+  },
+  "weather": {
+    "code": 51,
+    "description": "Leichter Nieselregen",
+    "icon": "🌦️",
+    "isDay": 0,
+    "provider": "DWD ICON via Open-Meteo"
+  },
+  "measuredAt": "2026-10-31T02:40:00",
+  "retrievedAt": "2026-10-31T01:46:23.154878+00:00",
+  "temperatureC": 7.2,
+  "humidityPercent": 99,
+  "pressureHpa": 1014.4,
+  "windKmh": 6,
+  "windDirection": "W",
+  "gustKmh": 11,
+  "gustDirection": "W",
+  "rainTotalCm": 0,
+  "rainRateCmH": 0,
+  "maxRainRateCmH": 0.12,
+  "status": "ok"
+}
