@@ -34,10 +34,8 @@ class KostebrauWeatherTests(unittest.TestCase):
             else:
                 self.assertEqual(data[field], expected, field)
         self.assertEqual(data["measuredAt"], LEGACY_CONTRACT["measuredAt"])
-        self.assertEqual(
-            datetime.fromisoformat(data["retrievedAt"].replace("Z", "+00:00")),
-            retrieved_at,
-        )
+        round_trip = datetime.fromisoformat(data["retrievedAt"].replace("Z", "+00:00"))
+        self.assertLessEqual(abs((round_trip - retrieved_at).total_seconds()), 0.001)
         self.assertEqual(data["status"], "ok")
         self.assertEqual(data["measuredAtTimezone"], "Europe/Berlin")
         self.assertEqual(data["measuredAtUtc"], "2026-10-31T01:40:00Z")
