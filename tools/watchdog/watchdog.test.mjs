@@ -281,6 +281,125 @@ test("offline, timeout and malformed JSON stay isolated per source", async () =>
   assert.equal(find(r, "graslandfeuerindex").reasonCode, "INVALID_JSON");
   assert.equal(find(r, "radolan_ry").status, "OK");
 });
+test("Cloudflare manual redirects follow only same-origin HTTPS targets", async () => {
+  const { fetcher: base } = mocked(fixtures());
+  const calls = [];
+  const f = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push({ url, init });
+    if (url.pathname.endsWith("dwd-weather.json") && !url.searchParams.has("accepted")) {
+      const location = new URL(url);
+      location.searchParams.set("accepted", "1");
+      return new Response(null, {
+        status: 302,
+        headers: { location: location.toString() },
+      });
+    }
+    return base(input, init);
+  };
+  const result = await collectStatus({ nowMs: NOW, fetcher: f });
+  assert.equal(find(result, "weather").status, "OK");
+  const weatherCalls = calls.filter(({ url }) => url.pathname.endsWith("dwd-weather.json"));
+  assert.equal(weatherCalls.length, 2);
+  assert.ok(weatherCalls.every(({ init }) => init.redirect === "manual"));
+});
+
+test("foreign-host, HTTP-downgrade, missing-location and redirect loops fail closed", async () => {
+  const cases = [
+    ["https://attacker.example/data.json", "REDIRECT_HOST_NOT_ALLOWED"],
+    ["http://raw.githubusercontent.com/redirect.json", "REDIRECT_HOST_NOT_ALLOWED"],
+    [null, "REDIRECT_MISSING_LOCATION"],
+  ];
+  for (const [location, expected] of cases) {
+    const { fetcher: base } = mocked(fixtures());
+    let redirectCalls = 0;
+    const f = async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("dwd-weather.json")) {
+        redirectCalls++;
+        return new Response(null, {
+          status: 302,
+          headers: location ? { location } : {},
+        });
+      }
+      return base(input, init);
+    };
+    const result = await collectStatus({ nowMs: NOW, fetcher: f });
+    assert.equal(find(result, "weather").reasonCode, expected);
+    assert.equal(redirectCalls, 1);
+  }
+  const { fetcher: base } = mocked(fixtures());
+  const f = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("dwd-weather.json")) {
+      return new Response(null, { status: 302, headers: { location: url.href } });
+    }
+    return base(input, init);
+  };
+  const result = await collectStatus({ nowMs: NOW, fetcher: f });
+  assert.equal(find(result, "weather").reasonCode, "REDIRECT_LOOP");
+});
+
+test("observed outage mix remains five STALE and two OK feeds", async () => {
+  const d = fixtures();
+  for (const row of Object.values(d[URLS.weather].observations)) {
+    row.measuredAt = "2026-10-31T08:00:00Z";
+  }
+  d[URLS.levelsL].latestMeasurement.measuredAtUtc = "2026-10-31T08:00:00Z";
+  d[URLS.levelsB].latestMeasurement.measuredAtUtc = "2026-10-31T08:00:00Z";
+  d[URLS.radar].productTime = "2026-10-31T10:00:00Z";
+  d[URLS.konrad].referenceTime = "2026-10-31T10:00:00Z";
+  const { fetcher } = mocked(d);
+  const result = await collectStatus({ nowMs: NOW, fetcher });
+  assert.deepEqual(
+    Object.fromEntries(
+      ["STALE", "OK"].map((status) => [
+        status,
+        result.sources.filter((source) => source.status === status).length,
+      ]),
+    ),
+    { STALE: 5, OK: 2 },
+  );
+  assert.equal(result.overallStatus, "STALE");
+});
+
+test("redirect chains are bounded", async () => {
+  const { fetcher: base } = mocked(fixtures());
+  const f = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("dwd-weather.json")) {
+      const next = new URL(url);
+      next.searchParams.set("hop", String(Number(next.searchParams.get("hop") || 0) + 1));
+      return new Response(null, { status: 302, headers: { location: next.href } });
+    }
+    return base(input, init);
+  };
+  const result = await collectStatus({ nowMs: NOW, fetcher: f });
+  assert.equal(find(result, "weather").reasonCode, "REDIRECT_LIMIT_EXCEEDED");
+});
+
+test("scheduled logs contain structured status, not feed URLs or payload values", async () => {
+  const { fetcher } = mocked(fixtures());
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  let logLine = "";
+  globalThis.fetch = fetcher;
+  console.log = (line) => { logLine = String(line); };
+  try {
+    await m.default.scheduled({ cron: "*/5 * * * *", scheduledTime: NOW });
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+  }
+  const log = JSON.parse(logLine);
+  assert.equal(log.event, "feed_watchdog_check");
+  assert.equal(log.sources.length, 7);
+  assert.equal(logLine.includes("raw.githubusercontent.com"), false);
+  assert.equal(logLine.includes("rain-ry1.png"), false);
+  assert.equal(logLine.includes('"waterLevelCm"'), false);
+  assert.equal(logLine.includes("Authorization"), false);
+});
+
 test("no github REST, dispatch, or persistence implementation", async () => {
   const s = await readFile(new URL("./worker.js", import.meta.url), "utf8");
   for (const x of [
