@@ -28,7 +28,14 @@ The adapter queries only these existing workflows on `main`:
 
 These values were checked against `main` at `557ac3fe1d9ed9ae1780b7d10aa5048dc56f6b61`. Recheck the workflow files before integrating this adapter, since schedules can change.
 
-The summary distinguishes latest run, latest success, latest failure, queued/in-progress runs, last scheduled start, minutes since that start, expected schedule tick, and schedule delay. Workflow success is separate metadata: it never upgrades the seven public feed freshness states.
+The schedule fields keep separate clocks and meanings:
+- `lastAutomaticRunCreatedAt` / `minutesSinceLastAutomaticRunCreated`: age of the scheduled run record from GitHub's `created_at`.
+- `lastAutomaticRunStartedAt` / `minutesSinceLastAutomaticRunStarted`: actual runner start from `run_started_at`; these remain null while a run is only queued.
+- `latestExpectedScheduleTickAt` and `latestExpectedTickOverdueMinutes`: the latest nominal Cron tick and how long that tick is overdue **if no scheduled run has been created at or after it**. This is not the age of the last run.
+- `lastAutomaticScheduleCreationDelayMinutes` and `lastAutomaticRunStartDelayMinutes`: differences from the nearest nominal Cron tick at or before the latest run's `created_at`. The attribution is explicitly marked `inferred_nearest_cron_tick_before_run_creation` because GitHub's runs API does not expose the intended occurrence timestamp.
+- `missingExpectedScheduleTicksBetweenLatestAutomaticRuns`: estimated missing Cron ticks between the previous scheduled run and the latest run's inferred tick; null when there is no prior run or the bounded calculation cannot determine it.
+
+This makes run age, current overdue time, inferred start delay, and missed ticks independently inspectable. Workflow success remains separate metadata: it never upgrades the seven public feed freshness states.
 
 ## Cloudflare Free budget estimate
 
