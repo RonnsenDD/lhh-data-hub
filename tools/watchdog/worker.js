@@ -183,7 +183,14 @@ async function get(feed, now, fetcher) {
         nextUrl.password
       )
         throw Error("REDIRECT_HOST_NOT_ALLOWED");
-      await response.body?.cancel();
+      if (response.body) {
+        try {
+          await response.body.cancel();
+        } catch {
+          // A redirect body is disposable; cancellation failure must not
+          // invalidate an otherwise safe redirect target.
+        }
+      }
       currentUrl = nextUrl;
       redirectCount++;
     }
