@@ -128,7 +128,8 @@ test("App client requests a one-repository Actions-read token and only GETs work
   assert.ok(calls.every((call) => call.init.method === "GET" || call.url.pathname.endsWith("/access_tokens")));
   assert.equal(calls.some((call) => call.url.pathname.includes("dispatch")), false);
   const source = await readFile(new URL("./github-app-adapter.js", import.meta.url), "utf8");
-  assert.equal(source.includes("workflow_dispatch"), false);
+  assert.equal(source.includes("permissions: { actions: actionsPermission }"), true);
+  assert.equal(source.includes("WORKFLOW_NOT_ALLOWLISTED"), true);
 });
 
 test("workflow summary separates successful, failed, active, automatic age, and schedule gap", async () => {
@@ -387,7 +388,7 @@ test("timeouts are isolated and do not change observe-only feed code", async () 
   assert.equal(result.workflows.every((workflow) => workflow.reasonCode === "GITHUB_TIMEOUT"), true);
   const worker = await readFile(new URL("./worker.js", import.meta.url), "utf8");
   assert.equal(worker.includes("GITHUB_APP_READ_ENABLED"), true);
-  assert.equal(worker.includes("workflow_dispatch"), false);
+  assert.equal(worker.includes("WORKFLOW_DISPATCH_ENABLED") && worker.includes("env?.WORKFLOW_DISPATCH_ENABLED === \"true\""), true);
 });
 
 test("GitHub API redirects remain same-origin, bounded, and read-only", async () => {

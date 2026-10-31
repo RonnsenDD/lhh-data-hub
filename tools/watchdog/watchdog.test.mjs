@@ -556,8 +556,10 @@ test("public status requests never invoke the GitHub App adapter even when enabl
       new Request("https://worker.example/status", { headers: { Origin: "https://feuerwehrlauchhammer.sharepoint.com" } }),
       {
         GITHUB_APP_READ_ENABLED: "true",
+        WORKFLOW_DISPATCH_ENABLED: "true",
         GITHUB_APP_ID: "5555433",
         GITHUB_INSTALLATION_ID: "177220128",
+        WATCHDOG_DISPATCH_COORDINATOR: { fetch: async () => assert.fail("public status must not reach the coordinator") },
       },
     );
     assert.equal(response.status, 200);
@@ -620,12 +622,12 @@ test("GitHub authentication failure is logged without changing feed results", as
   assert.equal(logs.join("\n").includes("private response body"), false);
 });
 
-test("no GitHub write or dispatch path is implemented", async () => {
+test("GitHub dispatch is default-off, fixed-scope, and absent from public fetch routes", async () => {
   const s = await readFile(new URL("./worker.js", import.meta.url), "utf8");
   const adapter = await readFile(new URL("./github-app-adapter.js", import.meta.url), "utf8");
-  assert.equal(adapter.includes("workflow_dispatch"), false);
-  assert.equal(adapter.includes("dispatches"), false);
-  assert.equal(s.includes("workflow_dispatch"), false);
+  assert.equal(adapter.includes("WORKFLOW_NOT_ALLOWLISTED"), true);
+  assert.equal(adapter.includes("enabled !== true"), true);
+  assert.equal(s.includes("env?.WORKFLOW_DISPATCH_ENABLED === \"true\""), true);
   assert.equal(s.includes("D1Database"), false);
   assert.equal(s.includes("caches.default"), false);
 });

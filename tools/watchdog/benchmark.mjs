@@ -35,6 +35,9 @@ function makeFeeds() {
 }
 
 const feeds = makeFeeds();
+const staleFeeds = makeFeeds();
+staleFeeds[URLS.weather].observations.wind.measuredAt = new Date(NOW - 60 * 60_000).toISOString();
+staleFeeds[URLS.radar].productTime = new Date(NOW - 20 * 60_000).toISOString();
 const snapshotFiles = new Map([
   [URLS.weather, "dwd-weather.json"],
   [URLS.levelsL, "level-l.json"],
@@ -59,6 +62,8 @@ if (snapshotDir) {
   }
 }
 const feedBodies = new Map(Object.entries(feeds).map(([url, data]) => [url, snapshotBodies.get(url) ?? JSON.stringify(data)]));
+const staleFeedBodies = new Map(Object.entries(staleFeeds).map(([url, data]) => [url, snapshotBodies.get(url) ?? JSON.stringify(data)]));
+let activeFeedBodies = feedBodies;
 const feedBytes = [...feedBodies.values()].reduce((sum, body) => sum + Buffer.byteLength(body), 0);
 const feedSamples = Object.entries(feeds).map(([url, data]) => {
   const body = feedBodies.get(url);
@@ -72,18 +77,23 @@ const feedSamples = Object.entries(feeds).map(([url, data]) => {
   };
 });
 const runsBody = JSON.stringify({ total_count: 1, workflow_runs: [{ id: 1, status: "completed", conclusion: "success", event: "schedule", created_at: "2026-10-31T10:48:00Z", run_started_at: "2026-10-31T10:48:02Z", updated_at: "2026-10-31T10:49:00Z", head_sha: "bench" }] });
-const tokenBody = JSON.stringify({ token: "ephemeral-benchmark-token", expires_at: new Date(NOW + 3600000).toISOString() });
+const tokenBody = JSON.stringify({ token: "ephemeral-benchmark-token", expires_at: new Date(Date.now() + 3600000).toISOString() });
 const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
 let githubApiCalls = 0;
 let feedCalls = 0;
+let dispatchCalls = 0;
 globalThis.fetch = async (input) => {
   const url = new URL(String(input));
   if (url.origin === "https://api.github.com") {
     githubApiCalls++;
+    if (url.pathname.endsWith("/dispatches")) {
+      dispatchCalls++;
+      return new Response(null, { status: 204 });
+    }
     return new Response(url.pathname.endsWith("/access_tokens") ? tokenBody : runsBody, { status: 200, headers: { "content-type": "application/json" } });
   }
   feedCalls++;
-  const body = feedBodies.get(url.origin + url.pathname);
+  const body = activeFeedBodies.get(url.origin + url.pathname);
   return body ? new Response(body, { status: 200, headers: { "content-type": "application/json", age: "0" } }) : new Response(null, { status: 404 });
 };
 
@@ -93,13 +103,29 @@ function percentile(sorted, fraction) {
 
 async function benchmark(mode) {
   const enabled = mode === "enabled";
-  const env = enabled ? { GITHUB_APP_READ_ENABLED: "true", GITHUB_APP_ID: "5555433", GITHUB_INSTALLATION_ID: "177220128", GITHUB_APP_PRIVATE_KEY: privateKey } : {};
+  const dispatchEnabled = mode === "dispatch";
+  activeFeedBodies = dispatchEnabled ? staleFeedBodies : feedBodies;
+  const env = enabled || dispatchEnabled ? {
+    GITHUB_APP_READ_ENABLED: enabled ? "true" : "false",
+    WORKFLOW_DISPATCH_ENABLED: dispatchEnabled ? "true" : "false",
+    GITHUB_APP_ID: "5555433",
+    GITHUB_INSTALLATION_ID: "177220128",
+    GITHUB_APP_PRIVATE_KEY: privateKey,
+    ...(dispatchEnabled ? { WATCHDOG_DISPATCH_COORDINATOR: {
+      async fetch(request) {
+        const action = new URL(request.url).pathname.slice(1);
+        if (action === "reserve") return Response.json({ granted: true, leaseId: "bench-lease" });
+        return Response.json({ completed: true });
+      },
+    } } : {}),
+  } : {};
   const oldLog = console.log;
   console.log = () => {};
   try {
     for (let i = 0; i < WARMUP; i++) await worker.scheduled({ cron: "*/5 * * * *", scheduledTime: NOW }, env);
     githubApiCalls = 0;
     feedCalls = 0;
+    dispatchCalls = 0;
     const cpuMs = [], wallMs = [];
     const totalCpuStart = process.cpuUsage();
     for (let i = 0; i < ITERATIONS; i++) {
@@ -112,8 +138,9 @@ async function benchmark(mode) {
     }
     const totalCpu = process.cpuUsage(totalCpuStart);
     if (feedCalls !== 7 * ITERATIONS) throw new Error(`Expected ${7 * ITERATIONS} feed requests, observed ${feedCalls}`);
-    const expectedGitHubCalls = enabled ? 6 * ITERATIONS : 0;
-    if (githubApiCalls !== expectedGitHubCalls) throw new Error(`Expected ${expectedGitHubCalls} GitHub requests, observed ${githubApiCalls}`);
+    const expectedGitHubCalls = enabled ? 6 * ITERATIONS : dispatchEnabled ? 8 * ITERATIONS : 0;
+    if (githubApiCalls !== expectedGitHubCalls) throw new Error("Unexpected GitHub request count: " + githubApiCalls + "; expected " + expectedGitHubCalls);
+    if (dispatchCalls !== (dispatchEnabled ? 2 * ITERATIONS : 0)) throw new Error("Unexpected dispatch request count: " + dispatchCalls);
     cpuMs.sort((a, b) => a - b);
     wallMs.sort((a, b) => a - b);
     return {
@@ -123,6 +150,7 @@ async function benchmark(mode) {
       feedSamples,
       feedRequests: feedCalls,
       githubApiCalls,
+      dispatchRequests: dispatchCalls,
       totalProcessCpuMs: Number(((totalCpu.user + totalCpu.system) / 1000).toFixed(2)),
       meanCpuMsPerInvocation: Number(((totalCpu.user + totalCpu.system) / 1000 / ITERATIONS).toFixed(3)),
       medianCpuMsPerInvocation: Number(percentile(cpuMs, 0.5).toFixed(3)),
@@ -134,4 +162,4 @@ async function benchmark(mode) {
   }
 }
 
-console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, results: [await benchmark("disabled"), await benchmark("enabled")] }, null, 2));
+console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, results: [await benchmark("disabled"), await benchmark("enabled"), await benchmark("dispatch")] }, null, 2));

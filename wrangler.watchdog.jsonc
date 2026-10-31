@@ -4,5 +4,17 @@
   "main": "tools/watchdog/worker.js",
   "compatibility_date": "2026-10-31",
   "workers_dev": true,
+  "vars": {
+    "GITHUB_APP_READ_ENABLED": "false",
+    "WORKFLOW_DISPATCH_ENABLED": "false"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "WATCHDOG_DISPATCH_COORDINATOR", "class_name": "WatchdogDispatchCoordinator" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1-dispatch-coordinator", "new_sqlite_classes": ["WatchdogDispatchCoordinator"] }
+  ],
   "triggers": { "crons": ["*/5 * * * *"] }
 }

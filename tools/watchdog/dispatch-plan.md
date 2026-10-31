@@ -1,48 +1,64 @@
-# Watchdog V2: sicherer GitHub-Nachstart (Plan, nicht implementiert)
+# Watchdog: vorbereiteter automatischer Nachstart (nicht aktiviert)
 
-Stand: 31.10.2026. Dies ist ein Architekturplan für eine spätere, gesondert freizugebende Funktion. Der Worker in `worker.js` bleibt observe-only: keine GitHub-API, keine Dispatches, keine Zugangsdaten.
+Stand: 31.10.2026. Der Codepfad ist in worker.js und github-app-adapter.js vorbereitet. Im Worker-Standardzustand bleiben GITHUB_APP_READ_ENABLED=false und WORKFLOW_DISPATCH_ENABLED=false. Es gab keine Cloudflare-Bereitstellung, keine Änderung an der GitHub-App, keine Secrets und keinen Workflowstart. Der bestehende Cron */5 * * * * bleibt erhalten.
 
-## Entscheidung zur Sperre
+## Nachgewiesene Datenlücken
 
-Ein zustandsloser Cron-Worker kann parallele Ausführungen nicht zuverlässig gegen doppelte Dispatches sperren. Für den Nachstart braucht es eine atomare, persistente Reservierung.
+GitHub-Historie am 31.10.2026 zeigt beim Wetter geplante Runs mit mehrstündigen Abständen (beispielsweise 15:54:09Z → 19:48:51Z = 3 h 54 min 42 s) und beim Radar 08:20:43Z → 14:36:46Z → 18:44:29Z. In den gezielt geprüften Runs waren die eigentlichen update-weather- beziehungsweise publish-Jobs erfolgreich; ein separat ausgeführter Schedule health-Job schlug bei der Prüfung der Historie fehl. Das belegt Lücken der Schedule-Ereignisse, aber keinen konkreten Grund für deren Ausbleiben. GitHub-Schedule-Ausführung ist best effort; die Audit-Fehler erkennen die Lücke, verursachen sie aber nicht.
 
-Cloudflare SQLite-backed Durable Objects sind laut Cloudflare-Dokumentation im Workers Free-Tarif verfügbar. Für Free gelten derzeit 100.000 DO-Requests/Tag, 13.000 GB-s Laufzeit/Tag, 5 Mio. SQL-Zeilenlesevorgänge/Tag, 100.000 Schreibvorgänge/Tag und 5 GB Speicher. Free-Limits werden täglich zurückgesetzt; bei Überschreitung schlagen weitere Operationen fehl. Auf einem Paid-Tarif gelten andere Inklusivmengen und mögliche Mehrkosten. Daher darf diese Architektur erst aktiviert werden, wenn im tatsächlichen Konto Workers Free und genügend Restkontingent bestätigt sind. Das Cloudflare-Connector-Konto dieser Prüfung zeigte keine Accounts; Tarif, aktuelle Nutzung und Restkontingent sind damit **nicht live bestätigt**.
+## CPU-Befund
 
-Bei einem einzigen Coordinator-Objekt kann ein SQLite-Unique-Key pro Workflow mit atomarem `INSERT … ON CONFLICT … WHERE lease_expired RETURNING` die Reservierung bilden. Der Netzwerkaufruf an GitHub erfolgt erst nach der Reservierung und außerhalb einer DB-Transaktion. Ein DO-Quota- oder Speicherfehler muss „kein Dispatch“ bedeuten (fail closed). Ein bloßes Worker-globales `Map`, Cache API oder KV-Read-then-Write ist keine ausreichende Sperre.
+Der Livebetrieb meldete zuvor 12–17 ms CPU je Cron-Ausführung bei deaktivierter GitHub-App. Cloudflare dokumentiert für Workers Free 10 ms CPU pro Aufruf. Ein 50-Sekunden-CPU-Profil des bestehenden Workers wurde aufgenommen, enthielt jedoch keine aufrufbaren Quellfunktionsnamen (nur root/GC/idle-Samples); daraus lässt sich kein einzelner Hotspot belegen. Der Quellpfad liest, decodiert und parst sieben vollständige JSON-Feeds pro Cron-Lauf; dies ist ein plausibler Arbeitsanteil, aber keine kausal gemessene Zuordnung. Die App-Observation kann bei deaktiviertem Flag nicht die Ursache des 12–17-ms-Baselineverbrauchs sein. Der Nachstartpfad bleibt default-off und kann daher den derzeitigen Liveverbrauch nicht reduzieren. Lokale Node-Benchmarks sind keine Cloudflare-CPU-Messung. Der Free-CPU-Headroom ist vor Aktivierung erneut live zu messen.
 
-Ein 5-Minuten-Cron bedeutet 288 Watchdog-Prüfungen/Tag. Ein globaler Coordinator-Aufruf pro Lauf wären etwa 288 DO-Requests/Tag, zuzüglich seltene Reservierungsänderungen; das liegt rechnerisch unter den dokumentierten Free-Grenzen, beweist aber weder Konto-Restkontingent noch CPU-Headroom. Der bestehende Worker prüft sieben Feeds (sieben ausgehende Feed-Requests pro Durchlauf, begrenzt parallel auf vier); für Free gilt außerdem 10 ms CPU je Worker-Aufruf und 50 Subrequests je Aufruf. CPU und Kontonutzung konnten live nicht geprüft werden.
+## Sichere Triggerlogik
 
-## Zielablauf für eine spätere Dispatch-Ausbaustufe
+- Nur weather.status === STALE löst update-dwd-weather.yml als Kandidat aus.
+- radolan_ry.status === STALE oder konrad3d.status === STALE lösen zusammen höchstens einen Lauf von update-radolan-ry.yml aus.
+- ERROR, UNKNOWN, UNAVAILABLE, fehlendes JSON oder ein HTTP-Ausfall erzeugen keinen Dispatch. Sie bleiben Fehler/Unverfügbarkeit und werden nicht als Aktualisierungslücke des Produzenten interpretiert.
+- Vor Reservierung und unmittelbar vor Dispatch werden aktive Runs geprüft. Jeder Fehler/Timeout/Rate-Limit der GitHub-API blockiert den Dispatch (fail closed).
+- WatchdogDispatchCoordinator ist ein SQLite-backed Durable Object. Es serialisiert Reservierungen pro Workflow, blockiert 30 Minuten nach einem Versuch, merkt sich einen Fingerabdruck der tatsächlich veralteten Quellzeitpunkte (keine Wiederholung bei unverändertem Quellstand) und lässt höchstens zwei Reservierungen pro Workflow/UTC-Tag zu. Fünf-Minuten-Lease verhindert konkurrierende Starts. Unsichere Timeouts behalten die Sperre; keine Retry-Schleife.
+- Zulässige Workflows und main sind im Code fest verdrahtet. Es gibt keinen HTTP-Admin-Endpunkt. / und /status bleiben ausschließlich Feedstatus-Endpunkte und lösen keine GitHub-Aktionen aus.
+- 204 von GitHub bedeutet nur „Dispatch-Anforderung angenommen“. Ein späterer Erfolg erfordert weiterhin einen neuen Workflowlauf und eine überprüfte Veröffentlichung mit tatsächlichem Quellzeitpunkt; dieser PR behauptet/implementiert keinen erfolgreichen Datenabschluss anhand des Dispatch-Responses.
 
-1. Der bestehende Cron prüft weiter alle sieben öffentlichen JSON-Feeds anhand ihrer Mess-/Produktzeit. Nur Quelle `STALE` oder bestätigter Produzentenfehler ist ein Kandidat; Abrufzeit/HTTP-Erfolg aktualisiert keine Messzeit.
-2. Ein einziger Coordinator-Aufruf prüft und reserviert atomar pro zulässiger Workflowdatei. Vor der Reservierung werden Status-API-Ausfälle, offene Cooldowns, Tageslimit, aktiver Lauf und zuletzt beobachtete Veröffentlichung berücksichtigt.
-3. Der Worker fragt GitHub für den fest verdrahteten Workflow-Laufstatus ab. Bei laufendem oder wartendem Job: kein Dispatch. Bei HTTP 403/429/5xx, Rate-Limit oder uneindeutiger Antwort: kein Dispatch; Rate-Limit-Header beachten und begrenzte Sperre beibehalten.
-4. Erst nach einer atomaren Kurzzeit-Reservierung wird der vorhandene Workflow mit `workflow_dispatch` angefordert. Die Reservierung wird vor dem HTTP-Aufruf persistiert. Bei Timeout bleibt ein Cooldown bestehen, weil GitHub den Start möglicherweise angenommen hat.
-5. HTTP 204 bedeutet nur „Dispatch-Anforderung angenommen“, niemals „Daten aktualisiert“. Der Worker wartet auf einen neuen `workflow_dispatch`-Run, ermittelt dessen Abschluss und prüft danach erneut den öffentlichen Feed und dessen tatsächlichen Quellzeitpunkt. Erst eine erfolgreiche Veröffentlichung mit fachlich aktueller Quelle gilt als aktualisiert.
-6. Bei nicht beobachtbarem Run oder unverändertem Feed: Status `dispatch_requested`/„Ausführung oder Datenaktualisierung nicht bestätigt“, begrenzte Wiederholungssperre und Störungsausgabe; kein Fünf-Minuten-Dauernachstart.
+## Rechte
 
-### Sicherheits- und Betriebsgrenzen
+Die bestehende GitHub App ist nur auf RonnsenDD/lhh-data-hub installiert und hat derzeit Actions: Read-only. Für den vorbereiteten POST /repos/RonnsenDD/lhh-data-hub/actions/workflows/{file}/dispatches benötigt die Installation Actions: write. Ein Installationstoken wird auf die einzelne Repository-ID 1424581788 und ausschließlich Actions write angefordert; keine Contents-, Administration- oder Organizations-Rechte. Die Einstellung wird in diesem PR nicht geändert. Der Kontoinhaber müsste die App-Berechtigung manuell anheben und die bestehende Installation aktualisieren. Der Private Key bleibt ein Cloudflare-Secret.
 
-- Zulässige Dateien sind eine im Code fest verdrahtete Liste: `update-dwd-weather.yml`, `update-levels.yml`, `update-radolan-ry.yml`, `update-graslandfeuerindex.yml`, `update-waldbrandgefahrenstufe-osl.yml`. Keine vom HTTP-Aufrufer übergebene Datei oder Branch akzeptieren.
-- GitHub App nur für `RonnsenDD/lhh-data-hub` installieren. Minimal erforderlich: Repository-Metadaten lesen (GitHub-Standard) und Actions lesen/schreiben, damit Workflow-Runs abgefragt und `workflow_dispatch` ausgelöst werden kann. Keine Contents-, Administration- oder Organisationsrechte, sofern die API-Prüfung sie nicht nachweislich verlangt.
-- App-ID und Installation-ID als nicht geheime Konfiguration; Private Key ausschließlich als Cloudflare Worker Secret. Installationstoken kurzlebig nur zur Laufzeit erzeugen, nicht persistieren/loggen. GitHub-App/Schlüssel erst nach gesonderter Freigabe erstellen.
-- Ein zentraler SQLite-backed Durable Object reserviert pro Workflow mit Lease, Idempotency-Key, letzter Dispatch-Zeit, Tageszähler, aktivem Run und Backoff. Geplante Anfangsregeln: maximal ein Nachstart je Workflow pro 30 Minuten, höchstens zwei pro Workflow/Tag; keine erneute Anforderung bei laufendem oder unklarem Job. Werte fachlich bestätigen, bevor Dispatch aktiviert wird.
-- `DISPATCH_MODE` ist standardmäßig `observe`; kein öffentlicher Pfad kann den Modus aktivieren. Umschaltung erfordert Worker-Konfigurationsänderung und gesonderte Freigabe. Rollback: zurück auf observe-only, bestehende Cron-Ausführung beibehalten, keine Produzenten-Schedules ändern.
-- Die fünf Workflows müssen auf `main` weiterhin `workflow_dispatch` unterstützen. Das ist vor einer Aktivierung je Datei neu zu prüfen.
+## Lokaler CPU-Benchmark (Node.js, kein Cloudflare-Messwert)
 
-## Abnahme vor Aktivierung
+Am 31.10.2026 mit Node v24.21.0, 20 Warm-up- und 500 Messläufen, 35.259 Fixture-Bytes pro Ausführung, vollständig simulierten HTTP-Antworten:
 
-1. Cloudflare-Kontotarif = Free und aktuelle Workers/DO-Kontingente im Dashboard kontrollieren; Paid-Tarif nur nach Kostenfreigabe.
-2. CPU-/Subrequest-Metriken des bestehenden Watchdogs während des 48-Stunden-Observe-Tests prüfen.
-3. Coordinator zunächst mit Testfällen und Dispatch deaktiviert testen: gleichzeitige Aufrufe erzeugen höchstens eine Reservierung; abgelaufene Lease kann einmalig übernommen werden; DO-Ausfall führt zu keinem Dispatch.
-4. Je Workflow testen: laufend, wartend, fehlgeschlagen, erfolgreich aber alter Quellzeitpunkt, API-403/429/5xx, Timeout nach Dispatch-Anforderung, tägliches Limit und Mitternachtsreset UTC.
-5. Danach gesonderte Freigabe für GitHub App/Secret, DO-Binding/Namespace und einen eng begrenzten echten Dispatch-Test einholen.
+| Modus | Ø CPU pro Aufruf | Median | p95 | GitHub-Requests/Aufruf | Dispatches/Aufruf |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Dispatch aus | 0,227 ms | 0,161 ms | 0,586 ms | 0 | 0 |
+| GitHub-Leseprüfung | 0,877 ms | 0,795 ms | 1,198 ms | 6 | 0 |
+| Stale-Stressfall, zwei Workflows dispatchen | 1,444 ms | 1,322 ms | 2,166 ms | 8 | 2 |
 
-## Offizielle technische Referenzen
+Der letzte Fall simuliert beide Kandidaten bei jeder Iteration und ignoriert absichtlich die dauerhafte DO-Cooldown-Sperre, damit er ein lokaler Rechen-Stressfall ist. Er zählt keine echten Cloudflare-CPU-Millisekunden, Netzwerk-Wartezeit oder DO-Kontingente. Die echten Livewerte 12–17 ms sind maßgeblich und werden dadurch nicht als unter 10 ms bestätigt.
 
-- [Workers Fetch Request / Redirect policy](https://developers.cloudflare.com/workers/runtime-apis/request/)
-- [Durable Objects Pricing and Free limits](https://developers.cloudflare.com/durable-objects/platform/pricing/)
-- [Durable Objects Limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
-- [Workers limits](https://developers.cloudflare.com/workers/platform/limits/)
-- [Workers metrics and analytics](https://developers.cloudflare.com/workers/observability/metrics-and-analytics/)
-- [GitHub workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
+## Cloudflare-Voraussetzungen und Kosten
+
+Der PR ergänzt eine SQLite-backed DO-Binding/Migration und setzt beide Schalter in der Wrangler-Konfiguration auf false. Vor einem Deploy muss der Kontoinhaber im Cloudflare-Konto den Workers-Plan und das verbleibende DO-Kontingent bestätigen. Free hat dokumentierte Kontingente, aber das Konto/Tarif und die aktuelle Auslastung waren nicht live bestätigt; dies ist daher keine Kostenfreigabe. Bei Paid/Standard Billing oder Überschreitung können Gebühren entstehen beziehungsweise weitere Vorgänge fehlschlagen. Kein Namespace, Secret oder Binding wurde live eingerichtet. Die Datei wrangler.watchdog.jsonc beschreibt die SQLite-Migration; sie muss mit Wrangler bereitgestellt werden, bevor der Worker das DO-Binding verwenden kann.
+
+## Kontrollierter Freigabeweg
+
+1. Erst nach getrennten Freigaben in Cloudflare den DO-SQLite-namespace migrieren/binden und den Worker mit beiden Schaltern false deployen. Cron unverändert lassen.
+2. 48 Stunden Observe-only: Quellfrische, CPU, Feedstatus und DO-Metriken beobachten. App-Lesezugriff kann getrennt aktiviert werden; er führt nie Dispatch aus.
+3. Nutzer-/Kontoinhaber prüft GitHub-App-Berechtigung, dann Actions: write nur für diese Repository-Installation. Secret bleibt im Cloudflare-Secret Store.
+4. Simulierte Dispatch-Tests dieses PRs und ein kontrollierter Wartungs-/Freigabetermin vorausgesetzt, separat WORKFLOW_DISPATCH_ENABLED=true genehmigen. Nicht durch öffentliche Requests änderbar.
+5. Beobachten, dass kein frischer Feed ausgelöst wird; veralteter Feed genau einen Lauf erlaubt; aktive und wartende Runs gesperrt werden; anschließende Veröffentlichung samt Quellzeit geprüft wird. Sofortiger Rückfall: Flag false.
+
+## Risiken / Abnahmegrenzen
+
+- Der echte Zeitplan bleibt best effort; ein Watchdog kann selbst ausfallen.
+- Workflow-API und öffentliche JSON-Feeds können unabhängig voneinander nicht erreichbar sein.
+- Es gibt ein unvermeidliches Rennen zwischen der zweiten Active-Run-Abfrage und GitHub-Annahme; Actions concurrency bleibt die letzte Ausführungssperre.
+- Ein 204 beweist nicht, dass der Runner startete oder ein frisches Produkt veröffentlichte.
+- Current live CPU 12–17 ms exceeds documented 10 ms. Keine Produktionsfreigabe, bis mehrere reale Cloudflare-Messungen ausreichenden Headroom belegen.
+- Bis mehrere automatische Datenzyklen nach Live-Aktivierung erfolgreich sind, wird keine Zuverlässigkeitsgarantie ausgesprochen.
+
+## Referenzen
+
+- https://developers.cloudflare.com/workers/platform/limits/
+- https://developers.cloudflare.com/durable-objects/platform/pricing/
+- https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
