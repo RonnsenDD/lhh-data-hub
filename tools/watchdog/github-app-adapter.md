@@ -51,6 +51,31 @@ GitHub documents a minimum 5,000 REST requests/hour for an installation token ([
 
 A local Node benchmark (50 ephemeral 2048-bit test-key JWT operations, including key import on every operation) measured about 0.66 ms process CPU per operation. This is a conservative local reference, **not** a Cloudflare CPU measurement. The Worker adapter caches its imported key during a client lifetime, but Cloudflare's 10 ms limit must be verified from actual Worker invocation metrics after a separately approved live integration. Network waiting time is not Worker CPU time.
 
+## Reproducible single-file deployment artifact
+
+The production source uses a static ES-module import. For the existing Cloudflare dashboard editor workflow, the repository also provides a generated single-file ES-module artifact at `tools/watchdog/worker.bundle.js`. The build tool uses Node.js built-ins only: it wraps the adapter in a private closure and keeps the Worker `export default` entrypoint. It adds no npm packages, account resources, bindings, routes, or Cron triggers. The bundle contains no credentials and works when all GitHub App variables and secrets are absent because the read flag defaults off.
+
+From the repository root, regenerate and verify the exact artifact:
+
+```sh
+node tools/watchdog/build-editor-bundle.mjs
+node --check tools/watchdog/worker.bundle.js
+node tools/watchdog/build-editor-bundle.mjs --check
+node --test tools/watchdog/*.test.mjs
+shasum -a 256 tools/watchdog/worker.bundle.js
+```
+
+The test suite loads the generated bundle itself as an ES module, calls its actual `/status` and scheduled handlers with mocked feeds, verifies all seven feeds remain present, and confirms no GitHub API call occurs with the flag off and no secrets configured. It never contacts Cloudflare or GitHub.
+
+### Manual Cloudflare editor procedure (after release approval)
+
+1. Generate the bundle and run all checks above. Confirm the source hash in its generated header and the file checksum recorded for the reviewed release.
+2. In **Workers & Pages** → `feuerwehr-lauchhammer-watchdog` → **Edit code**, replace the entire editor content with `tools/watchdog/worker.bundle.js`. This is the single module script; do not paste only `worker.js` or add a second module.
+3. Keep `GITHUB_APP_READ_ENABLED` unset or `false`; do not add App variables or a private-key Secret for this first deployment. Save/deploy only through the operator's approved Cloudflare workflow.
+4. Verify the existing Cron is still exactly `*/5 * * * *`; do not create another trigger. Read-only GET `/status` must still report seven feeds. After one scheduled run, its existing feed log must include all seven sources and there must be no GitHub workflow-observation event while the flag is off.
+
+This is a manual release procedure, not an automated deployment. PR changes and tests do not publish the bundle.
+
 ## Configuration prepared (not set)
 
 The adapter expects these environment entries:
