@@ -137,52 +137,93 @@ async function textBody(res) {
   }
   return new TextDecoder("utf-8", { fatal: true }).decode(b);
 }
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_REDIRECTS = 3;
 async function get(feed, now, fetcher) {
-  const u = new URL(feed.url);
-  u.searchParams.set("_watchdog", String(Math.floor(now / 300000)));
-  const c = new AbortController(),
-    start = Date.now(),
-    timer = setTimeout(() => c.abort(), LIMITS.timeoutMs);
+  const initialUrl = new URL(feed.url);
+  initialUrl.searchParams.set("_watchdog", String(Math.floor(now / 300000)));
+  const allowedOrigin = initialUrl.origin;
+  const controller = new AbortController();
+  const start = Date.now();
+  const timer = setTimeout(() => controller.abort(), LIMITS.timeoutMs);
   try {
-    const r = await fetcher(u.toString(), {
-      method: "GET",
-      redirect: "error",
-      signal: c.signal,
-      headers: {
-        Accept: "application/json",
-        "Cache-Control": "no-cache, max-age=0",
-        Pragma: "no-cache",
-      },
-    });
-    const ageHeader = r.headers.get("age"),
-      a = ageHeader === null ? Number.NaN : Number(ageHeader),
-      transport = {
-        httpDate: r.headers.get("date"),
-        httpLastModified: r.headers.get("last-modified"),
-        httpAgeSeconds: Number.isFinite(a) ? a : null,
-      };
-    if (!r.ok)
+    let currentUrl = initialUrl;
+    let redirectCount = 0;
+    const visited = new Set();
+    let response;
+    while (true) {
+      if (visited.has(currentUrl.href)) throw Error("REDIRECT_LOOP");
+      visited.add(currentUrl.href);
+      response = await fetcher(currentUrl.href, {
+        method: "GET",
+        // Cloudflare Workers does not support redirect:"error" for this
+        // subrequest path. Manual mode lets us validate Location before use.
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "Cache-Control": "no-cache, max-age=0",
+          Pragma: "no-cache",
+        },
+      });
+      if (!REDIRECT_STATUSES.has(response.status)) break;
+      const location = response.headers.get("location");
+      if (response.body) {
+        try {
+          await response.body.cancel();
+        } catch {
+          // The redirect body is disposable; do not let cancellation failure
+          // hide the redirect policy result.
+        }
+      }
+      if (!location) throw Error("REDIRECT_MISSING_LOCATION");
+      if (redirectCount >= MAX_REDIRECTS) throw Error("REDIRECT_LIMIT_EXCEEDED");
+      let nextUrl;
+      try {
+        nextUrl = new URL(location, currentUrl);
+      } catch {
+        throw Error("UNSAFE_REDIRECT");
+      }
+      if (
+        nextUrl.protocol !== "https:" ||
+        nextUrl.origin !== allowedOrigin ||
+        nextUrl.username ||
+        nextUrl.password
+      )
+        throw Error("REDIRECT_HOST_NOT_ALLOWED");
+      currentUrl = nextUrl;
+      redirectCount++;
+    }
+    const ageHeader = response.headers.get("age");
+    const ageSeconds =
+      ageHeader === null ? Number.NaN : Number(ageHeader);
+    const transport = {
+      httpDate: response.headers.get("date"),
+      httpLastModified: response.headers.get("last-modified"),
+      httpAgeSeconds: Number.isFinite(ageSeconds) ? ageSeconds : null,
+    };
+    if (!response.ok)
       return {
         failure: state(
           {
             key: feed.key,
             label: feed.label,
             checkedAt: new Date(now).toISOString(),
-            httpStatus: r.status,
+            httpStatus: response.status,
             transport,
             reason: "Öffentliche Quelle antwortete mit HTTP-Fehler.",
           },
-          r.status === 404 ? "UNAVAILABLE" : "ERROR",
-          r.status === 404
+          response.status === 404 ? "UNAVAILABLE" : "ERROR",
+          response.status === 404
             ? "FEED_NOT_FOUND"
-            : r.status === 429
+            : response.status === 429
               ? "UPSTREAM_RATE_LIMIT"
               : "UPSTREAM_HTTP_ERROR",
         ),
       };
     let j;
     try {
-      j = JSON.parse(await textBody(r));
+      j = JSON.parse(await textBody(response));
     } catch (e) {
       throw Error(
         e instanceof SyntaxError ? "INVALID_JSON" : e.message || "INVALID_BODY",
@@ -191,12 +232,20 @@ async function get(feed, now, fetcher) {
     if (!obj(j)) throw Error("INVALID_SCHEMA");
     return { j, transport, durationMs: Date.now() - start };
   } catch (e) {
+    const knownCodes = [
+      "INVALID_JSON",
+      "INVALID_SCHEMA",
+      "BODY_TOO_LARGE",
+      "REDIRECT_LOOP",
+      "REDIRECT_MISSING_LOCATION",
+      "REDIRECT_LIMIT_EXCEEDED",
+      "REDIRECT_HOST_NOT_ALLOWED",
+      "UNSAFE_REDIRECT",
+    ];
     const code =
-      c.signal.aborted || e.name === "AbortError"
+      controller.signal.aborted || e.name === "AbortError"
         ? "TIMEOUT"
-        : ["INVALID_JSON", "INVALID_SCHEMA", "BODY_TOO_LARGE"].includes(
-              e.message,
-            )
+        : knownCodes.includes(e.message)
           ? e.message
           : "FETCH_FAILED";
     return {
@@ -208,7 +257,9 @@ async function get(feed, now, fetcher) {
           reason:
             code === "TIMEOUT"
               ? "Abrufzeitlimit überschritten."
-              : "Feed konnte nicht abgerufen oder gelesen werden.",
+              : code.startsWith("REDIRECT_") || code === "UNSAFE_REDIRECT"
+                ? "Weiterleitung wurde aus Sicherheitsgründen abgewiesen."
+                : "Feed konnte nicht abgerufen oder gelesen werden.",
         },
         "ERROR",
         code,
