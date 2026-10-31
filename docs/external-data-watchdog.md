@@ -8,7 +8,7 @@ Der Ordner `tools/watchdog/` enthält einen noch nicht aktivierten Cloudflare-Wo
 - Es gibt keinen fetch-Handler, keine Route und keinen öffentlich aufrufbaren Auslösendpunkt. workers_dev=false ist im Wrangler-Beispiel gesetzt.
 - Kein Cloudflare-Konto, Worker, D1-Datenbank, GitHub-App, Secret oder Token wird durch diesen PR eingerichtet.
 - Die bestehenden GitHub-Schedules bleiben aktiv; kein Produktionsworkflow wird geändert oder gestartet.
-- Bei fehlender D1-Sperre, GitHub-API-Fehlern, deaktiviertem Workflow oder unklarem Feedstatus wird nicht dispatcht. Enthält ein Workflow mehrere Feeds, muss jeder davon lesbar und auswertbar sein, bevor ein Dispatch zulässig ist.
+- Bei fehlender D1-Sperre, GitHub-API-Fehlern, deaktiviertem Workflow oder unklarem Feedstatus wird nicht dispatcht. Enthält ein Workflow mehrere Feeds, muss jeder davon lesbar und auswertbar sein, bevor ein Dispatch zulässig ist. Kann der Commitzeitpunkt einer Raw-JSON nicht nachgewiesen werden, markiert das Monitoring die Publikation als ungeklärt und blockiert den Dispatch. Enthält ein Workflow mehrere Feeds, muss jeder davon lesbar und auswertbar sein, bevor ein Dispatch zulässig ist.
 - Der Worker schreibt weder in SharePoint noch in die erzeugten Feeddateien.
 
 ## Aufbau
@@ -35,7 +35,7 @@ Alle Cron-Zeiten sind UTC. Schwellen entsprechen dem lokalen DesignTest-Code, so
 
 Quellfrische wird unabhängig von einem erfolgreichen Workflowlauf berechnet. Die Waldbrandbewertung ignoriert das gespeicherte Statusfeld und prüft sourceDate. Bei Datenfehler oder fehlender Messzeit wird kein aktueller Status erfunden.
 
-Die aktuelle öffentliche JSON-Datei enthält nicht für jeden Feed eine belastbare Veröffentlichungszeit. Der Bericht trennt deshalb sourceTimestamp, Quellalter (bei Waldbrand ab 08:00 Europe/Berlin), retrievedAt/lastAttemptAt, publishedAt (nur sofern tatsächlich vorhanden) und den Abschlusszeitpunkt des letzten erfolgreichen GitHub-Workflowlaufs. Der Abschluss des Workflows ist kein Beweis für neue Quelldaten.
+Die aktuelle öffentliche JSON-Datei enthält nicht für jeden Feed eine belastbare Veröffentlichungszeit. Der Bericht trennt deshalb sourceTimestamp, Quellalter (bei Waldbrand ab 08:00 Europe/Berlin), retrievedAt/lastAttemptAt und publishedAt. Für Raw-JSONs ist publishedAt der letzte Commitzeitpunkt des konkreten JSON-Pfads aus der GitHub-Commits-API; dafür ist Contents:read erforderlich. Für RADOLAN/KONRAD3D wird wegen GitHub Pages statt eines Dateicommitzeitpunkts der letzte erfolgreiche Abschluss nach öffentlicher URL-Verifikation als lastPublicVerificationAt ausgewiesen. Das ist der Bestätigungszeitpunkt, kein behaupteter exakter Veröffentlichungszeitpunkt. Der Abschluss des Workflows ist kein Beweis für neue Quelldaten.
 
 ## Statusmodell
 
@@ -60,7 +60,7 @@ Dispatch ist doppelt gesperrt: WATCHDOG_MODE muss dispatch und DISPATCH_ENABLED 
 
 Die GitHub-App wird später ausschließlich für RonnsenDD/lhh-data-hub installiert:
 
-1. Beobachtungsmodus: GitHub-App-Installation auf genau `RonnsenDD/lhh-data-hub` und Repository-Recht Actions read. Kein Contents-, Administration-, Organization- oder SharePoint-Recht.
+1. Beobachtungsmodus: GitHub-App-Installation auf genau `RonnsenDD/lhh-data-hub` mit Repository-Rechten Actions read und Contents read. Contents read wird ausschließlich für den letzten Commitzeitpunkt jeder Raw-JSON-Datei verwendet. Kein Contents write, Administration-, Organization- oder SharePoint-Recht.
 2. Auslösemodus nach separater Freigabe: Repository Actions write, weil die Workflow-dispatch-REST-API dieses Recht benötigt. GitHub bietet für diese App-Berechtigung keine Beschränkung auf einzelne Workflowdateien; Actions write gilt für das gesamte installierte Repository. Der Code dispatcht nur die fünf fest konfigurierten Dateien. Die breitere Repositorywirkung ist ein verbleibendes Risiko. Kein Schreibzugriff auf Contents.
 3. Installation auf genau dieses Repository beschränken. Installation-ID, App-ID und private PEM ausschließlich in Cloudflare-Konfiguration/Secret Store; keine Werte in Git, Worker-Logs, D1 oder Browser.
 4. Der Worker erstellt kurzlebige Installationstokens pro Lauf und verwirft sie im Speicher. JWT und Token werden nie ausgegeben oder protokolliert.
@@ -69,7 +69,7 @@ Die im Code verwendete GitHub REST-API fragt Workflowzustand und Workflowläufe 
 
 ## Kosten- und Free-Tier-Prüfung (31.10.2026)
 
-Die aktuelle Cloudflare-Dokumentation nennt für Workers Free 100.000 Requests pro Tag, 10 ms CPU je Cron-Aufruf, maximal fünf Cron-Trigger pro Konto und 50 Subrequests pro Invocation. Ein Fünf-Minuten-Cron sind 288 Aufrufe pro Tag. Ein Kontrolllauf führt typischerweise sieben Feedabrufe, eine Repository-Metadatenabfrage, eine Workflowliste, fünf getrennte Workflowlaufabfragen und eine Tokenanforderung aus (15 Subrequests). Selbst mit maximal fünf Dispatches bleibt er bei etwa 20 von 50 Subrequests. Das sind bis zu 96 GitHub-API-Leseaufrufe pro Stunde plus wenige Dispatches; API-Rate-Limit-Header und 403/429 werden überwacht, und ein gemeinsamer Backoff verhindert Wiederholungsstürme. Das Free-Konto erlaubt höchstens fünf Cron-Trigger insgesamt; vorhandene Kontoauslastung muss vor Einrichtung geprüft werden.
+Die aktuelle Cloudflare-Dokumentation nennt für Workers Free 100.000 Requests pro Tag, 10 ms CPU je Cron-Aufruf, maximal fünf Cron-Trigger pro Konto und 50 Subrequests pro Invocation. Ein Fünf-Minuten-Cron sind 288 Aufrufe pro Tag. Ein Kontrolllauf führt typischerweise sieben Feedabrufe, fünf Metadaten-Commits, eine Repositoryabfrage, eine Workflowliste, fünf getrennte Workflowlaufabfragen und eine Tokenanforderung aus (20 Subrequests). Selbst mit maximal fünf Dispatches bleibt er bei etwa 25 von 50 Subrequests. Das sind rund 156 authentifizierte GitHub-API-Aufrufe pro Stunde, zusätzlich zu den Feedabrufen, plus wenige Dispatches; API-Rate-Limit-Header und 403/429 werden überwacht, und ein gemeinsamer Backoff verhindert Wiederholungsstürme. Das Free-Konto erlaubt höchstens fünf Cron-Trigger insgesamt; vorhandene Kontoauslastung muss vor Einrichtung geprüft werden.
 
 D1 Free umfasst aktuell 5 Mio. Zeilenreads pro Tag, 100.000 Zeilenwrites pro Tag und 5 GB Gesamtspeicher. Bei sieben Statuszeilen pro Tick sind etwa 2.016 Status-Upserts pro Tag zu erwarten, plus begrenzte Ereignisse. D1 Free-Anfragen schlagen nach Erreichen des täglichen Read-/Write-Limits fehl; das System wechselt dann in Fail-Closed und dispatcht nicht. Kein automatisches Upgrade und kein Paid-Plan vorsehen.
 
@@ -90,7 +90,7 @@ Keine der folgenden Handlungen wurde ausgeführt.
 5. WATCHDOG_MODE=observe und DISPATCH_ENABLED=false beibehalten; Worker ausschließlich mit scheduled handler veröffentlichen, workers.dev deaktiviert lassen und keinen Route-Eintrag anlegen.
 6. Eine Stunde beobachten: 12 Tick-Einträge über checked_at, alle sieben Feedzeilen, API-Rate-/CPU-Metriken, D1-Rows Read/Written, keine Dispatch-Events. Bei fehlendem Status, CPU-Limit oder API-Fehler nicht fortfahren.
 7. Danach einen 48-Stunden-Beobachtungstest starten. Mindestabnahme: 576 erwartete Ticks, mindestens 570 vollständige Statuschecks (99 %), alle fünf Workflowzustände je Check, sieben Datenquellenzeilen, keine Feedklassifizierung allein aus retrievedAt, zero Dispatches, keine D1-Limitfehler, keine Token-/Schlüsselleaks, Cron-CPU dauerhaft unter 10 ms (Ziel p99 höchstens 8 ms). Zwei getrennte Quellenzeitpunkte und der tägliche Europe/Berlin-Tageswechsel müssen beobachtet oder mit Fixtures validiert sein.
-8. Dispatch bleibt nach diesen Tests aus. Für die Aktivierung braucht es eine neue ausdrückliche Freigabe. Dann: GitHub-App-Berechtigung auf Actions write erhöhen und Installation erneut genehmigen; den erhöhten Modus ausstellen; nach einer begrenzten kontrollierten Testfreigabe eine separate Freigabe einholen, erst dann WATCHDOG_MODE=dispatch und DISPATCH_ENABLED=true setzen. Per-Workflow-Limit: höchstens drei Dispatches/UTC-Tag für die drei 15-Minuten-Produzenten, höchstens einer/UTC-Tag für beide Tagesproduzenten.
+8. Dispatch bleibt nach diesen Tests aus. Für die Aktivierung braucht es eine neue ausdrückliche Freigabe. Dann: GitHub-App-Berechtigung auf Actions write erhöhen und Installation erneut genehmigen; Contents read bleibt ebenfalls erforderlich; den erhöhten Modus ausstellen; nach einer begrenzten kontrollierten Testfreigabe eine separate Freigabe einholen, erst dann WATCHDOG_MODE=dispatch und DISPATCH_ENABLED=true setzen. Per-Workflow-Limit: höchstens drei Dispatches/UTC-Tag für die drei 15-Minuten-Produzenten, höchstens einer/UTC-Tag für beide Tagesproduzenten.
 9. Abschalten: zuerst DISPATCH_ENABLED=false setzen, danach Cron Trigger entfernen/deaktivieren. GitHub-Schedules und Produzenten bleiben aktiv. D1 Status/Logs lesend exportieren; kein Datensatz muss in Git verbleiben.
 
 ## Lokale Prüfung
