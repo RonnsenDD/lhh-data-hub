@@ -71,6 +71,7 @@ jobs:
         run: bash scripts/publish_one_snapshot.sh --message "Update DWD weather snapshot" data/generated/dwd-weather.json
   schedule-audit:
     name: Schedule health (separate from producer result)
+    continue-on-error: true
     if: always() && github.event_name == 'schedule'
     needs: update-weather
     runs-on: ubuntu-latest

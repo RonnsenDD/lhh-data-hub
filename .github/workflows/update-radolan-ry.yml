@@ -168,6 +168,7 @@ jobs:
         run: exit 1
   schedule-audit:
     name: Schedule health (separate from producer result)
+    continue-on-error: true
     if: always() && github.event_name == 'schedule'
     needs: publish
     runs-on: ubuntu-latest

@@ -62,6 +62,32 @@ class AuditWorkflowScheduleTests(unittest.TestCase):
             current_producer_result="success", prior_producer_results={})
         self.assertTrue(any("not an automatic schedule" in item for item in problems))
 
+class ScheduleAuditWorkflowContractTests(unittest.TestCase):
+    def test_all_data_hub_schedule_audits_are_visible_but_nonfatal(self):
+        from pathlib import Path
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        workflows = (
+            ".github/workflows/update-dwd-weather.yml",
+            ".github/workflows/update-graslandfeuerindex.yml",
+            ".github/workflows/update-levels.yml",
+            ".github/workflows/update-radolan-ry.yml",
+            ".github/workflows/update-waldbrandgefahrenstufe-osl.yml",
+        )
+        for relative_path in workflows:
+            with self.subTest(workflow=relative_path):
+                source = (root / relative_path).read_text(encoding="utf-8")
+                match = re.search(
+                    r"(?ms)^  schedule-audit:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)",
+                    source,
+                )
+                self.assertIsNotNone(match, "schedule-audit job must remain configured")
+                block = match.group(1)
+                self.assertRegex(block, r"(?m)^    continue-on-error: true$")
+                self.assertIn("name: Schedule health (separate from producer result)", block)
+                self.assertIn("run: python3 scripts/audit_workflow_schedule.py", block)
+
 
 if __name__ == "__main__":
     unittest.main()
