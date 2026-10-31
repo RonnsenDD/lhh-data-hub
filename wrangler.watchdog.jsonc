@@ -1,24 +1,2 @@
-{
-  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "lhh-data-hub-watchdog",
-  "main": "tools/watchdog/worker.mjs",
-  "compatibility_date": "2026-10-31",
-  "workers_dev": false,
-  "triggers": {
-    "crons": ["*/5 * * * *"]
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "lhh-data-hub-watchdog-state",
-      "database_id": "SET_AFTER_APPROVAL",
-      "migrations_dir": "tools/watchdog/migrations"
-    }
-  ],
-  "vars": {
-    "WATCHDOG_MODE": "observe",
-    "DISPATCH_ENABLED": "false",
-    "GH_APP_ID": "SET_AFTER_APPROVAL",
-    "GH_INSTALLATION_ID": "SET_AFTER_APPROVAL"
-  }
-}
+{"$schema":"https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json","name":"feuerwehr-lauchhammer-watchdog","main":"tools/watchdog/worker.js","compatibility_date":"2026-10-31","workers_dev":true,"triggers":{"crons":["*/5 * * * *"]}}
+
