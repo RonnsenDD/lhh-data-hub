@@ -6,6 +6,7 @@ const MAX_TOKEN_BYTES = 65536;
 const MAX_RUNS_BYTES = 131072; // Keep five parallel run-list payloads bounded for Workers Free.
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 8000;
+const GITHUB_JSON_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 
 export const WORKFLOWS = Object.freeze([
   { file: "update-dwd-weather.yml", cron: "3,18,33,48 * * * *", kind: "quarter-hour", minutes: [3, 18, 33, 48] },
@@ -188,7 +189,7 @@ async function readJsonBounded(response, maxBytes, stage) {
   }
   const bytes = concatBytes(...chunks);
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
+    return JSON.parse(GITHUB_JSON_DECODER.decode(bytes));
   } catch {
     throw new GitHubAppAdapterError("GITHUB_INVALID_RESPONSE", { stage, status: response.status });
   }
@@ -543,5 +544,6 @@ export const adapterConstants = Object.freeze({
   tokenRefreshSkewMs: TOKEN_REFRESH_SKEW_MS,
   timeoutMs: DEFAULT_TIMEOUT_MS,
 });
+
 
 
