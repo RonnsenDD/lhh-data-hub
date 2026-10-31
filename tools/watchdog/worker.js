@@ -26,6 +26,13 @@ export const LIMITS = {
 };
 const ORIGIN = "https://feuerwehrlauchhammer.sharepoint.com",
   rank = { ERROR: 5, UNKNOWN: 4, UNAVAILABLE: 3, STALE: 2, OK: 1 };
+const BERLIN_DATE_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Berlin",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const FEED_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 const obj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
 const timestamp = (x) =>
   typeof x === "string" && Number.isFinite(Date.parse(x))
@@ -37,19 +44,19 @@ const state = (base, status, reasonCode, reason) => ({
   ...(reasonCode ? { reasonCode } : {}),
   ...(reason ? { reason } : {}),
 });
-const worst = (xs) =>
-  xs
-    .map((x) => x?.status)
-    .filter((x) => rank[x])
-    .sort((a, b) => rank[b] - rank[a])[0] || "UNKNOWN";
-function berlinDate(n) {
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(n));
-}
+const worst = (xs) => {
+  let status = "UNKNOWN",
+    highest = 0;
+  for (const item of xs) {
+    const value = rank[item?.status] || 0;
+    if (value > highest) {
+      highest = value;
+      status = item.status;
+    }
+  }
+  return status;
+};
+function berlinDate(n) { return BERLIN_DATE_FORMATTER.format(new Date(n)); }
 function validDate(s) {
   if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(s + "T00:00:00Z");
@@ -117,9 +124,7 @@ async function textBody(res) {
   let n = 0;
   try {
     while (true) {
-      const { x, done, value } = await rd
-        .read()
-        .then((v) => ({ done: v.done, value: v.value }));
+      const { done, value } = await rd.read();
       if (done) break;
       n += value.byteLength;
       if (n > LIMITS.maxBytes) {
@@ -137,7 +142,7 @@ async function textBody(res) {
     b.set(c, o);
     o += c.length;
   }
-  return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(b);
+  return FEED_DECODER.decode(b);
 }
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 3;
@@ -317,40 +322,42 @@ function mos(f, now) {
     return state(base, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
   if (!Array.isArray(f.points))
     return state(base, "UNAVAILABLE", "POINTS_MISSING");
-  const a = age(f.issuedAt, 12 * 3600000, now),
-    p = f.points
-      .filter((x) => timestamp(x?.validAt) >= now)
-      .sort((x, y) => timestamp(x.validAt) - timestamp(y.validAt))
-      .find(
-        (x) =>
-          obj(x.values) &&
-          Object.values(x.values).some(
-            (v) => typeof v === "number" && Number.isFinite(v),
-          ),
-      );
+  const a = age(f.issuedAt, 12 * 3600000, now);
   if (a.status !== "OK")
     return state(
       { ...base, ageMinutes: a.ageMinutes },
       a.status,
       a.reasonCode || "ISSUE_STALE",
     );
+  let p,
+    pTime = Infinity,
+    latestTime = -Infinity;
+  for (const point of f.points) {
+    const validAt = timestamp(point?.validAt);
+    if (validAt === undefined) continue;
+    if (validAt > latestTime) latestTime = validAt;
+    if (validAt < now || validAt >= pTime || !obj(point.values)) continue;
+    let hasFiniteValue = false;
+    for (const key in point.values) {
+      if (!Object.prototype.hasOwnProperty.call(point.values, key)) continue;
+      const value = point.values[key];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        hasFiniteValue = true;
+        break;
+      }
+    }
+    if (hasFiniteValue) {
+      p = point;
+      pTime = validAt;
+    }
+  }
   if (!p)
     return state({ ...base, validAt: null }, "UNAVAILABLE", "NO_VALID_POINT");
   return state(
     {
       ...base,
       validAt: p.validAt,
-      validThrough: f.points
-        .map((x) => timestamp(x?.validAt))
-        .filter(Number.isFinite).length
-        ? new Date(
-            Math.max(
-              ...f.points
-                .map((x) => timestamp(x?.validAt))
-                .filter(Number.isFinite),
-            ),
-          ).toISOString()
-        : null,
+      validThrough: latestTime === -Infinity ? null : new Date(latestTime).toISOString(),
     },
     "OK",
   );
@@ -808,4 +815,5 @@ export default {
     }));
   },
 };
+
 
