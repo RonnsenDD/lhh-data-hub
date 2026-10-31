@@ -61,11 +61,12 @@ From the repository root, regenerate and verify the exact artifact:
 node tools/watchdog/build-editor-bundle.mjs
 node --check tools/watchdog/worker.bundle.js
 node tools/watchdog/build-editor-bundle.mjs --check
+npx --yes --package typescript@5.8.3 tsc --project tools/watchdog/tsconfig.cloudflare-editor.json
 node --test tools/watchdog/*.test.mjs
 shasum -a 256 tools/watchdog/worker.bundle.js
 ```
 
-The test suite loads the generated bundle itself as an ES module, calls its actual `/status` and scheduled handlers with mocked feeds, verifies all seven feeds remain present, and confirms no GitHub API call occurs with the flag off and no secrets configured. It never contacts Cloudflare or GitHub.
+The static TypeScript preflight checks the generated editor artifact as JavaScript against ES2022 and DOM runtime types without emitting files. The bundle test loads the artifact itself as an ES module, calls its actual `/status` and scheduled handlers with mocked feeds, verifies all seven feeds remain present, and confirms no GitHub API call occurs with the flag off and no secrets configured. These local checks never contact Cloudflare or GitHub. Cloudflare's editor uses its own runtime declarations, so after pasting an approved artifact the editor's diagnostics panel remains the final static compatibility check; review it before saving/deploying.
 
 ### Manual Cloudflare editor procedure (after release approval)
 
@@ -107,7 +108,9 @@ node tools/watchdog/build-editor-bundle.mjs --check
 node --check tools/watchdog/worker.js
 node --check tools/watchdog/github-app-adapter.js
 node --check tools/watchdog/worker.bundle.js
+npx --yes --package typescript@5.8.3 tsc --project tools/watchdog/tsconfig.cloudflare-editor.json
 node --test tools/watchdog/*.test.mjs
 ```
 
 The tests use only generated ephemeral keys and mocked HTTP responses; they never contact GitHub or Cloudflare and never use the real App private key.
+
