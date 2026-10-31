@@ -16,7 +16,12 @@ export const WORKFLOWS = Object.freeze([
 ]);
 
 export class GitHubAppAdapterError extends Error {
-  constructor(code, { stage, status, retryAfterSeconds, rateLimitRemaining, rateLimitResetAt } = {}) {
+  /**
+   * @param {string} code
+   * @param {{stage?: string, status?: number | null, retryAfterSeconds?: number | null, rateLimitRemaining?: number | null, rateLimitResetAt?: string | null}} [details]
+   */
+  constructor(code, details = {}) {
+    const { stage, status, retryAfterSeconds, rateLimitRemaining, rateLimitResetAt } = details;
     super(code);
     this.name = "GitHubAppAdapterError";
     this.code = code;
@@ -107,7 +112,7 @@ async function importSigningKey(privateKeyPem, cryptoImpl) {
   }
 }
 
-export async function createAppJwt({ appId, privateKeyPem, nowMs = Date.now(), cryptoImpl = globalThis.crypto }) {
+export async function createAppJwt({ appId, privateKeyPem, nowMs = Date.now(), cryptoImpl = crypto }) {
   if (!/^\d+$/.test(String(appId ?? ""))) {
     throw new GitHubAppAdapterError("INVALID_APP_ID", { stage: "jwt" });
   }
@@ -183,7 +188,7 @@ async function readJsonBounded(response, maxBytes, stage) {
   }
   const bytes = concatBytes(...chunks);
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
   } catch {
     throw new GitHubAppAdapterError("GITHUB_INVALID_RESPONSE", { stage, status: response.status });
   }
@@ -419,7 +424,7 @@ function lastRunFields(run) {
 
 export function createGitHubAppClient(env, {
   fetcher = fetch,
-  cryptoImpl = globalThis.crypto,
+  cryptoImpl = crypto,
   now = () => Date.now(),
   timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
@@ -538,4 +543,5 @@ export const adapterConstants = Object.freeze({
   tokenRefreshSkewMs: TOKEN_REFRESH_SKEW_MS,
   timeoutMs: DEFAULT_TIMEOUT_MS,
 });
+
 
