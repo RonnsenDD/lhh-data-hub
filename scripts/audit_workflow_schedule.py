@@ -8,7 +8,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, time, timezone
 
 
 def parse_time(value: str) -> datetime:
@@ -21,7 +21,9 @@ def parse_time(value: str) -> datetime:
 def audit(current: dict, runs: list[dict], *, interval_minutes: int,
           max_gap_minutes: int, max_queue_delay_minutes: int,
           producer_job_name: str, current_producer_result: str,
-          prior_producer_results: dict[str, str]) -> tuple[list[str], list[str]]:
+          prior_producer_results: dict[str, str],
+          expected_schedule_time_utc: str | None = None,
+          max_schedule_start_delay_minutes: int = 60) -> tuple[list[str], list[str]]:
     problems: list[str] = []
     messages: list[str] = []
     current_created = parse_time(current["created_at"])
@@ -42,6 +44,29 @@ def audit(current: dict, runs: list[dict], *, interval_minutes: int,
         problems.append(
             f"runner queue delay {queue_delay:.1f}m exceeds {max_queue_delay_minutes}m"
         )
+
+    if current.get("event") == "schedule" and expected_schedule_time_utc:
+        try:
+            expected_time = time.fromisoformat(expected_schedule_time_utc)
+        except ValueError as error:
+            raise ValueError("expected schedule time must use HH:MM UTC") from error
+        if expected_time.second or expected_time.microsecond:
+            raise ValueError("expected schedule time must use HH:MM UTC")
+        current_created_utc = current_created.astimezone(timezone.utc)
+        scheduled_slot = datetime.combine(
+            current_created_utc.date(), expected_time, tzinfo=timezone.utc
+        )
+        start_delay = (current_created_utc - scheduled_slot).total_seconds() / 60
+        messages.append(
+            f"expected_schedule_slot_utc={scheduled_slot.isoformat()} "
+            f"run_created_at_utc={current_created_utc.isoformat()} "
+            f"schedule_start_delay_minutes={start_delay:.1f}"
+        )
+        if start_delay > max_schedule_start_delay_minutes:
+            problems.append(
+                f"schedule start delay {start_delay:.1f}m exceeds "
+                f"{max_schedule_start_delay_minutes}m after expected UTC slot"
+            )
 
     prior = []
     for run in runs:
@@ -114,6 +139,8 @@ def main() -> int:
         interval = int(os.environ["SCHEDULE_INTERVAL_MINUTES"])
         max_gap = int(os.environ["MAX_SCHEDULE_GAP_MINUTES"])
         max_queue = int(os.environ.get("MAX_QUEUE_DELAY_MINUTES", "5"))
+        expected_schedule_time = os.environ.get("EXPECTED_SCHEDULE_TIME_UTC")
+        max_start_delay = int(os.environ.get("MAX_SCHEDULE_START_DELAY_MINUTES", "60"))
         encoded_workflow = urllib.parse.quote(workflow, safe="/")
         api = "https://api.github.com/repos/" + repository
         current = github_json(f"{api}/actions/runs/{run_id}", token)
@@ -157,6 +184,8 @@ def main() -> int:
             producer_job_name=producer_job_name,
             current_producer_result=current_producer_result,
             prior_producer_results=producer_results,
+            expected_schedule_time_utc=expected_schedule_time,
+            max_schedule_start_delay_minutes=max_start_delay,
         )
     except (KeyError, ValueError, RuntimeError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
         print(f"schedule audit unavailable: {error}", file=sys.stderr)
