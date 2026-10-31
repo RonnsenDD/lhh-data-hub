@@ -61,7 +61,7 @@ function decodeSegment(value) {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
 }
-function appJwtCalls() {
+function appJwtCalls(runs = validRuns) {
   const calls = [];
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
@@ -81,7 +81,7 @@ function appJwtCalls() {
     assert.equal(init.redirect, "manual");
     assert.equal(url.pathname.startsWith("/repos/RonnsenDD/lhh-data-hub/actions/workflows/"), true);
     assert.equal(url.pathname.endsWith("/runs"), true);
-    return json({ total_count: validRuns.length, workflow_runs: validRuns });
+    return json({ total_count: runs.length, workflow_runs: runs });
   };
   return { calls, fetcher };
 }
@@ -138,10 +138,106 @@ test("workflow summary separates successful, failed, active, automatic age, and 
   assert.equal(row.lastSuccess.conclusion, "success");
   assert.equal(row.lastFailure.conclusion, "failure");
   assert.equal(row.activeRuns[0].status, "queued");
-  assert.equal(row.lastAutomaticStartAt, "2026-10-31T10:03:15Z");
-  assert.equal(row.minutesSinceAutomaticStart, 16);
-  assert.equal(row.latestExpectedScheduleAt, "2026-10-31T10:18:00.000Z");
-  assert.equal(row.scheduleOverdueMinutes, 2);
+  assert.equal(row.lastAutomaticRunCreatedAt, "2026-10-31T10:03:15Z");
+  assert.equal(row.lastAutomaticRunStartedAt, null);
+  assert.equal(row.minutesSinceLastAutomaticRunCreated, 16);
+  assert.equal(row.minutesSinceLastAutomaticRunStarted, null);
+  assert.equal(row.latestExpectedScheduleTickAt, "2026-10-31T10:18:00.000Z");
+  assert.equal(row.latestExpectedTickOverdueMinutes, 2);
+  assert.equal(row.lastAutomaticScheduleCreationDelayMinutes, 0);
+  assert.equal(row.lastAutomaticRunStartDelayMinutes, null);
+});
+
+
+
+test("a missed schedule tick is separate from the age of the last automatic run", async () => {
+  const { fetcher } = appJwtCalls([{
+    id: 401,
+    status: "completed",
+    conclusion: "success",
+    event: "schedule",
+    created_at: "2026-10-31T10:03:00Z",
+    run_started_at: "2026-10-31T10:03:08Z",
+  }]);
+  const row = (await createGitHubAppClient(ENV, { fetcher, now: () => NOW })
+    .getWorkflowSnapshot()).workflows[0];
+  assert.equal(row.minutesSinceLastAutomaticRunCreated, 17);
+  assert.equal(row.minutesSinceLastAutomaticRunStarted, 16);
+  assert.equal(row.latestExpectedScheduleTickAt, "2026-10-31T10:18:00.000Z");
+  assert.equal(row.latestExpectedTickOverdueMinutes, 2);
+  assert.equal(row.lastAutomaticScheduleCreationDelayMinutes, 0);
+  assert.equal(row.missingExpectedScheduleTicksBetweenLatestAutomaticRuns, null);
+  assert.equal("scheduleOverdueMinutes" in row, false);
+});
+
+test("late run reports inferred cron delay, missed ticks, and actual run age separately", async () => {
+  const delayedRuns = [
+    {
+      id: 502,
+      status: "completed",
+      conclusion: "success",
+      event: "schedule",
+      created_at: "2026-10-31T10:37:00Z",
+      run_started_at: "2026-10-31T10:38:00Z",
+    },
+    {
+      id: 501,
+      status: "completed",
+      conclusion: "success",
+      event: "schedule",
+      created_at: "2026-10-31T10:03:00Z",
+      run_started_at: "2026-10-31T10:03:08Z",
+    },
+  ];
+  const { fetcher } = appJwtCalls(delayedRuns);
+  const row = (await createGitHubAppClient(ENV, {
+    fetcher,
+    now: () => Date.parse("2026-10-31T10:40:00Z"),
+  }).getWorkflowSnapshot()).workflows[0];
+
+  assert.equal(row.minutesSinceLastAutomaticRunCreated, 3);
+  assert.equal(row.minutesSinceLastAutomaticRunStarted, 2);
+  assert.equal(row.latestExpectedScheduleTickAt, "2026-10-31T10:33:00.000Z");
+  assert.equal(row.latestExpectedTickOverdueMinutes, 0);
+  assert.equal(row.lastAutomaticScheduleCreationDelayMinutes, 4);
+  assert.equal(row.lastAutomaticRunStartDelayMinutes, 5);
+  assert.equal(row.scheduleStartDelayAttribution, "inferred_nearest_cron_tick_before_run_creation");
+  assert.equal(row.missingExpectedScheduleTicksBetweenLatestAutomaticRuns, 1);
+});
+
+test("daily schedule gap counts omitted calendar runs without confusing age and lateness", async () => {
+  const daily = WORKFLOWS.find((workflow) => workflow.file === "update-graslandfeuerindex.yml");
+  const runs = [
+    {
+      id: 602,
+      status: "completed",
+      conclusion: "success",
+      event: "schedule",
+      created_at: "2026-10-31T05:17:00Z",
+      run_started_at: "2026-10-31T05:19:00Z",
+    },
+    {
+      id: 601,
+      status: "completed",
+      conclusion: "success",
+      event: "schedule",
+      created_at: "2026-10-28T05:16:00Z",
+      run_started_at: "2026-10-28T05:18:00Z",
+    },
+  ];
+  const actualNow = Date.parse("2026-10-31T05:30:00Z");
+  const { fetcher } = appJwtCalls(runs);
+  const row = (await createGitHubAppClient(ENV, {
+    fetcher,
+    now: () => actualNow,
+  }).getWorkflowSnapshot()).workflows.find((workflow) => workflow.file === daily.file);
+
+  assert.equal(row.minutesSinceLastAutomaticRunCreated, 13);
+  assert.equal(row.minutesSinceLastAutomaticRunStarted, 11);
+  assert.equal(row.latestExpectedTickOverdueMinutes, 0);
+  assert.equal(row.lastAutomaticScheduleCreationDelayMinutes, 2);
+  assert.equal(row.lastAutomaticRunStartDelayMinutes, 4);
+  assert.equal(row.missingExpectedScheduleTicksBetweenLatestAutomaticRuns, 2);
 });
 
 test("token is reused within its safe lifetime and renewed inside five-minute expiry margin", async () => {
