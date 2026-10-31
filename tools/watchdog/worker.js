@@ -32,12 +32,23 @@ const BERLIN_DATE_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
   month: "2-digit",
   day: "2-digit",
 });
+const BERLIN_WALL_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Berlin",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
 const FEED_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 const obj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
-const timestamp = (x) =>
-  typeof x === "string" && Number.isFinite(Date.parse(x))
-    ? Date.parse(x)
-    : undefined;
+export const timestamp = (x) => {
+  if (typeof x !== "string") return undefined;
+  const value = Date.parse(x);
+  return Number.isFinite(value) ? value : undefined;
+};
 const state = (base, status, reasonCode, reason) => ({
   ...base,
   status,
@@ -71,19 +82,9 @@ export function berlinWallClockToUtc(date, hour) {
   const [y, m, d] = date.split("-").map(Number),
     target = Date.UTC(y, m - 1, d, hour);
   let c = target;
-  const f = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
   for (let i = 0; i < 4; i++) {
     const p = Object.fromEntries(
-      f
+      BERLIN_WALL_FORMATTER
         .formatToParts(new Date(c))
         .filter((x) => x.type !== "literal")
         .map((x) => [x.type, +x.value]),

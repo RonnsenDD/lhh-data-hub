@@ -1,5 +1,6 @@
 import { generateKeyPairSync } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { readFile } from "node:fs/promises";
 import worker, { URLS } from "./worker.js";
 
 const NOW = Date.parse("2026-10-31T11:00:00Z");
@@ -34,8 +35,42 @@ function makeFeeds() {
 }
 
 const feeds = makeFeeds();
-const feedBodies = new Map(Object.entries(feeds).map(([url, data]) => [url, JSON.stringify(data)]));
+const snapshotFiles = new Map([
+  [URLS.weather, "dwd-weather.json"],
+  [URLS.levelsL, "level-l.json"],
+  [URLS.levelsB, "level-b.json"],
+  [URLS.grass, "grass.json"],
+  [URLS.wildfire, "wildfire.json"],
+  [URLS.radar, "radar.json"],
+  [URLS.konrad, "konrad.json"],
+]);
+const snapshotBodies = new Map();
+const snapshotDir = process.env.WATCHDOG_BENCH_DIR;
+if (snapshotDir) {
+  for (const [url, filename] of snapshotFiles) {
+    try {
+      const body = await readFile(`${snapshotDir}/${filename}`, "utf8");
+      const parsed = JSON.parse(body);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("expected JSON object");
+      snapshotBodies.set(url, body);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw new Error(`Invalid ${filename}: ${error.message}`);
+    }
+  }
+}
+const feedBodies = new Map(Object.entries(feeds).map(([url, data]) => [url, snapshotBodies.get(url) ?? JSON.stringify(data)]));
 const feedBytes = [...feedBodies.values()].reduce((sum, body) => sum + Buffer.byteLength(body), 0);
+const feedSamples = Object.entries(feeds).map(([url, data]) => {
+  const body = feedBodies.get(url);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch {}
+  return {
+    feed: Object.entries(URLS).find(([, candidate]) => candidate === url)?.[0] ?? "unknown",
+    sample: snapshotBodies.has(url) ? "public JSON snapshot" : "schema fixture",
+    bytes: Buffer.byteLength(body),
+    mosmixPointCount: url === URLS.weather ? parsed?.forecast?.points?.length ?? null : undefined,
+  };
+});
 const runsBody = JSON.stringify({ total_count: 1, workflow_runs: [{ id: 1, status: "completed", conclusion: "success", event: "schedule", created_at: "2026-10-31T10:48:00Z", run_started_at: "2026-10-31T10:48:02Z", updated_at: "2026-10-31T10:49:00Z", head_sha: "bench" }] });
 const tokenBody = JSON.stringify({ token: "ephemeral-benchmark-token", expires_at: new Date(NOW + 3600000).toISOString() });
 const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
@@ -85,6 +120,7 @@ async function benchmark(mode) {
       mode,
       iterations: ITERATIONS,
       feedFixtureBytes: feedBytes,
+      feedSamples,
       feedRequests: feedCalls,
       githubApiCalls,
       totalProcessCpuMs: Number(((totalCpu.user + totalCpu.system) / 1000).toFixed(2)),
@@ -98,4 +134,4 @@ async function benchmark(mode) {
   }
 }
 
-console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, results: [await benchmark("disabled"), await benchmark("enabled")] }, null, 2));
+console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, results: [await benchmark("disabled"), await benchmark("enabled")] }, null, 2));

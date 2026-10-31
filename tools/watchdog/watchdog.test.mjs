@@ -4,8 +4,30 @@ import { readFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 const code = await readFile(new URL("./worker.js", import.meta.url), "utf8"),
   m = await import("./worker.js");
-const { collectStatus, URLS, wildfireInterval, berlinWallClockToUtc } = m,
+const { collectStatus, URLS, wildfireInterval, berlinWallClockToUtc, timestamp } = m,
   NOW = Date.parse("2026-10-31T11:00:00Z");
+
+test("valid timestamps call Date.parse once and invalid timestamps remain rejected", () => {
+  const original = Date.parse;
+  let calls = 0;
+  const expected = original("2026-10-31T10:00:00Z");
+  Date.parse = (value) => {
+    calls++;
+    return original(value);
+  };
+  try {
+    assert.equal(timestamp("2026-10-31T10:00:00Z"), expected);
+    assert.equal(calls, 1);
+    calls = 0;
+    assert.equal(timestamp("not-a-date"), undefined);
+    assert.equal(calls, 1);
+    calls = 0;
+    assert.equal(timestamp(null), undefined);
+    assert.equal(calls, 0);
+  } finally {
+    Date.parse = original;
+  }
+});
 function fixtures() {
   return {
     [URLS.weather]: {
