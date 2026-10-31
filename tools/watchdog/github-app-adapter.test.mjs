@@ -81,6 +81,7 @@ function appJwtCalls(runs = validRuns) {
     assert.equal(init.redirect, "manual");
     assert.equal(url.pathname.startsWith("/repos/RonnsenDD/lhh-data-hub/actions/workflows/"), true);
     assert.equal(url.pathname.endsWith("/runs"), true);
+    assert.equal(url.searchParams.get("per_page"), "30");
     return json({ total_count: runs.length, workflow_runs: runs });
   };
   return { calls, fetcher };
@@ -346,6 +347,28 @@ test("429 and 5xx are reported per workflow without stopping other reads", async
   assert.equal(result.workflows.find((x) => x.file === "update-dwd-weather.yml").queryStatus, "OK");
 });
 
+
+test("oversized run-list responses fail only that workflow within the payload budget", async () => {
+  const { fetcher } = appJwtCalls();
+  const client = createGitHubAppClient(ENV, {
+    now: () => NOW,
+    fetcher: async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/access_tokens")) return fetcher(input, init);
+      if (url.pathname.includes("update-dwd-weather.yml")) {
+        return new Response("x".repeat(131073), { status: 200 });
+      }
+      return fetcher(input, init);
+    },
+  });
+  const result = await client.getWorkflowSnapshot();
+  const oversized = result.workflows.find((row) => row.file === "update-dwd-weather.yml");
+  const healthy = result.workflows.find((row) => row.file === "update-levels.yml");
+  assert.equal(oversized.reasonCode, "GITHUB_RESPONSE_TOO_LARGE");
+  assert.equal(healthy.queryStatus, "OK");
+  assert.equal(result.queryStatus, "PARTIAL");
+});
+
 test("timeouts are isolated and do not change observe-only feed code", async () => {
   const client = createGitHubAppClient(ENV, {
     now: () => NOW,
@@ -363,8 +386,8 @@ test("timeouts are isolated and do not change observe-only feed code", async () 
   assert.equal(result.queryStatus, "PARTIAL");
   assert.equal(result.workflows.every((workflow) => workflow.reasonCode === "GITHUB_TIMEOUT"), true);
   const worker = await readFile(new URL("./worker.js", import.meta.url), "utf8");
-  assert.equal(worker.includes("github-app-adapter"), false);
-  assert.equal(worker.includes("api.github.com"), false);
+  assert.equal(worker.includes("GITHUB_APP_READ_ENABLED"), true);
+  assert.equal(worker.includes("workflow_dispatch"), false);
 });
 
 test("GitHub API redirects remain same-origin, bounded, and read-only", async () => {
