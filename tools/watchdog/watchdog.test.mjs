@@ -176,6 +176,22 @@ test("forecast issue age and validAt are independent", async () => {
     "STALE",
   );
 });
+test("MOSMIX selects the earliest future point and retains the latest validThrough", async () => {
+  const d = fixtures();
+  d[URLS.weather].forecast.points = [
+    { validAt: "2026-10-31T14:00:00Z", values: { temperatureC: null } },
+    { validAt: "2026-10-31T13:00:00Z", values: { temperatureC: 12 } },
+    { validAt: "2026-10-31T12:00:00Z", values: { temperatureC: null } },
+    { validAt: "2026-10-31T10:00:00Z", values: { temperatureC: 5 } },
+    { validAt: "2026-10-31T17:00:00Z", values: { temperatureC: 16 } },
+    { validAt: "not-a-time", values: { temperatureC: 20 } },
+  ];
+  const { fetcher } = mocked(d);
+  const forecast = find(await collectStatus({ nowMs: NOW, fetcher }), "weather").products.forecast;
+  assert.equal(forecast.status, "OK");
+  assert.equal(forecast.validAt, "2026-10-31T13:00:00Z");
+  assert.equal(forecast.validThrough, "2026-10-31T17:00:00.000Z");
+});
 test("Lauchhammer and Biehlen have independent freshness", async () => {
   const d = fixtures();
   d[URLS.levelsL].latestMeasurement.measuredAtUtc = "2026-10-31T08:00:00Z";
@@ -685,3 +701,4 @@ test("missing CDN Age is reported as unavailable, not zero", async () => {
   );
   assert.equal(row.transport.httpAgeSeconds, null);
 });
+
