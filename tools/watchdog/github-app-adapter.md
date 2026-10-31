@@ -49,7 +49,24 @@ When `GITHUB_APP_READ_ENABLED=true`, each existing five-minute Cron invocation p
 
 GitHub documents a minimum 5,000 REST requests/hour for an installation token ([REST rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)); the estimate is far below that primary limit. GitHub secondary limits and transient API failures remain possible and are handled without retries or dispatch loops.
 
-A local Node benchmark (50 ephemeral 2048-bit test-key JWT operations, including key import on every operation) measured about 0.66 ms process CPU per operation. This is a conservative local reference, **not** a Cloudflare CPU measurement. The Worker adapter caches its imported key during a client lifetime, but Cloudflare's 10 ms limit must be verified from actual Worker invocation metrics after a separately approved live integration. Network waiting time is not Worker CPU time.
+Cloudflare documents **10 ms CPU per Cron invocation** and **50 external subrequests per invocation** on Workers Free ([limits](https://developers.cloudflare.com/workers/platform/limits/), [subrequest details](https://developers.cloudflare.com/changelog/post/2026-02-11-subrequests-limit/)). The operator-reported baseline was 13 ms with the App disabled and 14 ms enabled. Those successful invocations are still above the documented 10 ms figure; they do not prove sustained headroom. Do not assume the local improvement moves Cloudflare below the limit: re-measure Cloudflare CPU after a separately approved deployment.
+
+### Reproducible local CPU benchmark
+
+Run the included mocked-workload benchmark from the repository root:
+
+```sh
+WATCHDOG_BENCH_ITERATIONS=500 node tools/watchdog/benchmark.mjs
+```
+
+It warms each mode with 20 invocations, processes the same seven schema-shaped JSON fixtures (35,259 payload bytes per run), and reports Node process CPU and wall-time median/p95. The enabled case also uses an ephemeral generated RSA key and mocks the one token response plus five workflow-run responses. No real secret or network request is used. Sample results on Node v24.21.0:
+
+| Mode | Baseline mean process CPU | Optimized mean process CPU | Change | Optimized p95 |
+| --- | ---: | ---: | ---: | ---: |
+| App disabled | 0.448 ms/invocation | 0.266 ms/invocation | −41% | 0.547 ms |
+| App enabled | 1.079 ms/invocation | 0.883 ms/invocation | −18% | 1.085 ms |
+
+These are **local Node measurements**, not Cloudflare CPU measurements. They include mock Response construction and Node's runtime costs; Cloudflare CPU accounting and its V8/workerd environment differ. Network wait is mocked and is not a performance claim. `benchmark.mjs` can be rerun on the same revision and runtime to reproduce comparative local results.
 
 ## Reproducible single-file deployment artifact
 
@@ -105,12 +122,15 @@ For the first controlled live test, use the existing scheduled-event-only flag a
 From the repository root:
 ```sh
 node tools/watchdog/build-editor-bundle.mjs --check
+node --check tools/watchdog/benchmark.mjs
 node --check tools/watchdog/worker.js
 node --check tools/watchdog/github-app-adapter.js
 node --check tools/watchdog/worker.bundle.js
 npx --yes --package typescript@5.8.3 tsc --project tools/watchdog/tsconfig.cloudflare-editor.json
 node --test tools/watchdog/*.test.mjs
+WATCHDOG_BENCH_ITERATIONS=500 node tools/watchdog/benchmark.mjs
 ```
 
 The tests use only generated ephemeral keys and mocked HTTP responses; they never contact GitHub or Cloudflare and never use the real App private key.
+
 
