@@ -1,70 +1,106 @@
-# External watchdog (prepared, not deployed)
+# Unabhängiger Data-Hub-Watchdog (Entwurf)
 
-This folder prepares a Cloudflare Workers watchdog for the four existing public producers. It is deliberately inactive until an administrator approves account setup and deployment. It does not modify the existing producer workflows or dashboard consumers.
+Der Ordner `tools/watchdog/` enthält einen noch nicht aktivierten Cloudflare-Worker-Entwurf für die fünf bestehenden Workflows in RonnsenDD/lhh-data-hub. Er liest Feed- und GitHub-Status. Nur nach gesonderter Freigabe kann er bestehende Workflows über workflow_dispatch anstoßen.
 
-## What it checks
+## Sicherheitszustand
 
-Every tick inspects (a) GitHub Actions run history, (b) the named producer job rather than the overall workflow conclusion, (c) public JSON/manifests, (d) publication timestamps where available, and (e) source/product timestamps. It reports one of:
+- Standard ist WATCHDOG_MODE=observe und DISPATCH_ENABLED=false.
+- Es gibt keinen fetch-Handler, keine Route und keinen öffentlich aufrufbaren Auslösendpunkt. workers_dev=false ist im Wrangler-Beispiel gesetzt.
+- Kein Cloudflare-Konto, Worker, D1-Datenbank, GitHub-App, Secret oder Token wird durch diesen PR eingerichtet.
+- Die bestehenden GitHub-Schedules bleiben aktiv; kein Produktionsworkflow wird geändert oder gestartet.
+- Bei fehlender D1-Sperre, GitHub-API-Fehlern, deaktiviertem Workflow oder unklarem Feedstatus wird nicht dispatcht. Enthält ein Workflow mehrere Feeds, muss jeder davon lesbar und auswertbar sein, bevor ein Dispatch zulässig ist.
+- Der Worker schreibt weder in SharePoint noch in die erzeugten Feeddateien.
 
-- `aktuell`
-- `veraltet`
-- `Abruf fehlgeschlagen`
-- `Automatik ausgefallen`
+## Aufbau
 
-The JSON log record includes source age, latest schedule run, latest producer run, publication time(s), separate schedule-audit result, and any dispatch result. A GitHub dispatch acknowledgement is never presented as a successful data refresh. There is no public status endpoint; the worker's fallback fetch handler returns 404, `workers_dev` is disabled, and the latest report is held in the private Durable Object storage and operator logs.
+- worker.mjs: Scheduled-Handler, GitHub-App-JWT/Installationstoken, Statusadapter, Backoff und Dispatch-Gates.
+- migrations/0001_init.sql: D1-Free-Statusspeicher, eindeutige Sperre je Workflow, API-Backoff und minimales Ereignisprotokoll.
+- watchdog.test.mjs: Node-Testlauf mit gefälschten HTTP- und D1-Schnittstellen.
+- test_dispatch_guard_sql.py: führt das aus worker.mjs extrahierte Sperr-SQL gegen SQLite aus; prüft Cooldown und Tageslimit.
+- wrangler.watchdog.jsonc: beispielhafte 5-Minuten-Konfiguration ohne echte Konto- oder Datenbank-ID.
 
-Thresholds follow current producer contracts and reliability documentation:
+Der Worker prüft bei jedem Lauf den GitHub-Default-Branch und die Registrierung/Aktivierung der Workflows, lädt je Workflow bis zu 100 Läufe und liest die sieben unabhängigen JSON-Feeds. Die getrennten Workflowabfragen verhindern, dass häufige Wetter-/Radarläufe die tägliche Historie für Grasland oder Waldbrand aus der jüngsten 100er-Auswahl verdrängen. Der Worker dispatcht nur, wenn der Default-Branch weiterhin main ist.
 
-| Source | Existing workflow/job | Schedule gap threshold | Data-age rule | Dispatch cooldown |
-| --- | --- | ---: | --- | ---: |
-| Weather | `update-dwd-weather.yml` / `update-weather` | 20 min | each observation's own threshold (default 60 min), MOSMIX issue time max 12 h; publication age max 45 min | 60 min |
-| Levels (both stations) | `update-levels.yml` / `update` | 20 min | each `measuredAtUtc` max 45 min; publication age max 45 min | 60 min |
-| RADOLAN-RY + KONRAD3D | `update-radolan-ry.yml` / `publish` | 20 min | `productTime` / `referenceTime` max 15 min; check `publishedAt` max 45 min and checked separately | 60 min |
-| Grassland fire index | `update-graslandfeuerindex.yml` / `update` | 25 h | DWD `dataAsOf` max 36 h and `today.date` must be today's date in Europe/Berlin; publication age max 30 h | 6 h |
+## Geprüfte bestehende Zeitpläne und Frischegrenzen
 
-If both schedule automation and payload freshness are healthy, state is `aktuell`. A stale source is never made fresh based on retrieval/publication time. A producer job failure maps to `Abruf fehlgeschlagen`; audit-only failures remain separately visible. When the schedule is overdue, status is `Automatik ausgefallen` unless a producer run is already active (active runs always suppress dispatch). A broken GitHub API/permission is reported as `Abruf fehlgeschlagen` and never causes an unverified dispatch.
+Alle Cron-Zeiten sind UTC. Schwellen entsprechen dem lokalen DesignTest-Code, soweit dort eine fachliche Frischeprüfung vorhanden ist.
 
-## Dispatch safety
+| Workflow | GitHub-Zeitplan | Überwachte Datei(en) | Quellzeit / Dashboardgrenze | Grace | Mindestabstand / Tageslimit |
+| --- | --- | --- | --- | --- | --- |
+| update-dwd-weather.yml | :03, :18, :33, :48 jede Stunde | dwd-weather.json | DWD-Messzeiten höchstens 45 min; MOSMIX-Ausgabe höchstens 12 h | 30 min | 60 min / 3 |
+| update-levels.yml | :11, :26, :41, :56 jede Stunde | pegel-lauchhammer.json, pegel-biehlen-1.json | measuredAtUtc höchstens 45 min; retrievedAt wird nicht als Messzeit verwendet | 30 min | 60 min / 3 |
+| update-radolan-ry.yml | :07, :22, :37, :52 jede Stunde | RADOLAN latest.json, KONRAD3D latest.json | productTime bzw. referenceTime höchstens 15 min | 30 min | 60 min / 3 |
+| update-graslandfeuerindex.yml | täglich 05:15 | graslandfeuerindex.json | dataAsOf höchstens 36 h und Tageswert für Europe/Berlin vorhanden | 120 min | 360 min / 1 |
+| update-waldbrandgefahrenstufe-osl.yml | täglich 07:20 | waldbrandgefahrenstufe-osl.json | sourceDate muss im offiziellen 08:00–08:00-Intervall Europe/Berlin liegen | 60 min | 360 min / 1 |
 
-Only the four hard-coded existing workflow files can be dispatched, always on `main`, using the existing `workflow_dispatch` trigger. The watchdog never accepts a workflow name, branch, or arbitrary URL from an HTTP caller.
+Quellfrische wird unabhängig von einem erfolgreichen Workflowlauf berechnet. Die Waldbrandbewertung ignoriert das gespeicherte Statusfeld und prüft sourceDate. Bei Datenfehler oder fehlender Messzeit wird kein aktueller Status erfunden.
 
-- A singleton Durable Object serializes ticks.
-- Any queued or in-progress run blocks another dispatch.
-- A persisted per-source cooldown is written **before** sending the dispatch request, so a timeout after GitHub accepts a request cannot cause a retry loop.
-- Cooldown: one hour for the 15-minute products; six hours for the daily GLFI feed.
-- GitHub's 204 dispatch response is only recorded as `requested`; a later workflow run, producer job result, publication time, and source age must independently establish success.
-- API, parsing, or feed failures are logged without response bodies or secrets.
-- No automatic repeated retry occurs within the cooldown.
+Die aktuelle öffentliche JSON-Datei enthält nicht für jeden Feed eine belastbare Veröffentlichungszeit. Der Bericht trennt deshalb sourceTimestamp, Quellalter (bei Waldbrand ab 08:00 Europe/Berlin), retrievedAt/lastAttemptAt, publishedAt (nur sofern tatsächlich vorhanden) und den Abschlusszeitpunkt des letzten erfolgreichen GitHub-Workflowlaufs. Der Abschluss des Workflows ist kein Beweis für neue Quelldaten.
 
-The watcher's checks are sequential and limited to the four fixed workflows and their fixed public feeds. No loop polls GitHub rapidly.
+## Statusmodell
 
-## Cost and alternative comparison
+Jede der sieben Datenquellen erhält einen Datensatz in watchdog_status:
 
-Cloudflare Workers Free is a plausible first candidate for a 15-minute best-effort watchdog: the current plan documents 100,000 Worker requests/day, 10 ms CPU per invocation, and up to five Cron Triggers per account. The configured Cron uses one trigger and produces about 96 invocations/day. The singleton Durable Object is also intended to stay inside its published Free quotas. Exceeding Free quotas causes limits/failed operations rather than authorizing paid service; this design does not enable Paid, set billing, or use a paid resource. Plan quotas and availability must be rechecked in the user's Cloudflare account at approval time. Free-tier service has no operational SLA and does not make schedule delivery guaranteed.
+- aktuell: Quellzeit innerhalb der fachlichen Frische-/Gültigkeitsgrenze.
+- veraltet: Quelldatei lesbar, aber Quellzeit außerhalb der Grenze oder notwendiges Feld fehlt.
+- Abruf fehlgeschlagen: Feed-HTTP-/JSON-Fehler oder letzter Produzentenlauf fehlgeschlagen.
+- Automatik ausgefallen: Workflow deaktiviert/nicht registriert, überfälliger Schedule-Slot oder nachgewiesene Zeitplanlücke.
 
-Power Automate can be included with some Microsoft 365 licenses for scheduled flows and standard connectors (the owner's exact entitlement/action quota must be checked). Microsoft's standard GitHub connector documents `Create a repository dispatch event`, but not the Actions `workflow_dispatch` endpoint needed here. Adding `repository_dispatch` to the four producer workflows would change them and is outside this PR. Calling GitHub's REST dispatch endpoint through the Power Automate HTTP connector requires a Premium connector; therefore Power Automate is not confirmed as a no-additional-cost implementation under the requested restrictions. Existing tenant licensing may cover Premium, but must be verified before use.
+Zusätzlich enthält detail_json letzte manuelle/automatische Workflowstarts und Ergebnisse, aktiven Status, Schedule-Slot, Startverzögerung, Abstand zwischen den letzten automatischen Läufen, sourceTimestamp, retrievedAt, publishedAt (wenn geliefert), lastSuccessfulAt, Datenalter, Fehlergrund, Dispatch-Modus/-Entscheidung, Cooldown und nextAllowedDispatchAt. Ein fehlender Workflow wird nicht automatisch aktiviert.
 
-## Cost and alternative comparison
+Eine GitHub-API-Störung setzt einen persistenten Backoff; im Backoff findet kein weiterer GitHub-Aufruf und kein Dispatch statt. HTTP-429, 403, 5xx und Netzwerkfehler werden nicht aggressiv wiederholt. Eine Feed-HTTP-Störung allein startet keinen Produzenten: dafür muss ein echter stale Feed, ein fehlender Schedule-Slot oder ein fehlgeschlagener Producer vorliegen.
 
-Cloudflare Workers Free is a plausible first candidate for a 15-minute best-effort watchdog: the current plan documents 100,000 Worker requests/day, 10 ms CPU per invocation, and up to five Cron Triggers per account. The configured Cron uses one trigger and produces about 96 invocations/day. The singleton Durable Object is also intended to stay inside its published Free quotas. Exceeding Free quotas causes limits/failed operations rather than authorizing paid service; this design does not enable Paid, billing, or a paid resource. The Workers Paid plan has a US list minimum of $5/month; it is explicitly excluded. Plan quotas and availability must be rechecked in the user's Cloudflare account at approval time. Free-tier service has no operational SLA and does not make schedule delivery guaranteed.
+## Doppelstartschutz
 
-Power Automate can be included with some Microsoft 365 licenses for scheduled flows and standard connectors; the exact tenant entitlement and owner's action quota must be checked. The standard GitHub connector is classed Standard and documents a `Create a repository dispatch event` action, but the current producer workflows only expose `workflow_dispatch`. Using repository_dispatch would require changing those workflows and is outside this PR. Calling GitHub's REST `workflow_dispatch` endpoint through the Power Automate HTTP connector requires Premium. Microsoft's US list price for Power Automate Premium is $15/user/month paid yearly (regional pricing/tax and any existing tenant entitlement vary). Therefore Power Automate is not confirmed as a no-additional-cost implementation under the requested restrictions; it is only cost-neutral if an eligible Premium entitlement already exists, or if a different approved mechanism is identified.
+Die Sperre liegt in D1 Free (nicht in eventual-consistency KV). Ein SQLite-Upsert mit UNIQUE/PRIMARY KEY je workflow_key und RETURNING beansprucht die Sperre atomar. Das einzelne Claim-Statement setzt gleichzeitig Mindestabstand, UTC-Tageszähler und Lease. Claim-Fehler oder D1-Ausfall verhindern den Dispatch. Bei erfolgreicher oder unklar fehlgeschlagener Dispatch-Anfrage bleibt die Sperre bis zum Mindestabstand bestehen; ein Timeout kann daher einen Wiederanstoß verzögern, vermeidet aber Doppelstarts. Ein laufender/queued GitHub-Run blockiert zusätzlich.
 
-## Exact setup required later (not done by this PR)
+Dispatch ist doppelt gesperrt: WATCHDOG_MODE muss dispatch und DISPATCH_ENABLED muss exakt true sein. Beide bleiben standardmäßig ausgeschaltet. Der Workflow muss in der REST-API als aktiv vorhanden sein; der Watchdog schaltet keinen Workflow um.
 
-1. Review and merge this code PR first. No Worker or secret is created by merge.
-2. An administrator verifies Cloudflare Workers Free availability/quotas in the account and explicitly approves creating/deploying the Worker. Do not activate a paid plan, billing cap, or paid add-on.
-3. Create a fine-grained GitHub token restricted to repository `RonnsenDD/lhh-data-hub`, with only Actions: read/write and Contents: read (repository metadata read is implicit). Set an expiration and owner. This token is required because the watchdog reads Actions runs/jobs, reads publication commit dates, and dispatches only the fixed workflows.
-4. Store the token as the Worker secret `GITHUB_TOKEN` using Cloudflare's secret binding mechanism (for example `wrangler secret put GITHUB_TOKEN`). Never put it in Git, Wrangler vars, shell command history, public JSON, or logs. No token is generated or stored by this PR.
-5. Deploy from the repository using the root config `wrangler.watchdog.jsonc`, and verify the account exposes no route/worker-dev hostname. Confirm Cron Trigger appears once per quarter hour and inspect JSON logs. No deployment is performed here.
-6. Rollback is to disable/delete this Worker Cron Trigger and revoke the fine-grained token. This does not alter producer workflows or data publication.
+## Berechtigungen
 
-## Local tests
+Die GitHub-App wird später ausschließlich für RonnsenDD/lhh-data-hub installiert:
 
-Run with Node.js 20+:
+1. Beobachtungsmodus: GitHub-App-Installation auf genau `RonnsenDD/lhh-data-hub` und Repository-Recht Actions read. Kein Contents-, Administration-, Organization- oder SharePoint-Recht.
+2. Auslösemodus nach separater Freigabe: Repository Actions write, weil die Workflow-dispatch-REST-API dieses Recht benötigt. GitHub bietet für diese App-Berechtigung keine Beschränkung auf einzelne Workflowdateien; Actions write gilt für das gesamte installierte Repository. Der Code dispatcht nur die fünf fest konfigurierten Dateien. Die breitere Repositorywirkung ist ein verbleibendes Risiko. Kein Schreibzugriff auf Contents.
+3. Installation auf genau dieses Repository beschränken. Installation-ID, App-ID und private PEM ausschließlich in Cloudflare-Konfiguration/Secret Store; keine Werte in Git, Worker-Logs, D1 oder Browser.
+4. Der Worker erstellt kurzlebige Installationstokens pro Lauf und verwirft sie im Speicher. JWT und Token werden nie ausgegeben oder protokolliert.
 
-```sh
-node --test tools/watchdog/watchdog.test.mjs
-```
+Die im Code verwendete GitHub REST-API fragt Workflowzustand und Workflowläufe ab; dispatcht wird nur auf main und nur über den bestehenden Workflowdateinamen. `Actions: write` ist eine repositoryweite Berechtigung, keine workflowbezogene Einschränkung.
 
-Tests cover a missing schedule, stale source timestamps despite `status: ok`, GitHub API failure, active run duplicate prevention, dispatch acknowledgement versus actual refresh, audit-vs-producer result, and cooldown suppression. Tests use only mocked fetch and in-memory storage; no network or secret is used.
+## Kosten- und Free-Tier-Prüfung (31.10.2026)
+
+Die aktuelle Cloudflare-Dokumentation nennt für Workers Free 100.000 Requests pro Tag, 10 ms CPU je Cron-Aufruf, maximal fünf Cron-Trigger pro Konto und 50 Subrequests pro Invocation. Ein Fünf-Minuten-Cron sind 288 Aufrufe pro Tag. Ein Kontrolllauf führt typischerweise sieben Feedabrufe, eine Repository-Metadatenabfrage, eine Workflowliste, fünf getrennte Workflowlaufabfragen und eine Tokenanforderung aus (15 Subrequests). Selbst mit maximal fünf Dispatches bleibt er bei etwa 20 von 50 Subrequests. Das sind bis zu 96 GitHub-API-Leseaufrufe pro Stunde plus wenige Dispatches; API-Rate-Limit-Header und 403/429 werden überwacht, und ein gemeinsamer Backoff verhindert Wiederholungsstürme. Das Free-Konto erlaubt höchstens fünf Cron-Trigger insgesamt; vorhandene Kontoauslastung muss vor Einrichtung geprüft werden.
+
+D1 Free umfasst aktuell 5 Mio. Zeilenreads pro Tag, 100.000 Zeilenwrites pro Tag und 5 GB Gesamtspeicher. Bei sieben Statuszeilen pro Tick sind etwa 2.016 Status-Upserts pro Tag zu erwarten, plus begrenzte Ereignisse. D1 Free-Anfragen schlagen nach Erreichen des täglichen Read-/Write-Limits fehl; das System wechselt dann in Fail-Closed und dispatcht nicht. Kein automatisches Upgrade und kein Paid-Plan vorsehen.
+
+Monatliche direkte Cloudflare-Gebühr: 0 USD, sofern ausschließlich Workers Free und D1 Free innerhalb ihrer Limits benutzt werden. GitHub-Gebühr: keine zusätzliche Runner-Ausführung durch den Worker selbst; ein Dispatch kann einen vorhandenen Actions-Lauf starten und dessen übliche Repository-Minuten beanspruchen. Keine kostenpflichtigen Runner aktivieren.
+
+Wichtiger ungeklärter Free-Tier-Risikopunkt: Cloudflare Free begrenzt Cron-Code auf 10 ms CPU. Die App-JWT-Erzeugung, RSA-Signatur und das Parsen der etwa 100-KB-Wetterdatei wurden nur lokal in Node geprüft. Es gibt keinen Worker-/Free-Runtime-Messwert. Vor einem 48-Stunden-Test ist ein isolierter Free-Account-CPU-Probelauf erforderlich. Wenn reproduzierbar mehr als 10 ms benötigt werden, wird nicht auf Paid umgestellt; der Entwurf gilt bis zu einer neuen kostenfreien Option als nicht einsatzbereit.
+
+Cloudflare Cron läuft nach UTC und verwendet laut Dokumentation unterausgelastete Maschinen. Für einen harten Verfügbarkeits-SLA ist damit kein Nachweis erbracht. GitHub bleibt weiter selbst eine Abhängigkeit für Runstatus und Datenverarbeitung. Der Watchdog kann Netzwerk-, D1-, GitHub- oder Cloudflare-Ausfälle nicht selbstständig melden, wenn seine eigene Laufzeit nicht ausgeführt wird.
+
+## Einrichtung nach PR-Prüfung und separater Freigabe
+
+Keine der folgenden Handlungen wurde ausgeführt.
+
+1. Cloudflare-Konto/Workers Free und Wrangler lokal prüfen; vorab bestätigen, dass kein Paid-Plan erforderlich ist und keine automatische Umstellung auf Paid aktiviert wird.
+2. In GitHub eine App anlegen und auf genau das Repository installieren. Zunächst Actions read konfigurieren; für den Beobachtungsmodus werden keine weiteren Repositoryrechte benötigt. Für Beobachtung kann DISPATCH_ENABLED=false bleiben; App-ID und Installation-ID lokal in die ungetrackte Wrangler-Datei übernehmen.
+3. Aus der `wrangler.watchdog.jsonc`-Vorlage eine private Wrangler-Konfiguration erzeugen. Keine tatsächlichen IDs in diesen PR committen. D1 Free erstellen, die ausgegebene database_id nur lokal in die Konfiguration eintragen und migrations/0001_init.sql anwenden.
+4. GH_APP_PRIVATE_KEY mit Wrangler als Secret setzen. Das PEM nicht in einer Shell-Historie, einem öffentlichen Log, Commit oder D1 speichern. Prüfen, dass der Key niemals in wrangler tail erscheint.
+5. WATCHDOG_MODE=observe und DISPATCH_ENABLED=false beibehalten; Worker ausschließlich mit scheduled handler veröffentlichen, workers.dev deaktiviert lassen und keinen Route-Eintrag anlegen.
+6. Eine Stunde beobachten: 12 Tick-Einträge über checked_at, alle sieben Feedzeilen, API-Rate-/CPU-Metriken, D1-Rows Read/Written, keine Dispatch-Events. Bei fehlendem Status, CPU-Limit oder API-Fehler nicht fortfahren.
+7. Danach einen 48-Stunden-Beobachtungstest starten. Mindestabnahme: 576 erwartete Ticks, mindestens 570 vollständige Statuschecks (99 %), alle fünf Workflowzustände je Check, sieben Datenquellenzeilen, keine Feedklassifizierung allein aus retrievedAt, zero Dispatches, keine D1-Limitfehler, keine Token-/Schlüsselleaks, Cron-CPU dauerhaft unter 10 ms (Ziel p99 höchstens 8 ms). Zwei getrennte Quellenzeitpunkte und der tägliche Europe/Berlin-Tageswechsel müssen beobachtet oder mit Fixtures validiert sein.
+8. Dispatch bleibt nach diesen Tests aus. Für die Aktivierung braucht es eine neue ausdrückliche Freigabe. Dann: GitHub-App-Berechtigung auf Actions write erhöhen und Installation erneut genehmigen; den erhöhten Modus ausstellen; nach einer begrenzten kontrollierten Testfreigabe eine separate Freigabe einholen, erst dann WATCHDOG_MODE=dispatch und DISPATCH_ENABLED=true setzen. Per-Workflow-Limit: höchstens drei Dispatches/UTC-Tag für die drei 15-Minuten-Produzenten, höchstens einer/UTC-Tag für beide Tagesproduzenten.
+9. Abschalten: zuerst DISPATCH_ENABLED=false setzen, danach Cron Trigger entfernen/deaktivieren. GitHub-Schedules und Produzenten bleiben aktiv. D1 Status/Logs lesend exportieren; kein Datensatz muss in Git verbleiben.
+
+## Lokale Prüfung
+
+Node.js 20+:
+
+    node --test tools/watchdog/watchdog.test.mjs
+
+Python 3:
+
+    python3 -m unittest discover -s tools/watchdog -p 'test_*.py' -v
+
+Wrangler-Dry-Run/Free-CPU-Test ist vor der Einrichtung nicht möglich. Vor tatsächlicher Aktivierung muss die JSONC-Konfiguration mit der dann aktuellen Wrangler-Version validiert werden. Der Entwurf ist nicht produktiv freigegeben.
