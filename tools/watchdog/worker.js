@@ -1,3 +1,5 @@
+import { createGitHubAppClient } from "./github-app-adapter.js";
+
 export const URLS = {
   weather:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather.json",
@@ -690,7 +692,7 @@ export default {
       headers: headers(o),
     });
   },
-  async scheduled(event) {
+  async scheduled(event, env) {
     const r = await collectStatus();
     console.log(
       JSON.stringify({
@@ -724,5 +726,85 @@ export default {
         ),
       }),
     );
+
+    if (env?.GITHUB_APP_READ_ENABLED !== "true") return;
+
+    let snapshot;
+    try {
+      snapshot = await createGitHubAppClient(env).getWorkflowSnapshot();
+    } catch (error) {
+      console.log(JSON.stringify({
+        event: "github_workflow_observation",
+        requestId: crypto.randomUUID(),
+        repository: "RonnsenDD/lhh-data-hub",
+        checkedAt: new Date().toISOString(),
+        queryStatus: "ERROR",
+        reasonCode: typeof error?.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
+          ? error.code
+          : "GITHUB_OBSERVATION_FAILED",
+        httpStatus: Number.isInteger(error?.status) ? error.status : null,
+        stage: typeof error?.stage === "string" && /^[a-z_]+$/.test(error.stage)
+          ? error.stage
+          : "unknown",
+      }));
+      return;
+    }
+
+    console.log(JSON.stringify({
+      event: "github_workflow_observation",
+      requestId: crypto.randomUUID(),
+      repository: snapshot.repository,
+      checkedAt: snapshot.checkedAt,
+      queryStatus: snapshot.queryStatus,
+      reasonCode: snapshot.reasonCode ?? null,
+      httpStatus: snapshot.httpStatus ?? null,
+      retryAfterSeconds: snapshot.retryAfterSeconds ?? null,
+      rateLimitRemaining: snapshot.rateLimitRemaining ?? null,
+      rateLimitResetAt: snapshot.rateLimitResetAt ?? null,
+      workflows: snapshot.workflows.map((workflow) => ({
+        file: workflow.file,
+        cron: workflow.cron,
+        queryStatus: workflow.queryStatus,
+        reasonCode: workflow.reasonCode ?? null,
+        httpStatus: workflow.httpStatus ?? null,
+        retryAfterSeconds: workflow.retryAfterSeconds ?? null,
+        rateLimitRemaining: workflow.rateLimitRemaining ?? null,
+        rateLimitResetAt: workflow.rateLimitResetAt ?? null,
+        lastSuccess: workflow.lastSuccess
+          ? {
+              id: workflow.lastSuccess.id,
+              createdAt: workflow.lastSuccess.createdAt,
+              startedAt: workflow.lastSuccess.startedAt,
+              conclusion: workflow.lastSuccess.conclusion,
+              headSha: workflow.lastSuccess.headSha,
+            }
+          : null,
+        lastFailure: workflow.lastFailure
+          ? {
+              id: workflow.lastFailure.id,
+              createdAt: workflow.lastFailure.createdAt,
+              startedAt: workflow.lastFailure.startedAt,
+              conclusion: workflow.lastFailure.conclusion,
+              headSha: workflow.lastFailure.headSha,
+            }
+          : null,
+        activeRuns: workflow.activeRuns ?? [],
+        lastAutomaticRunCreatedAt: workflow.lastAutomaticRunCreatedAt ?? null,
+        lastAutomaticRunStartedAt: workflow.lastAutomaticRunStartedAt ?? null,
+        minutesSinceLastAutomaticRunCreated:
+          workflow.minutesSinceLastAutomaticRunCreated ?? null,
+        minutesSinceLastAutomaticRunStarted:
+          workflow.minutesSinceLastAutomaticRunStarted ?? null,
+        latestExpectedScheduleTickAt: workflow.latestExpectedScheduleTickAt ?? null,
+        latestExpectedTickOverdueMinutes:
+          workflow.latestExpectedTickOverdueMinutes ?? null,
+        lastAutomaticScheduleCreationDelayMinutes:
+          workflow.lastAutomaticScheduleCreationDelayMinutes ?? null,
+        lastAutomaticRunStartDelayMinutes:
+          workflow.lastAutomaticRunStartDelayMinutes ?? null,
+        missingExpectedScheduleTicksBetweenLatestAutomaticRuns:
+          workflow.missingExpectedScheduleTicksBetweenLatestAutomaticRuns ?? null,
+      })),
+    }));
   },
 };

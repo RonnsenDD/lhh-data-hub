@@ -3,7 +3,7 @@ const REPOSITORY_PATH = "/repos/RonnsenDD/lhh-data-hub";
 const REPOSITORY_ID = 1424581788;
 const API_VERSION = "2026-03-10";
 const MAX_TOKEN_BYTES = 65536;
-const MAX_RUNS_BYTES = 524288;
+const MAX_RUNS_BYTES = 131072; // Keep five parallel run-list payloads bounded for Workers Free.
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 8000;
 
@@ -472,7 +472,7 @@ export function createGitHubAppClient(env, {
   }
 
   async function readOneWorkflow(workflow, token) {
-    const query = new URLSearchParams({ branch: "main", per_page: "100" });
+    const query = new URLSearchParams({ branch: "main", per_page: "30" });
     const url = API_ORIGIN + REPOSITORY_PATH + "/actions/workflows/" +
       encodeURIComponent(workflow.file) + "/runs?" + query.toString();
     try {

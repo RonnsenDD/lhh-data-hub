@@ -1,10 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { generateKeyPairSync } from "node:crypto";
 const code = await readFile(new URL("./worker.js", import.meta.url), "utf8"),
-  m = await import(
-    "data:text/javascript;base64," + Buffer.from(code).toString("base64")
-  );
+  m = await import("./worker.js");
 const { collectStatus, URLS, wildfireInterval, berlinWallClockToUtc } = m,
   NOW = Date.parse("2026-10-31T11:00:00Z");
 function fixtures() {
@@ -400,16 +399,197 @@ test("scheduled logs contain structured status, not feed URLs or payload values"
   assert.equal(logLine.includes("Authorization"), false);
 });
 
-test("no github REST, dispatch, or persistence implementation", async () => {
+test("GitHub App reads remain disabled unless the exact true flag is set", async () => {
+  const { fetcher } = mocked(fixtures());
+  const oldFetch = globalThis.fetch;
+  const oldLog = console.log;
+  const calls = [];
+  const logs = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push(new URL(String(input)));
+    return fetcher(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    await m.default.scheduled({ cron: "*/5 * * * *", scheduledTime: NOW }, {});
+    await m.default.scheduled(
+      { cron: "*/5 * * * *", scheduledTime: NOW },
+      { GITHUB_APP_READ_ENABLED: "false" },
+    );
+    await m.default.scheduled(
+      { cron: "*/5 * * * *", scheduledTime: NOW },
+      { GITHUB_APP_READ_ENABLED: "TRUE" },
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    console.log = oldLog;
+  }
+  assert.equal(calls.length, 21);
+  assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
+  assert.equal(logs.filter((line) => JSON.parse(line).event === "github_workflow_observation").length, 0);
+});
+
+test("enabled Cron event performs scoped read-only workflow queries and preserves seven feed checks", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+    publicKeyEncoding: { type: "spki", format: "pem" },
+  });
+  const { fetcher: feedFetch } = mocked(fixtures());
+  const calls = [];
+  const logs = [];
+  const oldFetch = globalThis.fetch;
+  const oldLog = console.log;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === "https://api.github.com") {
+      calls.push({ url, init });
+      if (url.pathname.endsWith("/access_tokens")) {
+        assert.equal(init.method, "POST");
+        assert.equal(init.redirect, "manual");
+        assert.deepEqual(JSON.parse(init.body), {
+          repository_ids: [1424581788],
+          permissions: { actions: "read" },
+        });
+        return new Response(JSON.stringify({
+          token: "ghs_ephemeral_test_token_not_real",
+          expires_at: new Date(Date.now() + 3600000).toISOString(),
+        }), { status: 201, headers: { "content-type": "application/json" } });
+      }
+      assert.equal(init.method, "GET");
+      assert.equal(init.redirect, "manual");
+      assert.equal(url.pathname.startsWith("/repos/RonnsenDD/lhh-data-hub/actions/workflows/"), true);
+      return new Response(JSON.stringify({ workflow_runs: [{
+        id: 91,
+        status: "completed",
+        conclusion: "success",
+        event: "schedule",
+        created_at: new Date(Date.now() - 60000).toISOString(),
+        run_started_at: new Date(Date.now() - 55000).toISOString(),
+        updated_at: new Date().toISOString(),
+        head_sha: "public-test-sha",
+      }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return feedFetch(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    await m.default.scheduled(
+      { cron: "*/5 * * * *", scheduledTime: NOW },
+      {
+        GITHUB_APP_READ_ENABLED: "true",
+        GITHUB_APP_ID: "5555433",
+        GITHUB_INSTALLATION_ID: "177220128",
+        GITHUB_APP_PRIVATE_KEY: privateKey,
+      },
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    console.log = oldLog;
+  }
+  assert.equal(calls.length, 6);
+  assert.equal(calls.filter((call) => call.init.method === "GET").length, 5);
+  assert.equal(calls.filter((call) => call.init.method === "POST").length, 1);
+  assert.ok(calls.every((call) => call.url.origin === "https://api.github.com"));
+  assert.ok(calls.every((call) => call.url.pathname.endsWith("/access_tokens") || call.url.pathname.endsWith("/runs")));
+  assert.equal(calls.some((call) => call.url.pathname.includes("dispatch")), false);
+
+  const feedLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "feed_watchdog_check");
+  const appLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "github_workflow_observation");
+  assert.equal(feedLog.sources.length, 7);
+  assert.equal(appLog.queryStatus, "OK");
+  assert.equal(appLog.workflows.length, 5);
+  assert.equal(logs.join("\n").includes(privateKey), false);
+  assert.equal(logs.join("\n").includes("ghs_ephemeral_test_token_not_real"), false);
+});
+
+test("public status requests never invoke the GitHub App adapter even when enabled", async () => {
+  const { fetcher } = mocked(fixtures());
+  const calls = [];
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(url);
+    if (url.origin === "https://api.github.com") throw new Error("must not call GitHub API");
+    return fetcher(input, init);
+  };
+  try {
+    const response = await m.default.fetch(
+      new Request("https://worker.example/status", { headers: { Origin: "https://feuerwehrlauchhammer.sharepoint.com" } }),
+      {
+        GITHUB_APP_READ_ENABLED: "true",
+        GITHUB_APP_ID: "5555433",
+        GITHUB_INSTALLATION_ID: "177220128",
+      },
+    );
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.sources.length, 7);
+    assert.equal("workflows" in payload, false);
+  } finally {
+    globalThis.fetch = oldFetch;
+  }
+  assert.equal(calls.length, 7);
+  assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
+});
+
+test("GitHub authentication failure is logged without changing feed results", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+    publicKeyEncoding: { type: "spki", format: "pem" },
+  });
+  const { fetcher: feedFetch } = mocked(fixtures());
+  const baselineFeeds = await collectStatus({ fetcher: feedFetch });
+  const calls = [];
+  const logs = [];
+  const oldFetch = globalThis.fetch;
+  const oldLog = console.log;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === "https://api.github.com") {
+      calls.push({ url, init });
+      return new Response("private response body", { status: 403 });
+    }
+    return feedFetch(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    await m.default.scheduled(
+      { cron: "*/5 * * * *", scheduledTime: NOW },
+      {
+        GITHUB_APP_READ_ENABLED: "true",
+        GITHUB_APP_ID: "5555433",
+        GITHUB_INSTALLATION_ID: "177220128",
+        GITHUB_APP_PRIVATE_KEY: privateKey,
+      },
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    console.log = oldLog;
+  }
+  assert.equal(calls.length, 1);
+  const feedLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "feed_watchdog_check");
+  const appLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "github_workflow_observation");
+  assert.equal(feedLog.overallStatus, baselineFeeds.overallStatus);
+  assert.equal(feedLog.sources.length, 7);
+  assert.deepEqual(
+    feedLog.sources.map((source) => [source.key, source.status, source.reasonCode]),
+    baselineFeeds.sources.map((source) => [source.key, source.status, source.reasonCode ?? null]),
+  );
+  assert.equal(appLog.queryStatus, "ERROR");
+  assert.equal(appLog.reasonCode, "GITHUB_PERMISSION_DENIED");
+  assert.equal(logs.join("\n").includes("private response body"), false);
+});
+
+test("no GitHub write or dispatch path is implemented", async () => {
   const s = await readFile(new URL("./worker.js", import.meta.url), "utf8");
-  for (const x of [
-    "api.github.com",
-    "workflow_dispatch",
-    "D1Database",
-    "caches.default",
-    "Authorization",
-  ])
-    assert.equal(s.includes(x), false);
+  const adapter = await readFile(new URL("./github-app-adapter.js", import.meta.url), "utf8");
+  assert.equal(adapter.includes("workflow_dispatch"), false);
+  assert.equal(adapter.includes("dispatches"), false);
+  assert.equal(s.includes("workflow_dispatch"), false);
+  assert.equal(s.includes("D1Database"), false);
+  assert.equal(s.includes("caches.default"), false);
 });
 
 test("invalid schema is ERROR and cannot claim freshness", async () => {
