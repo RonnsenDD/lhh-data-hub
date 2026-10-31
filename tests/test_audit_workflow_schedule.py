@@ -62,6 +62,45 @@ class AuditWorkflowScheduleTests(unittest.TestCase):
             current_producer_result="success", prior_producer_results={})
         self.assertTrue(any("not an automatic schedule" in item for item in problems))
 
+    def test_daily_schedule_start_delay_detected_when_daily_gap_is_normal(self):
+        current = self.make_run(
+            2, "2026-10-30T14:13:00Z", "2026-10-30T14:13:20Z", None
+        )
+        prior = self.make_run(
+            1, "2026-10-29T14:13:00Z", "2026-10-29T14:13:20Z", "success"
+        )
+        problems, messages = audit(
+            current, [current, prior], interval_minutes=1440,
+            max_gap_minutes=1500, max_queue_delay_minutes=60,
+            producer_job_name="update", current_producer_result="success",
+            prior_producer_results={"1": "success"},
+            expected_schedule_time_utc="07:20",
+            max_schedule_start_delay_minutes=60,
+        )
+        self.assertTrue(any("schedule start delay" in problem for problem in problems))
+        self.assertTrue(any("schedule_start_delay_minutes=413.0" in line
+                            for line in messages))
+        self.assertFalse(any("schedule gap" in problem for problem in problems))
+
+    def test_daily_schedule_start_within_grace_passes(self):
+        current = self.make_run(
+            2, "2026-10-30T07:35:00Z", "2026-10-30T07:35:20Z", None
+        )
+        prior = self.make_run(
+            1, "2026-10-29T07:35:00Z", "2026-10-29T07:35:20Z", "success"
+        )
+        problems, messages = audit(
+            current, [current, prior], interval_minutes=1440,
+            max_gap_minutes=1500, max_queue_delay_minutes=60,
+            producer_job_name="update", current_producer_result="success",
+            prior_producer_results={"1": "success"},
+            expected_schedule_time_utc="07:20",
+            max_schedule_start_delay_minutes=60,
+        )
+        self.assertEqual(problems, [])
+        self.assertTrue(any("schedule_start_delay_minutes=15.0" in line
+                            for line in messages))
+
 class ScheduleAuditWorkflowContractTests(unittest.TestCase):
     def test_all_data_hub_schedule_audits_are_visible_but_nonfatal(self):
         from pathlib import Path
@@ -87,6 +126,9 @@ class ScheduleAuditWorkflowContractTests(unittest.TestCase):
                 self.assertRegex(block, r"(?m)^    continue-on-error: true$")
                 self.assertIn("name: Schedule health (separate from producer result)", block)
                 self.assertIn("run: python3 scripts/audit_workflow_schedule.py", block)
+                if relative_path.endswith("update-waldbrandgefahrenstufe-osl.yml"):
+                    self.assertIn("EXPECTED_SCHEDULE_TIME_UTC: '07:20'", block)
+                    self.assertIn("MAX_SCHEDULE_START_DELAY_MINUTES: '60'", block)
 
 
 if __name__ == "__main__":

@@ -82,4 +82,6 @@ jobs:
           SCHEDULE_INTERVAL_MINUTES: '1440'
           MAX_SCHEDULE_GAP_MINUTES: '1500'
           MAX_QUEUE_DELAY_MINUTES: '60'
+          EXPECTED_SCHEDULE_TIME_UTC: '07:20'
+          MAX_SCHEDULE_START_DELAY_MINUTES: '60'
         run: python3 scripts/audit_workflow_schedule.py
