@@ -161,6 +161,7 @@ test('Dispatch wird nur im freigegebenen Modus für einen echten stale Feed erwo
   assert.equal(decisionForWorkflow(weather, [{ dataStatus: 'stale', fetchError: false }], healthy, now, 'dispatch').shouldDispatch, true);
   assert.equal(decisionForWorkflow(weather, [{ dataStatus: 'error', fetchError: true }], healthy, now, 'dispatch').shouldDispatch, false);
   assert.equal(decisionForWorkflow(levels, [{ dataStatus: 'stale', fetchError: false }, { dataStatus: 'unavailable', fetchError: false }], { ...healthy, pending: false }, now, 'dispatch').shouldDispatch, false);
+  assert.equal(decisionForWorkflow(weather, [{ dataStatus: 'stale', fetchError: false, publicationLookupFailed: true }], healthy, now, 'dispatch').shouldDispatch, false);
 });
 
 test('D1 atomarer Guard verhindert parallele Dispatch-Ansprüche und begrenzt Tagesstarts', async () => {
@@ -283,12 +284,14 @@ test('freigegebener Dispatch nutzt main und der persistente Cooldown verhindert 
   const db = new MemoryDb();
   const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } });
   const dispatches = [];
+  let appTokenBody = null;
   const now = Date.parse('2026-10-31T05:19:00Z');
   const fetcher = async (url, init = {}) => {
-    if (url.includes('/access_tokens')) return new Response(JSON.stringify({ token: 'short-lived' }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    if (url.includes('/access_tokens')) { appTokenBody = JSON.parse(init.body); return new Response(JSON.stringify({ token: 'short-lived' }), { status: 201, headers: { 'Content-Type': 'application/json' } }); }
     if (url.endsWith('/repos/RonnsenDD/lhh-data-hub')) return new Response(JSON.stringify({ default_branch: 'main' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     if (url.includes('/actions/workflows?per_page')) return new Response(JSON.stringify({ workflows: [{ id: 7, path: '.github/workflows/' + weather.file, state: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     if (url.includes('/actions/workflows/7/runs')) return new Response(JSON.stringify({ workflow_runs: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    if (url.includes('/commits?path=')) return new Response(JSON.stringify([{ commit: { committer: { date: '2026-10-31T04:00:00Z' } } }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     if (url.includes('/dispatches')) {
       dispatches.push(JSON.parse(init.body));
       return new Response(null, { status: 204 });
@@ -313,5 +316,8 @@ test('freigegebener Dispatch nutzt main und der persistente Cooldown verhindert 
   await runScheduledCheck(null, env, {}, { nowMs: now + 5 * 60000, workflows: [weather], fetcher });
   assert.equal(dispatches.length, 1);
   assert.deepEqual(dispatches[0], { ref: 'main' });
+  assert.deepEqual(appTokenBody.permissions, { actions: 'write', contents: 'read' });
+  assert.equal(db.status.get('weather').publishedAt, '2026-10-31T04:00:00Z');
+  assert.equal(db.status.get('weather').publicationEvidence, 'github_file_commit');
   assert.ok(db.status.get('weather').nextAllowedDispatchAt);
 });
