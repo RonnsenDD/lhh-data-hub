@@ -168,6 +168,14 @@ async function get(feed, now, fetcher) {
       });
       if (!REDIRECT_STATUSES.has(response.status)) break;
       const location = response.headers.get("location");
+      if (response.body) {
+        try {
+          await response.body.cancel();
+        } catch {
+          // The redirect body is disposable; do not let cancellation failure
+          // hide the redirect policy result.
+        }
+      }
       if (!location) throw Error("REDIRECT_MISSING_LOCATION");
       if (redirectCount >= MAX_REDIRECTS) throw Error("REDIRECT_LIMIT_EXCEEDED");
       let nextUrl;
@@ -183,14 +191,6 @@ async function get(feed, now, fetcher) {
         nextUrl.password
       )
         throw Error("REDIRECT_HOST_NOT_ALLOWED");
-      if (response.body) {
-        try {
-          await response.body.cancel();
-        } catch {
-          // A redirect body is disposable; cancellation failure must not
-          // invalidate an otherwise safe redirect target.
-        }
-      }
       currentUrl = nextUrl;
       redirectCount++;
     }
