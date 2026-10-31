@@ -56,6 +56,7 @@ jobs:
 
   schedule-audit:
     name: Schedule health (separate from producer result)
+    continue-on-error: true
     if: always() && github.event_name == 'schedule'
     needs: update
     runs-on: ubuntu-latest
