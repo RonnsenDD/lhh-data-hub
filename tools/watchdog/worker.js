@@ -137,7 +137,7 @@ async function textBody(res) {
     b.set(c, o);
     o += c.length;
   }
-  return new TextDecoder("utf-8", { fatal: true }).decode(b);
+  return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(b);
 }
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 3;
@@ -808,3 +808,4 @@ export default {
     }));
   },
 };
+
