@@ -638,6 +638,10 @@ test("scheduled logs contain structured status, not feed URLs or payload values"
   assert.ok(log);
   assert.equal(log.event, "feed_watchdog_check");
   assert.equal(log.sources.length, 3);
+  const weather = log.sources.find((source) => source.key === "weather");
+  assert.equal(weather.httpStatus, 200);
+  assert.equal(weather.fetchStatus, "success");
+  assert.equal(weather.status, "STALE");
   assert.equal(logLine.includes("raw.githubusercontent.com"), false);
   assert.equal(logLine.includes("rain-ry1.png"), false);
   assert.equal(logLine.includes('"waterLevelCm"'), false);

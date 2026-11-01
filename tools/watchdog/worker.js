@@ -164,6 +164,7 @@ async function get(feed, now, fetcher) {
   const start = Date.now();
   const fetchStartedAt = performance.now();
   const timer = setTimeout(() => controller.abort(), LIMITS.timeoutMs);
+  let responseStatus = null;
   try {
     let currentUrl = initialUrl;
     let redirectCount = 0;
@@ -214,11 +215,13 @@ async function get(feed, now, fetcher) {
       currentUrl = nextUrl;
       redirectCount++;
     }
+    responseStatus = response.status;
     const fetchWallMs = performance.now() - fetchStartedAt;
     const ageHeader = response.headers.get("age");
     const ageSeconds =
       ageHeader === null ? Number.NaN : Number(ageHeader);
     const transport = {
+      httpStatus: response.status,
       httpDate: response.headers.get("date"),
       httpLastModified: response.headers.get("last-modified"),
       httpAgeSeconds: Number.isFinite(ageSeconds) ? ageSeconds : null,
@@ -294,6 +297,7 @@ async function get(feed, now, fetcher) {
           key: feed.key,
           label: feed.label,
           checkedAt: new Date(now).toISOString(),
+          httpStatus: responseStatus,
           reason:
             code === "TIMEOUT"
               ? "Abrufzeitlimit überschritten."
@@ -774,6 +778,7 @@ export async function collectStatus({
           label,
           checkedAt,
           durationMs: r.durationMs,
+          httpStatus: r.transport.httpStatus,
           transport: {
             httpDate: r.transport.httpDate,
             httpLastModified: r.transport.httpLastModified,
@@ -840,6 +845,7 @@ export async function collectDispatchStatus({
           label,
           checkedAt,
           durationMs: r.durationMs,
+          httpStatus: r.transport.httpStatus,
           transport: {
             httpDate: r.transport.httpDate,
             httpLastModified: r.transport.httpLastModified,
@@ -1242,6 +1248,7 @@ export function formatScheduledStatus(report, event = {}) {
     sources: report.sources.map(({
       key,
       status,
+      httpStatus,
       reasonCode,
       ageMinutes,
       ageHours,
@@ -1252,6 +1259,10 @@ export function formatScheduledStatus(report, event = {}) {
     }) => ({
       key,
       status,
+      httpStatus: httpStatus ?? null,
+      fetchStatus: Number.isInteger(httpStatus)
+        ? (httpStatus >= 200 && httpStatus < 300 ? "success" : "http_error")
+        : "transport_error",
       reasonCode: reasonCode ?? null,
       ageMinutes: ageMinutes ?? null,
       ageHours: ageHours ?? null,
