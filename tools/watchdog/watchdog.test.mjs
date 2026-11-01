@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 const code = await readFile(new URL("./worker.js", import.meta.url), "utf8"),
   m = await import("./worker.js");
-const { collectStatus, URLS, wildfireInterval, berlinWallClockToUtc, timestamp } = m,
+const { collectStatus, collectDispatchStatus, URLS, wildfireInterval, berlinWallClockToUtc, timestamp } = m,
   NOW = Date.parse("2026-10-31T11:00:00Z");
 
 test("valid timestamps call Date.parse once and invalid timestamps remain rejected", () => {
@@ -73,6 +73,22 @@ function fixtures() {
           { validAt: "2026-10-31T12:00:00Z", values: { temperatureC: 9 } },
         ],
       },
+    },
+    [URLS.weatherFreshness]: {
+      schemaVersion: 1,
+      source: "DWD weather snapshot v2",
+      sourceStatus: "ok",
+      lastAttemptAt: "2026-10-31T10:55:00Z",
+      snapshotPublishedAt: "2026-10-31T10:55:00Z",
+      derivedAt: "2026-10-31T10:55:02Z",
+      observations: {
+        temperatureHumidity: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: "2026-10-31T10:55:00Z", freshnessThresholdMinutes: 60, availableFields: ["temperatureC", "relativeHumidityPercent", "dewPointC"] },
+        stationPressure: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["stationPressureHpa"] },
+        wind: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["windSpeedKmh", "windDirectionDeg"] },
+        windGust: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["windGustKmh"] },
+        precipitation: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["precipitation10MinMm"] },
+      },
+      forecast: { status: "ok", issuedAt: "2026-10-31T03:00:00Z", retrievedAt: "2026-10-31T10:55:00Z", validAt: "2026-10-31T12:00:00Z", validThrough: "2026-10-31T12:00:00.000Z", hasUsablePoint: true },
     },
     [URLS.levelsL]: {
       schemaVersion: 1,
@@ -165,6 +181,44 @@ test("all seven real feed paths are individually evaluated", async () => {
   assert.equal(calls.length, 7);
   assert.equal(r.overallStatus, "OK");
   assert.equal(find(r, "konrad3d").jsonPublishedAt, "2026-10-31T10:59:00Z");
+});
+
+test("dispatch freshness check reads only the compact weather manifest and both radar products", async () => {
+  const { fetcher } = mocked(fixtures());
+  const urls = [];
+  const report = await collectDispatchStatus({ nowMs: NOW, fetcher: async (url, init) => {
+    urls.push(new URL(String(url)).origin + new URL(String(url)).pathname);
+    return fetcher(url, init);
+  } });
+  assert.deepEqual(urls.sort(), [URLS.weatherFreshness, URLS.radar, URLS.konrad].map((url) => new URL(url).origin + new URL(url).pathname).sort());
+  assert.deepEqual(report.sources.map((source) => source.key), ["weather", "radolan_ry", "konrad3d"]);
+  assert.equal(report.overallStatus, "OK");
+  assert.equal(report.guarantees.freshnessFromSourceTimes, true);
+});
+
+test("compact sidecar matches full-feed freshness and never treats its derived time as a source time", async () => {
+  const fixture = fixtures();
+  const { fetcher } = mocked(fixture);
+  const full = await collectStatus({ nowMs: NOW, fetcher });
+  const compact = await collectDispatchStatus({ nowMs: NOW, fetcher });
+  const fullWeather = full.sources.find((item) => item.key === "weather");
+  const compactWeather = compact.sources.find((item) => item.key === "weather");
+  assert.equal(compactWeather.status, fullWeather.status);
+  assert.deepEqual(compactWeather.products, fullWeather.products);
+  assert.equal(compactWeather.products.forecast.issuedAt, "2026-10-31T03:00:00Z");
+  assert.notEqual(compactWeather.products.forecast.issuedAt, fixture[URLS.weatherFreshness].derivedAt);
+});
+
+test("dispatch freshness path preserves stale source data and marks malformed sidecars unknown", async () => {
+  const fixture = fixtures();
+  fixture[URLS.weatherFreshness].observations.wind.measuredAt = "2026-10-31T09:00:00Z";
+  const { fetcher } = mocked(fixture);
+  const stale = await collectDispatchStatus({ nowMs: NOW, fetcher });
+  assert.equal(stale.sources.find((item) => item.key === "weather").status, "STALE");
+  delete fixture[URLS.weatherFreshness].observations.wind.measuredAt;
+  const { fetcher: malformedFetcher } = mocked(fixture);
+  const malformed = await collectDispatchStatus({ nowMs: NOW, fetcher: malformedFetcher });
+  assert.equal(malformed.sources.find((item) => item.key === "weather").status, "UNKNOWN");
 });
 test("opt-in diagnostics separate body size, decode, JSON parse, and evaluator time without values", async () => {
   const { fetcher } = mocked(fixtures());
@@ -445,7 +499,7 @@ test("scheduled logs contain structured status, not feed URLs or payload values"
   const log = logLines.map((line) => JSON.parse(line)).find((item) => item.event === "feed_watchdog_check");
   assert.ok(log);
   assert.equal(log.event, "feed_watchdog_check");
-  assert.equal(log.sources.length, 7);
+  assert.equal(log.sources.length, 3);
   assert.equal(logLine.includes("raw.githubusercontent.com"), false);
   assert.equal(logLine.includes("rain-ry1.png"), false);
   assert.equal(logLine.includes('"waterLevelCm"'), false);
@@ -455,6 +509,8 @@ test("scheduled logs contain structured status, not feed URLs or payload values"
 test("observe-only cron logs stale candidates without GitHub or Durable Object access", async () => {
   const data = fixtures();
   data[URLS.weather].observations.wind.measuredAt = "2026-10-31T08:00:00Z";
+  data[URLS.weatherFreshness].observations.wind.measuredAt = "2026-10-31T08:00:00Z";
+  data[URLS.weatherFreshness].observations.wind.status = "stale";
   data[URLS.radar].productTime = "2026-10-31T08:00:00Z";
   const { fetcher } = mocked(data);
   const originalFetch = globalThis.fetch;
@@ -490,7 +546,7 @@ test("observe-only cron logs stale candidates without GitHub or Durable Object a
   assert.equal(observation.dispatchEnabled, false);
   assert.equal(observation.githubRunStateChecked, false);
   assert.deepEqual(observation.candidates.map((item) => item.workflowFile), ["update-dwd-weather.yml", "update-radolan-ry.yml"]);
-  assert.equal(calls.length, 7);
+  assert.equal(calls.length, 3);
 });
 
 test("GitHub App reads remain disabled unless the exact true flag is set", async () => {
@@ -518,12 +574,12 @@ test("GitHub App reads remain disabled unless the exact true flag is set", async
     globalThis.fetch = oldFetch;
     console.log = oldLog;
   }
-  assert.equal(calls.length, 21);
+  assert.equal(calls.length, 9);
   assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
   assert.equal(logs.filter((line) => JSON.parse(line).event === "github_workflow_observation").length, 0);
 });
 
-test("enabled Cron event performs scoped read-only workflow queries and preserves seven feed checks", async () => {
+test("enabled Cron event performs scoped read-only workflow queries with the minimal three-feed path", async () => {
   const { privateKey } = generateKeyPairSync("rsa", {
     modulusLength: 2048,
     privateKeyEncoding: { type: "pkcs1", format: "pem" },
@@ -590,7 +646,7 @@ test("enabled Cron event performs scoped read-only workflow queries and preserve
 
   const feedLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "feed_watchdog_check");
   const appLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "github_workflow_observation");
-  assert.equal(feedLog.sources.length, 7);
+  assert.equal(feedLog.sources.length, 3);
   assert.equal(appLog.queryStatus, "OK");
   assert.equal(appLog.workflows.length, 5);
   assert.equal(logs.join("\n").includes(privateKey), false);
@@ -636,7 +692,7 @@ test("GitHub authentication failure is logged without changing feed results", as
     publicKeyEncoding: { type: "spki", format: "pem" },
   });
   const { fetcher: feedFetch } = mocked(fixtures());
-  const baselineFeeds = await collectStatus({ fetcher: feedFetch });
+  const baselineFeeds = await collectDispatchStatus({ fetcher: feedFetch });
   const calls = [];
   const logs = [];
   const oldFetch = globalThis.fetch;
@@ -668,7 +724,7 @@ test("GitHub authentication failure is logged without changing feed results", as
   const feedLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "feed_watchdog_check");
   const appLog = logs.map((line) => JSON.parse(line)).find((log) => log.event === "github_workflow_observation");
   assert.equal(feedLog.overallStatus, baselineFeeds.overallStatus);
-  assert.equal(feedLog.sources.length, 7);
+  assert.equal(feedLog.sources.length, 3);
   assert.deepEqual(
     feedLog.sources.map((source) => [source.key, source.status, source.reasonCode]),
     baselineFeeds.sources.map((source) => [source.key, source.status, source.reasonCode ?? null]),

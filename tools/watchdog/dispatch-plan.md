@@ -2,6 +2,14 @@
 
 Stand: 31.10.2026. Der Codepfad ist in worker.js und github-app-adapter.js vorbereitet. Im Worker-Standardzustand bleiben GITHUB_APP_READ_ENABLED=false und WORKFLOW_DISPATCH_ENABLED=false. Es gab keine Cloudflare-Bereitstellung, keine Änderung an der GitHub-App, keine Secrets und keinen Workflowstart. Der bestehende Cron */5 * * * * bleibt erhalten.
 
+## CPU-isolierter Frischepfad (PR #17, Stand 01.11.2026)
+
+Der PR-Zweig trennt öffentliche Statusabfragen und geplante Auslöseentscheidungen: `/` und `/status` prüfen weiterhin alle sieben Feeds samt vollständiger DWD-Wetter- und MOSMIX-Auswertung. Geplante Entscheidungen lesen nur drei Dokumente: den kompakten DWD-Frische-Sidecar sowie RADOLAN-RY und KONRAD3D. Die zwei Radarzustände führen weiterhin zu höchstens einem bestehenden Workflowziel.
+
+Der unveränderte Wetterworkflow erstellt `dwd-weather-freshness.json` erst nach der bisherigen Validierung des vollständigen Wettersnapshots und veröffentlicht beide JSON-Dateien gemeinsam über den allowlistgeschützten Publisher. Der Sidecar enthält Quellstatus, originale Messzeitpunkte, MOSMIX-Ausgabezeit, Feldverfügbarkeit und echte Prognosegültigkeitszeiten; er enthält weder Messwerte noch die MOSMIX-Punkteliste. Erstellungs- und Snapshot-Veröffentlichungszeit dienen nur der Diagnose, nicht der Frischebewertung. Dadurch entfallen im Cloudflare-Cron die vollständige Wetter-JSON-Dekodierung/JSON-Verarbeitung und der MOSMIX-Punktescan.
+
+Der geänderte Code wurde nicht live ausgeführt. Der Sidecar ist daher noch nicht als öffentliche Datei bestätigt; bis PR-Merge und regulärem Wetterlauf würde der neue Cronpfad den fehlenden Sidecar fail-closed als Abruffehler ausweisen. PR #17 bleibt Draft. Keine Cloudflare-Version, Durable-Object-Migration, App-Berechtigung, Secret oder Workflowausführung wurde geändert. Node-Benchmark und Tests belegen nur lokale Funktion beziehungsweise Node-Prozess-CPU, keine Cloudflare-Einsparung. Weitere Messgrenzen stehen in `docs/watchdog-cpu-profile.md`.
+
 ## Nachgewiesene Datenlücken
 
 GitHub-Historie am 31.10.2026 zeigt beim Wetter geplante Runs mit mehrstündigen Abständen (beispielsweise 15:54:09Z → 19:48:51Z = 3 h 54 min 42 s) und beim Radar 08:20:43Z → 14:36:46Z → 18:44:29Z. In den gezielt geprüften Runs waren die eigentlichen update-weather- beziehungsweise publish-Jobs erfolgreich; ein separat ausgeführter Schedule health-Job schlug bei der Prüfung der Historie fehl. Das belegt Lücken der Schedule-Ereignisse, aber keinen konkreten Grund für deren Ausbleiben. GitHub-Schedule-Ausführung ist best effort; die Audit-Fehler erkennen die Lücke, verursachen sie aber nicht.

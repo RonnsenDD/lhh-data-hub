@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / "scripts/publish_one_snapshot.sh"
 TARGET = "data/generated/dwd-weather.json"
+FRESHNESS_TARGET = "data/generated/dwd-weather-freshness.json"
 WALDBRAND_TARGET = "data/generated/waldbrandgefahrenstufe-osl.json"
 
 
@@ -170,6 +171,37 @@ exit 1
             self.assertEqual(paths, [WALDBRAND_TARGET])
             published = git(["--git-dir", str(bare), "show", f"main:{WALDBRAND_TARGET}"], root).stdout
             self.assertIn('"sourceDate":"2026-10-29"', published)
+
+    def test_weather_and_freshness_sidecar_publish_atomically(self):
+        with tempfile.TemporaryDirectory(prefix="publisher-weather-sidecar-") as temp:
+            root = Path(temp)
+            bare, work, racer = self.make_repos(root)
+            second = work / FRESHNESS_TARGET
+            second.parent.mkdir(parents=True, exist_ok=True)
+            second.write_text('{"sourceStatus":"ok","measuredAt":"2026-11-01T01:20:00Z"}\n')
+            (work / TARGET).write_text('{"generation":2}\n')
+            hook = work / ".git/hooks/pre-push"
+            hook.unlink()
+            result = self.run_helper(work, racer, "no-race", [TARGET, FRESHNESS_TARGET])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            committed_paths = git(["show", "--pretty=format:", "--name-only", "HEAD"], work).stdout.split()
+            self.assertEqual(set(committed_paths), {TARGET, FRESHNESS_TARGET})
+            self.assertIn('"generation":2', git(["--git-dir", str(bare), "show", f"main:{TARGET}"], root).stdout)
+            self.assertIn('"measuredAt":"2026-11-01T01:20:00Z"', git(["--git-dir", str(bare), "show", f"main:{FRESHNESS_TARGET}"], root).stdout)
+
+    def test_freshness_sidecar_is_allowlisted(self):
+        with tempfile.TemporaryDirectory(prefix="publisher-sidecar-allowlist-") as temp:
+            root = Path(temp)
+            _, work, racer = self.make_repos(root)
+            git(["checkout", "--", TARGET], work)
+            sidecar = work / FRESHNESS_TARGET
+            sidecar.parent.mkdir(parents=True, exist_ok=True)
+            sidecar.write_text('{"schemaVersion":1}\n')
+            (work / ".git/hooks/pre-push").unlink()
+            result = self.run_helper(work, racer, "no-race", [FRESHNESS_TARGET])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            paths = git(["show", "--pretty=format:", "--name-only", "HEAD"], work).stdout.split()
+            self.assertEqual(paths, [FRESHNESS_TARGET])
 
     def test_non_allowlisted_target_is_rejected_before_staging(self):
         with tempfile.TemporaryDirectory(prefix="publisher-allowlist-") as temp:

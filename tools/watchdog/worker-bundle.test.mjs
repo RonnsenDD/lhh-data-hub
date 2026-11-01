@@ -54,10 +54,10 @@ test("manual-editor bundle is current, self-contained, and preserves V2 endpoint
     globalThis.fetch = originalFetch;
     console.log = originalLog;
   }
-  assert.equal(calls.length, 14);
+  assert.equal(calls.length, 10);
   assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
   const feedLog = logs.map((line) => JSON.parse(line)).find((item) => item.event === "feed_watchdog_check");
-  assert.equal(feedLog.sources.length, 7);
+  assert.equal(feedLog.sources.length, 3);
   assert.equal(logs.some((line) => JSON.parse(line).event === "github_workflow_observation"), false);
 });
 

@@ -3,6 +3,8 @@ import { createGitHubAppClient } from "./github-app-adapter.js";
 export const URLS = {
   weather:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather.json",
+  weatherFreshness:
+    "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather-freshness.json",
   levelsL:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-lauchhammer.json",
   levelsB:
@@ -427,6 +429,63 @@ function weather(j, c, now) {
     ]),
   };
 }
+// Cron/dispatch evaluation consumes the compact source-time sidecar produced
+// from the validated DWD snapshot. Public / and /status still evaluate the
+// complete weather payload, including all MOSMIX points.
+function weatherFreshness(j, c, now) {
+  if (j.schemaVersion !== 1 || !obj(j.observations) || !obj(j.forecast))
+    return state(c, "ERROR", "INVALID_SCHEMA");
+  const fields = [
+      ["temperatureHumidity", "temperatureC"],
+      ["temperatureHumidity", "relativeHumidityPercent"],
+      ["temperatureHumidity", "dewPointC"],
+      ["stationPressure", "stationPressureHpa"],
+      ["wind", "windSpeedKmh"],
+      ["wind", "windDirectionDeg"],
+      ["windGust", "windGustKmh"],
+      ["precipitation", "precipitation10MinMm"],
+    ],
+    products = fields.map(([name, field]) => {
+      const product = j.observations[name];
+      if (!obj(product)) return state({ field, measuredAt: null }, "UNAVAILABLE", "PRODUCT_MISSING");
+      const base = { field, measuredAt: product.measuredAt ?? null, retrievedAt: product.retrievedAt ?? null };
+      if (product.status === "error") return state(base, "ERROR", "PRODUCER_ERROR");
+      if (product.status === "stale") return state(base, "STALE", "PRODUCER_STALE");
+      if (! ["ok", "partial"].includes(product.status)) return state(base, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
+      if (!Array.isArray(product.availableFields) || !product.availableFields.includes(field))
+        return state(base, "UNAVAILABLE", "VALUE_MISSING");
+      const thresholdMinutes = Math.min(45,
+        Number.isFinite(product.freshnessThresholdMinutes) ? product.freshnessThresholdMinutes : 45);
+      const result = age(product.measuredAt, thresholdMinutes * 60000, now);
+      return state({ ...base, ageMinutes: result.ageMinutes, thresholdMinutes }, result.status, result.reasonCode);
+    });
+  const f = j.forecast,
+    forecastBase = {
+      product: "MOSMIX-L",
+      issuedAt: f.issuedAt ?? null,
+      retrievedAt: f.retrievedAt ?? null,
+      validAt: f.validAt ?? null,
+      validThrough: f.validThrough ?? null,
+    };
+  let forecast;
+  if (f.status === "error") forecast = state(forecastBase, "ERROR", "PRODUCER_ERROR");
+  else if (f.status === "stale") forecast = state(forecastBase, "STALE", "PRODUCER_STALE");
+  else if (f.status === "unavailable") forecast = state(forecastBase, "UNAVAILABLE", "PRODUCER_UNAVAILABLE");
+  else if (!["ok", "partial"].includes(f.status)) forecast = state(forecastBase, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
+  else {
+    const result = age(f.issuedAt, LIMITS.mosmixHours * 3600000, now);
+    if (result.status !== "OK") forecast = state({ ...forecastBase, ageMinutes: result.ageMinutes }, result.status, result.reasonCode || "ISSUE_STALE");
+    else if (f.hasUsablePoint !== true || timestamp(f.validAt) === undefined || timestamp(f.validAt) < now) forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+    else forecast = state(forecastBase, "OK");
+  }
+  const producer = j.sourceStatus === "error" ? "ERROR" : j.sourceStatus === "stale" ? "STALE" : ["ok", "partial"].includes(j.sourceStatus) ? null : "UNKNOWN";
+  return {
+    ...c,
+    sourceStatus: j.sourceStatus ?? null,
+    products: { observations: products, forecast },
+    status: worst([...products, forecast, ...(producer ? [{ status: producer }] : [])]),
+  };
+}
 function level(j, c, station, now) {
   if (
     j.schemaVersion !== 1 ||
@@ -632,6 +691,11 @@ const feeds = [
   ["graslandfeuerindex", "DWD-Graslandfeuerindex", URLS.grass, grass],
   ["waldbrand_osl", "Waldbrandgefahrenstufe OSL", URLS.wildfire, wildfire],
 ];
+const dispatchFeeds = [
+  ["weather", "DWD-Wetter", URLS.weatherFreshness, weatherFreshness],
+  ["radolan_ry", "RADOLAN-RY", URLS.radar, radar],
+  ["konrad3d", "KONRAD3D", URLS.konrad, konrad],
+];
 async function mapLimit(xs, n, fn) {
   const out = new Array(xs.length);
   let i = 0;
@@ -698,6 +762,65 @@ export async function collectStatus({
   const result = {
     schemaVersion: 1,
     mode: "observe-only",
+    checkedAt,
+    overallStatus: worst(sources),
+    sources,
+    guarantees: {
+      githubRestApiUsed: false,
+      writesPerformed: false,
+      workflowDispatchPerformed: false,
+      persistenceUsed: false,
+      freshnessFromSourceTimes: true,
+    },
+  };
+  if (includeDiagnostics) result.diagnostics = diagnostics;
+  return result;
+}
+export async function collectDispatchStatus({
+  nowMs = Date.now(),
+  fetcher = fetch,
+  includeDiagnostics = false,
+} = {}) {
+  const checkedAt = new Date(nowMs).toISOString(),
+    diagnostics = [],
+    sources = await mapLimit(
+      dispatchFeeds,
+      LIMITS.concurrency,
+      async ([key, label, url, evalFn]) => {
+        const r = await get({ key, label, url }, nowMs, fetcher);
+        if (r.failure) {
+          if (includeDiagnostics) diagnostics.push({ key, failure: r.failure.reasonCode ?? "FETCH_FAILED" });
+          return r.failure;
+        }
+        const c = {
+          key,
+          label,
+          checkedAt,
+          durationMs: r.durationMs,
+          transport: {
+            httpDate: r.transport.httpDate,
+            httpLastModified: r.transport.httpLastModified,
+            httpAgeSeconds: r.transport.httpAgeSeconds,
+          },
+          ...times(r.j),
+        };
+        try {
+          const evaluationStartedAt = performance.now();
+          const evaluated = evalFn(r.j, c, nowMs);
+          if (includeDiagnostics) diagnostics.push({
+            key,
+            ...r.diagnostics,
+            evaluationMs: performance.now() - evaluationStartedAt,
+          });
+          return evaluated;
+        } catch {
+          return state({ key, label, checkedAt }, "ERROR", "EVALUATION_FAILED");
+        }
+      },
+    );
+  const result = {
+    schemaVersion: 1,
+    mode: "dispatch-observe-only",
     checkedAt,
     overallStatus: worst(sources),
     sources,
@@ -1060,6 +1183,37 @@ const headers = (o) => {
   }
   return h;
 };
+export function formatScheduledStatus(report, event = {}) {
+  return JSON.stringify({
+    event: "feed_watchdog_check",
+    requestId: crypto.randomUUID(),
+    cron: event?.cron ?? null,
+    scheduledAt: event?.scheduledTime
+      ? new Date(event.scheduledTime).toISOString()
+      : null,
+    checkedAt: report.checkedAt,
+    overallStatus: report.overallStatus,
+    sources: report.sources.map(({
+      key,
+      status,
+      reasonCode,
+      ageMinutes,
+      ageHours,
+      sourceTime,
+      measuredAt,
+      validUntil,
+    }) => ({
+      key,
+      status,
+      reasonCode: reasonCode ?? null,
+      ageMinutes: ageMinutes ?? null,
+      ageHours: ageHours ?? null,
+      sourceTime: sourceTime ?? measuredAt ?? null,
+      validUntil: validUntil ?? null,
+    })),
+    ...(Array.isArray(report.diagnostics) ? { sourceTimings: report.diagnostics } : {}),
+  });
+}
 export default {
   async fetch(req) {
     const u = new URL(req.url),
@@ -1081,40 +1235,8 @@ export default {
   },
   async scheduled(event, env) {
     const diagnosticsEnabled = env?.WATCHDOG_DIAGNOSTICS_ENABLED === "true";
-    const r = await collectStatus({ includeDiagnostics: diagnosticsEnabled });
-    console.log(
-      JSON.stringify({
-        event: "feed_watchdog_check",
-        requestId: crypto.randomUUID(),
-        cron: event?.cron ?? null,
-        scheduledAt: event?.scheduledTime
-          ? new Date(event.scheduledTime).toISOString()
-          : null,
-        checkedAt: r.checkedAt,
-        overallStatus: r.overallStatus,
-        sources: r.sources.map(
-          ({
-            key,
-            status,
-            reasonCode,
-            ageMinutes,
-            ageHours,
-            sourceTime,
-            measuredAt,
-            validUntil,
-          }) => ({
-            key,
-            status,
-            reasonCode: reasonCode ?? null,
-            ageMinutes: ageMinutes ?? null,
-            ageHours: ageHours ?? null,
-            sourceTime: sourceTime ?? measuredAt ?? null,
-            validUntil: validUntil ?? null,
-          }),
-        ),
-        ...(diagnosticsEnabled ? { sourceTimings: r.diagnostics } : {}),
-      }),
-    );
+    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled });
+    console.log(formatScheduledStatus(r, event));
 
     const readEnabled = env?.GITHUB_APP_READ_ENABLED === "true";
     const dispatchEnabled = env?.WORKFLOW_DISPATCH_ENABLED === "true";

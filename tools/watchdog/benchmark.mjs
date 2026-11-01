@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { readFile } from "node:fs/promises";
-import worker, { collectStatus, URLS } from "./worker.js";
+import worker, { collectDispatchStatus, collectStatus, formatScheduledStatus, URLS } from "./worker.js";
 
 const NOW = Date.parse(process.env.WATCHDOG_BENCH_NOW || "2026-10-31T11:00:00Z");
 const WARMUP = Number(process.env.WATCHDOG_BENCH_WARMUP || 20);
@@ -36,11 +36,36 @@ function makeFeeds() {
 }
 
 const feeds = makeFeeds();
+const weather = feeds[URLS.weather];
+feeds[URLS.weatherFreshness] = {
+  schemaVersion: 1,
+  sourceStatus: weather.status,
+  lastAttemptAt: weather.lastAttemptAt ?? null,
+  lastSuccessfulAt: weather.lastSuccessfulAt ?? null,
+  sourcePublishedAt: weather.publishedAt ?? null,
+  derivedAt: new Date(NOW).toISOString(),
+  observations: Object.fromEntries(Object.entries(weather.observations).map(([name, product]) => [name, {
+    status: product.status,
+    measuredAt: product.measuredAt ?? null,
+    retrievedAt: product.retrievedAt ?? null,
+    freshnessThresholdMinutes: product.freshnessThresholdMinutes ?? null,
+    availableFields: Object.entries(product.values ?? {}).filter(([, value]) => typeof value === "number" && Number.isFinite(value)).map(([key]) => key),
+  }])),
+  forecast: {
+    status: weather.forecast.status,
+    issuedAt: weather.forecast.issuedAt,
+    retrievedAt: weather.forecast.retrievedAt ?? null,
+    validAt: weather.forecast.points.find((point) => point.validAt && Object.values(point.values ?? {}).some((value) => typeof value === "number" && Number.isFinite(value)))?.validAt ?? null,
+    validThrough: weather.forecast.points.at(-1)?.validAt ?? null,
+    hasUsablePoint: weather.forecast.points.some((point) => Date.parse(point.validAt) >= NOW && Object.values(point.values ?? {}).some((value) => typeof value === "number" && Number.isFinite(value))),
+  },
+};
 const staleFeeds = makeFeeds();
 staleFeeds[URLS.weather].observations.wind.measuredAt = new Date(NOW - 60 * 60_000).toISOString();
 staleFeeds[URLS.radar].productTime = new Date(NOW - 20 * 60_000).toISOString();
 const snapshotFiles = new Map([
   [URLS.weather, "dwd-weather.json"],
+  [URLS.weatherFreshness, "dwd-weather-freshness.json"],
   [URLS.levelsL, "level-l.json"],
   [URLS.levelsB, "level-b.json"],
   [URLS.grass, "grass.json"],
@@ -64,8 +89,38 @@ if (snapshotDir) {
 }
 const feedBodies = new Map(Object.entries(feeds).map(([url, data]) => [url, snapshotBodies.get(url) ?? JSON.stringify(data)]));
 const staleFeedBodies = new Map(Object.entries(staleFeeds).map(([url, data]) => [url, snapshotBodies.get(url) ?? JSON.stringify(data)]));
+const profiledWeather = JSON.parse(feedBodies.get(URLS.weather));
+if (!snapshotBodies.has(URLS.weatherFreshness)) feedBodies.set(URLS.weatherFreshness, JSON.stringify({
+  schemaVersion: 1,
+  sourceStatus: profiledWeather.status,
+  lastAttemptAt: profiledWeather.lastAttemptAt ?? null,
+  lastSuccessfulAt: profiledWeather.lastSuccessfulAt ?? null,
+  snapshotPublishedAt: profiledWeather.publishedAt ?? null,
+  derivedAt: new Date(NOW).toISOString(),
+  observations: Object.fromEntries(Object.entries(profiledWeather.observations).map(([name, product]) => [name, {
+    status: product.status,
+    measuredAt: product.measuredAt ?? null,
+    retrievedAt: product.retrievedAt ?? null,
+    freshnessThresholdMinutes: product.freshnessThresholdMinutes ?? null,
+    availableFields: Object.entries(product.values ?? {}).filter(([, value]) => typeof value === "number" && Number.isFinite(value)).map(([key]) => key),
+  }])),
+  forecast: {
+    status: profiledWeather.forecast.status,
+    issuedAt: profiledWeather.forecast.issuedAt,
+    retrievedAt: profiledWeather.forecast.retrievedAt ?? null,
+    validAt: profiledWeather.forecast.points.find((point) => point.validAt && Object.values(point.values ?? {}).some((value) => typeof value === "number" && Number.isFinite(value)))?.validAt ?? null,
+    validThrough: profiledWeather.forecast.points.at(-1)?.validAt ?? null,
+    hasUsablePoint: profiledWeather.forecast.points.some((point) => Date.parse(point.validAt) >= NOW && Object.values(point.values ?? {}).some((value) => typeof value === "number" && Number.isFinite(value))),
+  },
+}, null, 2) + "\n");
+const staleManifest = JSON.parse(feedBodies.get(URLS.weatherFreshness));
+staleManifest.observations.wind.measuredAt = new Date(NOW - 60 * 60_000).toISOString();
+staleManifest.observations.wind.status = "stale";
+staleFeedBodies.set(URLS.weatherFreshness, JSON.stringify(staleManifest));
 let activeFeedBodies = feedBodies;
 const feedBytes = [...feedBodies.values()].reduce((sum, body) => sum + Buffer.byteLength(body), 0);
+const dispatchFeedBytes = [URLS.weatherFreshness, URLS.radar, URLS.konrad]
+  .reduce((sum, url) => sum + Buffer.byteLength(feedBodies.get(url) ?? ""), 0);
 const feedSamples = Object.entries(feeds).map(([url, data]) => {
   const body = feedBodies.get(url);
   let parsed;
@@ -103,29 +158,18 @@ function percentile(sorted, fraction) {
 }
 
 async function benchmark(mode) {
-  const enabled = mode === "enabled";
-  const dispatchEnabled = mode === "dispatch";
-  activeFeedBodies = dispatchEnabled ? staleFeedBodies : feedBodies;
-  const env = enabled || dispatchEnabled ? {
-    GITHUB_APP_READ_ENABLED: enabled ? "true" : "false",
-    WORKFLOW_DISPATCH_ENABLED: dispatchEnabled ? "true" : "false",
+  const githubReadEnabled = mode === "github-read";
+  activeFeedBodies = mode === "stale-observe" ? staleFeedBodies : feedBodies;
+  const env = {
+    WATCHDOG_DIAGNOSTICS_ENABLED: mode === "diagnostics" ? "true" : "false",
+    ...(githubReadEnabled ? {
+    GITHUB_APP_READ_ENABLED: "true",
+    WORKFLOW_DISPATCH_ENABLED: "false",
     GITHUB_APP_ID: "5555433",
     GITHUB_INSTALLATION_ID: "177220128",
     GITHUB_APP_PRIVATE_KEY: privateKey,
-    ...(dispatchEnabled ? { WATCHDOG_DISPATCH_COORDINATOR: {
-      idFromName(name) { return name; },
-      get(id) {
-        if (id !== "weather-radar-dispatch-v1") throw new Error("unexpected Durable Object id");
-        return {
-          async fetch(request) {
-            const action = new URL(request.url).pathname.slice(1);
-            if (action === "reserve") return Response.json({ granted: true, leaseId: "bench-lease" });
-            return Response.json({ completed: true });
-          },
-        };
-      },
-    } } : {}),
-  } : {};
+  } : {}),
+  };
   const oldLog = console.log;
   console.log = () => {};
   try {
@@ -144,16 +188,17 @@ async function benchmark(mode) {
       wallMs.push(performance.now() - wallStart);
     }
     const totalCpu = process.cpuUsage(totalCpuStart);
-    if (feedCalls !== 7 * ITERATIONS) throw new Error(`Expected ${7 * ITERATIONS} feed requests, observed ${feedCalls}`);
-    const expectedGitHubCalls = enabled ? 6 * ITERATIONS : dispatchEnabled ? 8 * ITERATIONS : 0;
+    if (feedCalls !== 3 * ITERATIONS) throw new Error(`Expected ${3 * ITERATIONS} dispatch freshness requests, observed ${feedCalls}`);
+    const expectedGitHubCalls = githubReadEnabled ? 6 * ITERATIONS : 0;
     if (githubApiCalls !== expectedGitHubCalls) throw new Error("Unexpected GitHub request count: " + githubApiCalls + "; expected " + expectedGitHubCalls);
-    if (dispatchCalls !== (dispatchEnabled ? 2 * ITERATIONS : 0)) throw new Error("Unexpected dispatch request count: " + dispatchCalls);
+    if (dispatchCalls !== 0) throw new Error("Benchmark must never dispatch workflows");
     cpuMs.sort((a, b) => a - b);
     wallMs.sort((a, b) => a - b);
     return {
       mode,
       iterations: ITERATIONS,
       feedFixtureBytes: feedBytes,
+      dispatchFixtureBytes: dispatchFeedBytes,
       feedSamples,
       feedRequests: feedCalls,
       githubApiCalls,
@@ -161,7 +206,9 @@ async function benchmark(mode) {
       totalProcessCpuMs: Number(((totalCpu.user + totalCpu.system) / 1000).toFixed(2)),
       meanCpuMsPerInvocation: Number(((totalCpu.user + totalCpu.system) / 1000 / ITERATIONS).toFixed(3)),
       medianCpuMsPerInvocation: Number(percentile(cpuMs, 0.5).toFixed(3)),
+      p90CpuMsPerInvocation: Number(percentile(cpuMs, 0.9).toFixed(3)),
       p95CpuMsPerInvocation: Number(percentile(cpuMs, 0.95).toFixed(3)),
+      maxCpuMsPerInvocation: Number(cpuMs.at(-1).toFixed(3)),
       medianWallMsPerInvocation: Number(percentile(wallMs, 0.5).toFixed(3)),
     };
   } finally {
@@ -173,10 +220,15 @@ async function profileComponents() {
   activeFeedBodies = feedBodies;
   const samples = new Map();
   for (let i = 0; i < PROFILE_ITERATIONS; i++) {
-    const report = await collectStatus({ nowMs: NOW, includeDiagnostics: true });
-    for (const row of report.diagnostics) {
-      if (!samples.has(row.key)) samples.set(row.key, []);
-      samples.get(row.key).push(row);
+    for (const [path, report] of [
+      ["full-public", await collectStatus({ nowMs: NOW, includeDiagnostics: true })],
+      ["dispatch-minimal", await collectDispatchStatus({ nowMs: NOW, includeDiagnostics: true })],
+    ]) {
+      for (const row of report.diagnostics) {
+        const key = `${path}:${row.key}`;
+        if (!samples.has(key)) samples.set(key, []);
+        samples.get(key).push(row);
+      }
     }
   }
   const stats = (rows, key) => {
@@ -195,4 +247,90 @@ async function profileComponents() {
   }));
 }
 
-console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, componentProfileIterations: PROFILE_ITERATIONS, componentProfile: await profileComponents(), results: [await benchmark("disabled"), await benchmark("enabled"), await benchmark("dispatch")] }, null, 2));
+async function benchmarkPublicStatus() {
+  activeFeedBodies = feedBodies;
+  const oldLog = console.log;
+  console.log = () => {};
+  try {
+    for (let i = 0; i < WARMUP; i++) await worker.fetch(new Request("https://watchdog.example/status"));
+    feedCalls = 0;
+    const cpuMs = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+      const start = process.cpuUsage();
+      const response = await worker.fetch(new Request("https://watchdog.example/status"));
+      if (!response.ok) throw new Error("public /status returned non-2xx");
+      await response.arrayBuffer();
+      const cpu = process.cpuUsage(start);
+      cpuMs.push((cpu.user + cpu.system) / 1000);
+    }
+    if (feedCalls !== 7 * ITERATIONS) throw new Error(`Expected ${7 * ITERATIONS} public status feed requests, observed ${feedCalls}`);
+    cpuMs.sort((a, b) => a - b);
+    return {
+      mode: "public-status-full-seven-feeds",
+      iterations: ITERATIONS,
+      feedRequests: feedCalls,
+      medianNodeCpuMs: Number(percentile(cpuMs, 0.5).toFixed(3)),
+      p90NodeCpuMs: Number(percentile(cpuMs, 0.9).toFixed(3)),
+      p95NodeCpuMs: Number(percentile(cpuMs, 0.95).toFixed(3)),
+      maxNodeCpuMs: Number(cpuMs.at(-1).toFixed(3)),
+    };
+  } finally {
+    console.log = oldLog;
+  }
+}
+
+async function benchmarkCollector(mode, collector, expectedFeeds) {
+  activeFeedBodies = feedBodies;
+  for (let i = 0; i < WARMUP; i++) await collector({ nowMs: NOW });
+  feedCalls = 0;
+  const cpuMs = [];
+  for (let i = 0; i < ITERATIONS; i++) {
+    const start = process.cpuUsage();
+    await collector({ nowMs: NOW });
+    const cpu = process.cpuUsage(start);
+    cpuMs.push((cpu.user + cpu.system) / 1000);
+  }
+  if (feedCalls !== expectedFeeds * ITERATIONS) throw new Error(`${mode}: expected ${expectedFeeds * ITERATIONS} feed requests, observed ${feedCalls}`);
+  cpuMs.sort((a, b) => a - b);
+  return {
+    mode,
+    iterations: ITERATIONS,
+    feedRequests: feedCalls,
+    responseBytesPerInvocation: mode.includes("scheduled") ? dispatchFeedBytes : feedBytes,
+    medianNodeCpuMs: Number(percentile(cpuMs, 0.5).toFixed(3)),
+    p90NodeCpuMs: Number(percentile(cpuMs, 0.9).toFixed(3)),
+    p95NodeCpuMs: Number(percentile(cpuMs, 0.95).toFixed(3)),
+    maxNodeCpuMs: Number(cpuMs.at(-1).toFixed(3)),
+  };
+}
+
+async function benchmarkFormatting() {
+  activeFeedBodies = feedBodies;
+  const full = await collectStatus({ nowMs: NOW });
+  const scheduled = await collectDispatchStatus({ nowMs: NOW });
+  const measure = (mode, format) => {
+    const samples = [];
+    for (let i = 0; i < ITERATIONS; i++) {
+      const start = process.cpuUsage();
+      format();
+      const cpu = process.cpuUsage(start);
+      samples.push((cpu.user + cpu.system) / 1000);
+    }
+    samples.sort((a, b) => a - b);
+    return {
+      mode,
+      iterations: ITERATIONS,
+      outputBytes: Buffer.byteLength(format()),
+      medianNodeCpuMs: Number(percentile(samples, 0.5).toFixed(4)),
+      p90NodeCpuMs: Number(percentile(samples, 0.9).toFixed(4)),
+      p95NodeCpuMs: Number(percentile(samples, 0.95).toFixed(4)),
+      maxNodeCpuMs: Number(samples.at(-1).toFixed(4)),
+    };
+  };
+  return [
+    measure("full-public-json-serialization", () => JSON.stringify(full)),
+    measure("scheduled-status-log-formatting", () => formatScheduledStatus(scheduled, { cron: "*/5 * * * *", scheduledTime: NOW })),
+  ];
+}
+
+console.log(JSON.stringify({ benchmark: "Node process CPU with mocked outbound HTTP; not Cloudflare CPU", node: process.version, warmupInvocations: WARMUP, snapshotDirectory: snapshotDir ?? null, componentProfileIterations: PROFILE_ITERATIONS, componentProfile: await profileComponents(), collectionComparison: [await benchmarkCollector("full-seven-feed-collection", collectStatus, 7), await benchmarkCollector("scheduled-three-feed-collection", collectDispatchStatus, 3)], formatting: await benchmarkFormatting(), results: [await benchmark("disabled"), await benchmark("stale-observe"), await benchmark("diagnostics"), await benchmark("github-read")], publicStatus: await benchmarkPublicStatus() }, null, 2));
