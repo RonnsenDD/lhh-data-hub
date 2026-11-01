@@ -5,6 +5,8 @@ export const URLS = {
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather.json",
   weatherFreshness:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather-freshness.json",
+  cpuTestWeatherFreshness:
+    "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/feat/watchdog-stale-dispatch-guarded/tools/watchdog/fixtures/dwd-weather-freshness-cpu-test.json",
   levelsL:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-lauchhammer.json",
   levelsB:
@@ -780,11 +782,17 @@ export async function collectDispatchStatus({
   nowMs = Date.now(),
   fetcher = fetch,
   includeDiagnostics = false,
+  cpuTestMode = false,
 } = {}) {
   const checkedAt = new Date(nowMs).toISOString(),
     diagnostics = [],
+    feedsForRun = cpuTestMode
+      ? dispatchFeeds.map((feed) => feed[0] === "weather"
+        ? [feed[0], feed[1], URLS.cpuTestWeatherFreshness, feed[3]]
+        : feed)
+      : dispatchFeeds,
     sources = await mapLimit(
-      dispatchFeeds,
+      feedsForRun,
       LIMITS.concurrency,
       async ([key, label, url, evalFn]) => {
         const r = await get({ key, label, url }, nowMs, fetcher);
@@ -1235,11 +1243,12 @@ export default {
   },
   async scheduled(event, env) {
     const diagnosticsEnabled = env?.WATCHDOG_DIAGNOSTICS_ENABLED === "true";
-    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled });
+    const cpuTestMode = env?.WATCHDOG_CPU_TEST_MODE === "true";
+    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled, cpuTestMode });
     console.log(formatScheduledStatus(r, event));
 
-    const readEnabled = env?.GITHUB_APP_READ_ENABLED === "true";
-    const dispatchEnabled = env?.WORKFLOW_DISPATCH_ENABLED === "true";
+    const readEnabled = !cpuTestMode && env?.GITHUB_APP_READ_ENABLED === "true";
+    const dispatchEnabled = !cpuTestMode && env?.WORKFLOW_DISPATCH_ENABLED === "true";
     if (!readEnabled && !dispatchEnabled) {
       logDispatchObservation(r);
       return;

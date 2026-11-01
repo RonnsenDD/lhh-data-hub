@@ -4,6 +4,10 @@ import { readFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 const code = await readFile(new URL("./worker.js", import.meta.url), "utf8"),
   m = await import("./worker.js");
+const cpuTestSidecar = JSON.parse(await readFile(
+  new URL("./fixtures/dwd-weather-freshness-cpu-test.json", import.meta.url),
+  "utf8",
+));
 const { collectStatus, collectDispatchStatus, URLS, wildfireInterval, berlinWallClockToUtc, timestamp } = m,
   NOW = Date.parse("2026-10-31T11:00:00Z");
 
@@ -90,6 +94,7 @@ function fixtures() {
       },
       forecast: { status: "ok", issuedAt: "2026-10-31T03:00:00Z", retrievedAt: "2026-10-31T10:55:00Z", validAt: "2026-10-31T12:00:00Z", validThrough: "2026-10-31T12:00:00.000Z", hasUsablePoint: true },
     },
+    [URLS.cpuTestWeatherFreshness]: structuredClone(cpuTestSidecar),
     [URLS.levelsL]: {
       schemaVersion: 1,
       station: "Lauchhammer",
@@ -219,6 +224,47 @@ test("dispatch freshness path preserves stale source data and marks malformed si
   const { fetcher: malformedFetcher } = mocked(fixture);
   const malformed = await collectDispatchStatus({ nowMs: NOW, fetcher: malformedFetcher });
   assert.equal(malformed.sources.find((item) => item.key === "weather").status, "UNKNOWN");
+});
+
+test("isolated CPU-test mode uses the public-value fixture and cannot reach GitHub or Durable Objects", async () => {
+  const { fetcher } = mocked(fixtures());
+  const calls = [];
+  const logs = [];
+  const oldFetch = globalThis.fetch;
+  const oldLog = console.log;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(url);
+    if (url.origin === "https://api.github.com") assert.fail("CPU-test mode must never read GitHub");
+    return fetcher(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    await m.default.scheduled(
+      { cron: "*/30 * * * *", scheduledTime: Date.parse("2026-11-01T06:29:27Z") },
+      {
+        WATCHDOG_CPU_TEST_MODE: "true",
+        // Even a mistakenly enabled flag must not activate GitHub in CPU-test mode.
+        GITHUB_APP_READ_ENABLED: "true",
+        WORKFLOW_DISPATCH_ENABLED: "true",
+        WATCHDOG_DISPATCH_COORDINATOR: {
+          idFromName() { assert.fail("CPU-test mode must not resolve a Durable Object"); },
+          get() { assert.fail("CPU-test mode must not access a Durable Object"); },
+        },
+      },
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    console.log = oldLog;
+  }
+  assert.equal(calls.length, 3);
+  assert.ok(calls.some((url) => url.href.startsWith(URLS.cpuTestWeatherFreshness)));
+  assert.equal(calls.some((url) => url.href.startsWith(URLS.weatherFreshness)), false);
+  assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
+  const feedLog = logs.map((line) => JSON.parse(line)).find((line) => line.event === "feed_watchdog_check");
+  assert.equal(feedLog.sources.find((source) => source.key === "weather").status, "STALE");
+  assert.equal(logs.some((line) => JSON.parse(line).event === "github_workflow_observation"), false);
+  assert.equal(logs.some((line) => JSON.parse(line).event === "workflow_dispatch_observation"), true);
 });
 test("opt-in diagnostics separate body size, decode, JSON parse, and evaluator time without values", async () => {
   const { fetcher } = mocked(fixtures());

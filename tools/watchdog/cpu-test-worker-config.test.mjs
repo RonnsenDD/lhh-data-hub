@@ -15,6 +15,7 @@ test("CPU observation uses a separate, read-only test Worker and cadence", async
   assert.equal(config.vars.GITHUB_APP_READ_ENABLED, "false");
   assert.equal(config.vars.WORKFLOW_DISPATCH_ENABLED, "false");
   assert.equal(config.vars.WATCHDOG_DIAGNOSTICS_ENABLED, "false");
+  assert.equal(config.vars.WATCHDOG_CPU_TEST_MODE, "true");
 
   assert.equal("routes" in config, false);
   assert.equal("durable_objects" in config, false);
