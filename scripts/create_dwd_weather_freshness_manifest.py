@@ -2,8 +2,9 @@
 """Create a small freshness-only sidecar from a validated DWD weather snapshot.
 
 The sidecar carries source timestamps and producer statuses only. It deliberately
-does not copy forecast points or measurements and never substitutes a generated
-or publication timestamp for a source measurement time.
+does not copy forecast points or measurements; its additive usableValidTimes list
+contains timestamps only for validated future points with at least one finite
+numeric value. Generated/publication timestamps never substitute for source time.
 """
 from __future__ import annotations
 
@@ -86,7 +87,7 @@ def create_manifest(snapshot: dict[str, Any], *, derived_at: str | None = None) 
         else:
             raise ValueError("forecast.points must be an array for a usable producer status")
     valid_times: list[tuple[datetime, str]] = []
-    next_usable: tuple[datetime, str] | None = None
+    usable_times: dict[datetime, str] = {}
     for point in points:
         if not isinstance(point, dict):
             continue
@@ -102,8 +103,9 @@ def create_manifest(snapshot: dict[str, Any], *, derived_at: str | None = None) 
             for value in values.values()
         ):
             continue
-        if next_usable is None or valid_at < next_usable[0]:
-            next_usable = (valid_at, point["validAt"])
+        usable_times.setdefault(valid_at, point["validAt"])
+    sorted_usable_times = sorted(usable_times.items())
+    next_usable = sorted_usable_times[0] if sorted_usable_times else None
 
     return {
         "schemaVersion": 1,
@@ -123,6 +125,9 @@ def create_manifest(snapshot: dict[str, Any], *, derived_at: str | None = None) 
             .isoformat(timespec="milliseconds").replace("+00:00", "Z")
             if valid_times else None,
             "hasUsablePoint": next_usable is not None,
+            # Additive v1 field: an evaluator can advance past an elapsed next
+            # point without inferring data availability from validThrough alone.
+            "usableValidTimes": [value for _, value in sorted_usable_times],
         },
     }
 
