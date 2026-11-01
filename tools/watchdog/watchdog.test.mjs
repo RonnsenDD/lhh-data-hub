@@ -232,6 +232,7 @@ test("isolated CPU-test mode uses the public-value fixture and cannot reach GitH
   const logs = [];
   const oldFetch = globalThis.fetch;
   const oldLog = console.log;
+  const oldNow = Date.now;
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     calls.push(url);
@@ -240,6 +241,7 @@ test("isolated CPU-test mode uses the public-value fixture and cannot reach GitH
   };
   console.log = (line) => logs.push(String(line));
   try {
+    Date.now = () => Date.parse("2026-11-01T06:29:27Z");
     await m.default.scheduled(
       { cron: "*/30 * * * *", scheduledTime: Date.parse("2026-11-01T06:29:27Z") },
       {
@@ -256,6 +258,7 @@ test("isolated CPU-test mode uses the public-value fixture and cannot reach GitH
   } finally {
     globalThis.fetch = oldFetch;
     console.log = oldLog;
+    Date.now = oldNow;
   }
   assert.equal(calls.length, 3);
   assert.ok(calls.some((url) => url.href.startsWith(URLS.cpuTestWeatherFreshness)));
