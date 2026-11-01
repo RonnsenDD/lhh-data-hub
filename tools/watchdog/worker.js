@@ -476,9 +476,44 @@ function weatherFreshness(j, c, now) {
   else if (!["ok", "partial"].includes(f.status)) forecast = state(forecastBase, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
   else {
     const result = age(f.issuedAt, LIMITS.mosmixHours * 3600000, now);
-    if (result.status !== "OK") forecast = state({ ...forecastBase, ageMinutes: result.ageMinutes }, result.status, result.reasonCode || "ISSUE_STALE");
-    else if (f.hasUsablePoint !== true || timestamp(f.validAt) === undefined || timestamp(f.validAt) < now) forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
-    else forecast = state(forecastBase, "OK");
+    if (result.status !== "OK") {
+      forecast = state({ ...forecastBase, ageMinutes: result.ageMinutes }, result.status, result.reasonCode || "ISSUE_STALE");
+    } else if (Array.isArray(f.usableValidTimes)) {
+      if ((f.hasUsablePoint === true) !== (f.usableValidTimes.length > 0)) {
+        forecast = state(forecastBase, "ERROR", "INCONSISTENT_VALID_POINT_METADATA");
+      }
+      const usableTimes = [];
+      for (const value of forecast ? [] : f.usableValidTimes) {
+        const parsed = timestamp(value);
+        if (parsed === undefined) {
+          forecast = state(forecastBase, "ERROR", "INVALID_VALID_POINT_TIMES");
+          break;
+        }
+        if (parsed >= now) usableTimes.push([parsed, value]);
+      }
+      if (!forecast) {
+        usableTimes.sort((a, b) => a[0] - b[0]);
+        const next = usableTimes[0];
+        forecast = next
+          ? state({ ...forecastBase, validAt: next[1] }, "OK")
+          : state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+      }
+    } else if (f.hasUsablePoint !== true) {
+      forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+    } else {
+      const nextPoint = timestamp(f.validAt);
+      const horizon = timestamp(f.validThrough);
+      if (nextPoint !== undefined && nextPoint >= now) {
+        forecast = state(forecastBase, "OK");
+      } else if (horizon !== undefined && horizon >= now) {
+        // Legacy sidecars only carry the first usable point at generation time.
+        // A future horizon alone cannot prove a later point is usable, so keep
+        // this status explicitly unknown until the additive time list is present.
+        forecast = state(forecastBase, "UNKNOWN", "FUTURE_POINT_TIMES_UNVERIFIED");
+      } else {
+        forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+      }
+    }
   }
   const producer = j.sourceStatus === "error" ? "ERROR" : j.sourceStatus === "stale" ? "STALE" : ["ok", "partial"].includes(j.sourceStatus) ? null : "UNKNOWN";
   return {
@@ -782,11 +817,11 @@ export async function collectDispatchStatus({
   nowMs = Date.now(),
   fetcher = fetch,
   includeDiagnostics = false,
-  cpuTestMode = false,
+  weatherFixtureMode = false,
 } = {}) {
   const checkedAt = new Date(nowMs).toISOString(),
     diagnostics = [],
-    feedsForRun = cpuTestMode
+    feedsForRun = weatherFixtureMode
       ? dispatchFeeds.map((feed) => feed[0] === "weather"
         ? [feed[0], feed[1], URLS.cpuTestWeatherFreshness, feed[3]]
         : feed)
@@ -811,6 +846,9 @@ export async function collectDispatchStatus({
             httpAgeSeconds: r.transport.httpAgeSeconds,
           },
           ...times(r.j),
+          dataSourceMode: key === "weather"
+            ? (weatherFixtureMode ? "test-fixture" : "public-sidecar")
+            : "public-feed",
         };
         try {
           const evaluationStartedAt = performance.now();
@@ -1210,6 +1248,7 @@ export function formatScheduledStatus(report, event = {}) {
       sourceTime,
       measuredAt,
       validUntil,
+      dataSourceMode,
     }) => ({
       key,
       status,
@@ -1218,6 +1257,7 @@ export function formatScheduledStatus(report, event = {}) {
       ageHours: ageHours ?? null,
       sourceTime: sourceTime ?? measuredAt ?? null,
       validUntil: validUntil ?? null,
+      ...(dataSourceMode ? { dataSourceMode } : {}),
     })),
     ...(Array.isArray(report.diagnostics) ? { sourceTimings: report.diagnostics } : {}),
   });
@@ -1244,7 +1284,8 @@ export default {
   async scheduled(event, env) {
     const diagnosticsEnabled = env?.WATCHDOG_DIAGNOSTICS_ENABLED === "true";
     const cpuTestMode = env?.WATCHDOG_CPU_TEST_MODE === "true";
-    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled, cpuTestMode });
+    const weatherFixtureMode = env?.WATCHDOG_WEATHER_FIXTURE_MODE === "true";
+    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled, weatherFixtureMode });
     console.log(formatScheduledStatus(r, event));
 
     const readEnabled = !cpuTestMode && env?.GITHUB_APP_READ_ENABLED === "true";

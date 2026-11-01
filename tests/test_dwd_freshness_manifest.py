@@ -57,6 +57,8 @@ class FreshnessManifestTests(unittest.TestCase):
         self.assertNotIn("values", doc["observations"]["precipitation"])
         self.assertNotIn("points", doc["forecast"])
         self.assertEqual(doc["forecast"]["issuedAt"], "2026-11-01T00:00:00Z")
+        self.assertEqual(doc["forecast"]["usableValidTimes"], ["2026-11-01T02:00:00Z"])
+        self.assertEqual(doc["forecast"]["validAt"], doc["forecast"]["usableValidTimes"][0])
 
     def test_does_not_use_derived_or_published_time_as_a_source_timestamp(self):
         value = snapshot()
@@ -81,6 +83,33 @@ class FreshnessManifestTests(unittest.TestCase):
         self.assertEqual(manifest["forecast"]["status"], "unavailable")
         self.assertFalse(manifest["forecast"]["hasUsablePoint"])
         self.assertIsNone(manifest["forecast"]["validAt"])
+        self.assertEqual(manifest["forecast"]["usableValidTimes"], [])
+
+    def test_usable_valid_times_are_sorted_deduplicated_and_require_finite_values(self):
+        value = snapshot()
+        value["forecast"]["points"] = [
+            {"validAt": "2026-11-01T04:00:00Z", "values": {"T": 4}},
+            {"validAt": "2026-11-01T03:00:00Z", "values": {"T": None}},
+            {"validAt": "2026-11-01T03:00:00+00:00", "values": {"T": 5}},
+            {"validAt": "2026-11-01T05:00:00Z", "values": {"T": True}},
+            {"validAt": "2026-11-01T06:00:00Z", "values": {"T": float("nan")}},
+            {"validAt": "not-a-time", "values": {"T": 7}},
+        ]
+        doc = create_manifest(value, derived_at="2026-11-01T02:30:00Z")
+        self.assertEqual(
+            doc["forecast"]["usableValidTimes"],
+            ["2026-11-01T03:00:00+00:00", "2026-11-01T04:00:00Z"],
+        )
+        self.assertEqual(doc["forecast"]["validAt"], "2026-11-01T03:00:00+00:00")
+
+    def test_generated_at_does_not_make_past_points_usable(self):
+        value = snapshot()
+        value["forecast"]["points"] = [
+            {"validAt": "2026-11-01T01:00:00Z", "values": {"T": 8}},
+        ]
+        doc = create_manifest(value, derived_at="2026-11-01T02:30:00Z")
+        self.assertFalse(doc["forecast"]["hasUsablePoint"])
+        self.assertEqual(doc["forecast"]["usableValidTimes"], [])
 
 
 if __name__ == "__main__":

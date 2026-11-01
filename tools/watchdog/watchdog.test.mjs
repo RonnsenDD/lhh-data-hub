@@ -92,7 +92,7 @@ function fixtures() {
         windGust: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["windGustKmh"] },
         precipitation: { status: "ok", measuredAt: "2026-10-31T10:40:00Z", retrievedAt: null, freshnessThresholdMinutes: 60, availableFields: ["precipitation10MinMm"] },
       },
-      forecast: { status: "ok", issuedAt: "2026-10-31T03:00:00Z", retrievedAt: "2026-10-31T10:55:00Z", validAt: "2026-10-31T12:00:00Z", validThrough: "2026-10-31T12:00:00.000Z", hasUsablePoint: true },
+      forecast: { status: "ok", issuedAt: "2026-10-31T03:00:00Z", retrievedAt: "2026-10-31T10:55:00Z", validAt: "2026-10-31T12:00:00Z", validThrough: "2026-10-31T12:00:00.000Z", hasUsablePoint: true, usableValidTimes: ["2026-10-31T12:00:00Z"] },
     },
     [URLS.cpuTestWeatherFreshness]: structuredClone(cpuTestSidecar),
     [URLS.levelsL]: {
@@ -199,6 +199,7 @@ test("dispatch freshness check reads only the compact weather manifest and both 
   assert.deepEqual(report.sources.map((source) => source.key), ["weather", "radolan_ry", "konrad3d"]);
   assert.equal(report.overallStatus, "OK");
   assert.equal(report.guarantees.freshnessFromSourceTimes, true);
+  assert.equal(report.sources.find((source) => source.key === "weather").dataSourceMode, "public-sidecar");
 });
 
 test("compact sidecar matches full-feed freshness and never treats its derived time as a source time", async () => {
@@ -226,7 +227,51 @@ test("dispatch freshness path preserves stale source data and marks malformed si
   assert.equal(malformed.sources.find((item) => item.key === "weather").status, "UNKNOWN");
 });
 
-test("isolated CPU-test mode uses the public-value fixture and cannot reach GitHub or Durable Objects", async () => {
+test("CPU safety mode reads the public Sidecar by default and cannot reach GitHub or Durable Objects", async () => {
+  const { fetcher } = mocked(fixtures());
+  const calls = [];
+  const logs = [];
+  const oldFetch = globalThis.fetch;
+  const oldLog = console.log;
+  const oldNow = Date.now;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(url);
+    if (url.origin === "https://api.github.com") assert.fail("CPU-test mode must never read GitHub");
+    return fetcher(input, init);
+  };
+  console.log = (line) => logs.push(String(line));
+  try {
+    Date.now = () => Date.parse("2026-10-31T11:00:00Z");
+    await m.default.scheduled(
+      { cron: "*/30 * * * *", scheduledTime: Date.parse("2026-10-31T11:00:00Z") },
+      {
+        WATCHDOG_CPU_TEST_MODE: "true",
+        WATCHDOG_WEATHER_FIXTURE_MODE: "false",
+        GITHUB_APP_READ_ENABLED: "true",
+        WORKFLOW_DISPATCH_ENABLED: "true",
+        WATCHDOG_DISPATCH_COORDINATOR: {
+          idFromName() { assert.fail("CPU-test mode must not resolve a Durable Object"); },
+          get() { assert.fail("CPU-test mode must not access a Durable Object"); },
+        },
+      },
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    console.log = oldLog;
+    Date.now = oldNow;
+  }
+  assert.equal(calls.length, 3);
+  assert.ok(calls.some((url) => url.href.startsWith(URLS.weatherFreshness)));
+  assert.equal(calls.some((url) => url.href.startsWith(URLS.cpuTestWeatherFreshness)), false);
+  assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
+  const feedLog = logs.map((line) => JSON.parse(line)).find((line) => line.event === "feed_watchdog_check");
+  const weatherLog = feedLog.sources.find((source) => source.key === "weather");
+  assert.equal(weatherLog.dataSourceMode, "public-sidecar");
+  assert.equal(logs.some((line) => JSON.parse(line).event === "github_workflow_observation"), false);
+  assert.equal(logs.some((line) => JSON.parse(line).event === "workflow_dispatch_observation"), false);
+});
+test("fixture mode is explicit and cannot be mistaken for a live DWD read", async () => {
   const { fetcher } = mocked(fixtures());
   const calls = [];
   const logs = [];
@@ -246,6 +291,7 @@ test("isolated CPU-test mode uses the public-value fixture and cannot reach GitH
       { cron: "*/30 * * * *", scheduledTime: Date.parse("2026-11-01T06:29:27Z") },
       {
         WATCHDOG_CPU_TEST_MODE: "true",
+        WATCHDOG_WEATHER_FIXTURE_MODE: "true",
         // Even a mistakenly enabled flag must not activate GitHub in CPU-test mode.
         GITHUB_APP_READ_ENABLED: "true",
         WORKFLOW_DISPATCH_ENABLED: "true",
@@ -266,6 +312,7 @@ test("isolated CPU-test mode uses the public-value fixture and cannot reach GitH
   assert.equal(calls.some((url) => url.origin === "https://api.github.com"), false);
   const feedLog = logs.map((line) => JSON.parse(line)).find((line) => line.event === "feed_watchdog_check");
   assert.equal(feedLog.sources.find((source) => source.key === "weather").status, "STALE");
+  assert.equal(feedLog.sources.find((source) => source.key === "weather").dataSourceMode, "test-fixture");
   assert.equal(logs.some((line) => JSON.parse(line).event === "github_workflow_observation"), false);
   assert.equal(logs.some((line) => JSON.parse(line).event === "workflow_dispatch_observation"), true);
 });
@@ -313,6 +360,48 @@ test("forecast issue age and validAt are independent", async () => {
       .forecast.status,
     "STALE",
   );
+});
+test("expired next MOSMIX point advances to a separately confirmed usable forecast point", async () => {
+  const d = fixtures();
+  d[URLS.weatherFreshness].forecast.validAt = "2026-10-31T10:00:00Z";
+  d[URLS.weatherFreshness].forecast.validThrough = "2026-10-31T17:00:00Z";
+  d[URLS.weatherFreshness].forecast.usableValidTimes = [
+    "2026-10-31T10:00:00Z",
+    "2026-10-31T12:00:00Z",
+    "2026-10-31T13:00:00Z",
+  ];
+  const { fetcher } = mocked(d);
+  const forecast = find(await collectDispatchStatus({ nowMs: NOW, fetcher }), "weather").products.forecast;
+  assert.equal(forecast.status, "OK");
+  assert.equal(forecast.validAt, "2026-10-31T12:00:00Z");
+});
+test("validThrough alone cannot promote an expired MOSMIX point to available", async () => {
+  const d = fixtures();
+  delete d[URLS.weatherFreshness].forecast.usableValidTimes;
+  d[URLS.weatherFreshness].forecast.validAt = "2026-10-31T10:00:00Z";
+  d[URLS.weatherFreshness].forecast.validThrough = "2026-10-31T17:00:00Z";
+  const { fetcher } = mocked(d);
+  const forecast = find(await collectDispatchStatus({ nowMs: NOW, fetcher }), "weather").products.forecast;
+  assert.equal(forecast.status, "UNKNOWN");
+  assert.equal(forecast.reasonCode, "FUTURE_POINT_TIMES_UNVERIFIED");
+});
+test("a sidecar with no usable forecast point remains UNAVAILABLE", async () => {
+  const d = fixtures();
+  d[URLS.weatherFreshness].forecast.usableValidTimes = [];
+  d[URLS.weatherFreshness].forecast.hasUsablePoint = false;
+  d[URLS.weatherFreshness].forecast.validThrough = "2026-11-11T04:00:00Z";
+  const { fetcher } = mocked(d);
+  const forecast = find(await collectDispatchStatus({ nowMs: NOW, fetcher }), "weather").products.forecast;
+  assert.equal(forecast.status, "UNAVAILABLE");
+  assert.equal(forecast.reasonCode, "NO_VALID_POINT");
+});
+test("inconsistent MOSMIX usable-point metadata fails closed", async () => {
+  const d = fixtures();
+  d[URLS.weatherFreshness].forecast.hasUsablePoint = false;
+  const { fetcher } = mocked(d);
+  const forecast = find(await collectDispatchStatus({ nowMs: NOW, fetcher }), "weather").products.forecast;
+  assert.equal(forecast.status, "ERROR");
+  assert.equal(forecast.reasonCode, "INCONSISTENT_VALID_POINT_METADATA");
 });
 test("MOSMIX selects the earliest future point and retains the latest validThrough", async () => {
   const d = fixtures();
