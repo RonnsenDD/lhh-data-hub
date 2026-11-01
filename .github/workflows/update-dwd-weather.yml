@@ -46,12 +46,17 @@ jobs:
           --schema docs/dwd-weather-v2.schema.json
           --for-publication
           --max-attempt-age-minutes 10
-
       - name: Create freshness-only sidecar
         run: >-
           python3 scripts/create_dwd_weather_freshness_manifest.py
           --input data/generated/dwd-weather.json
           --output data/generated/dwd-weather-freshness.json
+
+      - name: Validate freshness sidecar schema and forecast timestamps
+        run: >-
+          python3 src/validate_dwd_weather_freshness.py
+          data/generated/dwd-weather-freshness.json
+          --require-usable-valid-times
 
       - name: Wetter-Quelldatenstand und Alter protokollieren
         run: |
@@ -73,7 +78,7 @@ jobs:
           print(f"forecast status={forecast.get('status')} issuedAt={forecast.get('issuedAt')} actualAgeMinutes={age_minutes(forecast.get('issuedAt'))} thresholdHours=12")
           PY
 
-      - name: Publish DWD snapshot and freshness sidecar atomically (bounded safe push)
+      - name: Publish DWD snapshot and compact freshness sidecar (bounded safe push)
         run: >-
           bash scripts/publish_one_snapshot.sh
           --message "Update DWD weather snapshot and freshness sidecar"

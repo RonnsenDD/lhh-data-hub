@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/RonnsenDD/lhh-data-hub/schemas/dwd-weather-freshness-v1.schema.json",
+  "title": "DWD Weather Freshness Sidecar v1",
+  "description": "Compact status and source timestamps derived from a validated DWD weather snapshot. usableValidTimes is an additive v1 field and remains optional for older consumers and snapshots.",
+  "type": "object",
+  "required": ["schemaVersion", "source", "sourceStatus", "lastAttemptAt", "lastSuccessfulAt", "snapshotPublishedAt", "derivedAt", "observations", "forecast"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "source": { "const": "DWD weather snapshot v2" },
+    "sourceStatus": { "$ref": "#/$defs/status" },
+    "lastAttemptAt": { "type": "string", "format": "date-time" },
+    "lastSuccessfulAt": { "type": ["string", "null"], "format": "date-time" },
+    "snapshotPublishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "derivedAt": { "type": "string", "format": "date-time" },
+    "observations": {
+      "type": "object",
+      "required": ["temperatureHumidity", "stationPressure", "wind", "windGust", "precipitation"],
+      "properties": {
+        "temperatureHumidity": { "$ref": "#/$defs/observation" },
+        "stationPressure": { "$ref": "#/$defs/observation" },
+        "wind": { "$ref": "#/$defs/observation" },
+        "windGust": { "$ref": "#/$defs/observation" },
+        "precipitation": { "$ref": "#/$defs/observation" }
+      },
+      "additionalProperties": false
+    },
+    "forecast": {
+      "type": "object",
+      "required": ["status", "issuedAt", "retrievedAt", "validAt", "validThrough", "hasUsablePoint"],
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "issuedAt": { "type": ["string", "null"], "format": "date-time" },
+        "retrievedAt": { "type": ["string", "null"], "format": "date-time" },
+        "validAt": { "type": ["string", "null"], "format": "date-time" },
+        "validThrough": { "type": ["string", "null"], "format": "date-time" },
+        "hasUsablePoint": { "type": "boolean" },
+        "usableValidTimes": {
+          "type": "array",
+          "description": "Optional additive v1 list. Each entry is an unchanged validAt copied from the validated snapshot for a future forecast point containing at least one finite numeric value.",
+          "items": { "type": "string", "format": "date-time" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "status": { "enum": ["ok", "partial", "stale", "error", "unavailable"] },
+    "observation": {
+      "type": "object",
+      "required": ["status", "measuredAt", "retrievedAt", "freshnessThresholdMinutes", "availableFields"],
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "measuredAt": { "type": ["string", "null"], "format": "date-time" },
+        "retrievedAt": { "type": ["string", "null"], "format": "date-time" },
+        "freshnessThresholdMinutes": { "type": ["number", "null"], "minimum": 0 },
+        "availableFields": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
