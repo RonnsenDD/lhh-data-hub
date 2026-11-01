@@ -119,6 +119,8 @@ staleManifest.observations.wind.status = "stale";
 staleFeedBodies.set(URLS.weatherFreshness, JSON.stringify(staleManifest));
 let activeFeedBodies = feedBodies;
 const feedBytes = [...feedBodies.values()].reduce((sum, body) => sum + Buffer.byteLength(body), 0);
+const fullStatusUrls = [URLS.weather, URLS.levelsL, URLS.levelsB, URLS.radar, URLS.konrad, URLS.grass, URLS.wildfire];
+const fullStatusBytes = fullStatusUrls.reduce((sum, url) => sum + Buffer.byteLength(feedBodies.get(url) ?? ""), 0);
 const dispatchFeedBytes = [URLS.weatherFreshness, URLS.radar, URLS.konrad]
   .reduce((sum, url) => sum + Buffer.byteLength(feedBodies.get(url) ?? ""), 0);
 const feedSamples = Object.entries(feeds).map(([url, data]) => {
@@ -296,7 +298,7 @@ async function benchmarkCollector(mode, collector, expectedFeeds) {
     mode,
     iterations: ITERATIONS,
     feedRequests: feedCalls,
-    responseBytesPerInvocation: mode.includes("scheduled") ? dispatchFeedBytes : feedBytes,
+    responseBytesPerInvocation: mode.includes("scheduled") ? dispatchFeedBytes : fullStatusBytes,
     medianNodeCpuMs: Number(percentile(cpuMs, 0.5).toFixed(3)),
     p90NodeCpuMs: Number(percentile(cpuMs, 0.9).toFixed(3)),
     p95NodeCpuMs: Number(percentile(cpuMs, 0.95).toFixed(3)),
