@@ -42,3 +42,19 @@ The GitHub App read adapter, Durable Object dispatch reservation, workflow allow
 - The producer workflow now writes two generated files together. Existing publisher path allowlisting and atomic multi-file publication are tested.
 - A successful producer execution is not proof of fresh observations; actual source times remain decisive.
 - The PR remains draft and the Worker remains undeployed. No sustained Free-plan headroom is claimed until the changed code is measured on Cloudflare across sufficient runs.
+
+## Isolated CPU observation preparation (2026-11-01)
+
+The separate config `wrangler.watchdog-cpu-test.jsonc` names a different Worker, disables `workers.dev`, contains no routes, secrets, Durable Object binding, or migration, and sets the GitHub read and dispatch switches off. Its only schedule is a test-only 30-minute Cron; it is not in `wrangler.watchdog.jsonc` and cannot change the production Worker's `*/5` trigger. Deploying it would create additional read-only requests, so it must not be deployed until the account plan is confirmed and the owner approves the test. The account subscription read returned HTTP 403 because the connected Cloudflare session lacks Billing Read; the plan is unconfirmed. No Worker was deployed.
+
+At 2026-11-01 06:29:27 UTC, the current public weather snapshot was 106,184 bytes. It records a successful attempt at 02:16:10 UTC, with actual observation times 01:20 UTC and 01:50 UTC. The locally generated 1,772-byte sidecar preserved those source times. Both the full weather adapter and compact sidecar adapter classified all observations as `STALE` at the test instant; MOSMIX remained valid with issue time 2026-10-31 21:00 UTC and next usable point 07:00 UTC. The `derivedAt` time did not make measurements fresh.
+
+The publication validator was also run against this public snapshot. It rejected it because `lastAttemptAt` was older than the configured 10-minute publication limit. Therefore no sidecar publication was attempted from this stale snapshot. The public sidecar URL currently returns HTTP 404, as expected while PR #17 remains unmerged. The existing local publisher regression test publishes a weather file and sidecar together to an isolated temporary bare Git remote; it does not write to the public repository. No GitHub workflow was run.
+
+### Controlled live measurement procedure (not executed)
+
+1. Have the account owner confirm the Cloudflare plan and that the account remains within its no-cost usage limits; the current API connection cannot read billing.
+2. Merge/publish the weather producer separately and wait for its normal scheduled run to pass the publication validator and make the sidecar publicly reachable. Confirm the sidecar's measurement and issue timestamps before proceeding.
+3. After explicit deployment approval, deploy only `wrangler.watchdog-cpu-test.jsonc`. It has its own test-only name and `*/30` schedule; do not edit the production worker or its Cron.
+4. Observe at least 48 hours (96 scheduled samples). Record Cloudflare CPU p50, p90, p95, maximum, and invocation outcomes for this test Worker. Require p95 no higher than 7 ms and no sample at or above 10 ms before claiming useful reserve under the documented Free limit. Any CPU-limit outcome, unknown plan, or failed source fetch stops the test.
+5. Remove the test-only trigger and test Worker after observation through the owner's approved Cloudflare process. This PR does not automate deployment or cleanup.
