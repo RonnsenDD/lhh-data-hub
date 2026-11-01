@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "source": "DWD weather snapshot v2",
   "sourceStatus": "ok",
-  "lastAttemptAt": "2026-11-01T16:15:29Z",
+  "lastAttemptAt": "2026-11-01T20:34:23Z",
   "lastSuccessfulAt": null,
   "snapshotPublishedAt": null,
-  "derivedAt": "2026-11-01T16:15:34.353428Z",
+  "derivedAt": "2026-11-01T20:34:28.747040Z",
   "observations": {
     "temperatureHumidity": {
       "status": "ok",
-      "measuredAt": "2026-11-01T15:20:00Z",
-      "retrievedAt": "2026-11-01T16:15:29Z",
+      "measuredAt": "2026-11-01T19:50:00Z",
+      "retrievedAt": "2026-11-01T20:34:23Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "temperatureC",
@@ -20,8 +20,8 @@
     },
     "stationPressure": {
       "status": "ok",
-      "measuredAt": "2026-11-01T15:20:00Z",
-      "retrievedAt": "2026-11-01T16:15:29Z",
+      "measuredAt": "2026-11-01T19:50:00Z",
+      "retrievedAt": "2026-11-01T20:34:23Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "stationPressureHpa"
@@ -29,8 +29,8 @@
     },
     "wind": {
       "status": "ok",
-      "measuredAt": "2026-11-01T15:50:00Z",
-      "retrievedAt": "2026-11-01T16:15:29Z",
+      "measuredAt": "2026-11-01T19:50:00Z",
+      "retrievedAt": "2026-11-01T20:34:23Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "windSpeedKmh",
@@ -39,8 +39,8 @@
     },
     "windGust": {
       "status": "ok",
-      "measuredAt": "2026-11-01T15:50:00Z",
-      "retrievedAt": "2026-11-01T16:15:29Z",
+      "measuredAt": "2026-11-01T19:50:00Z",
+      "retrievedAt": "2026-11-01T20:34:23Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "windGustKmh"
@@ -48,8 +48,8 @@
     },
     "precipitation": {
       "status": "ok",
-      "measuredAt": "2026-11-01T15:50:00Z",
-      "retrievedAt": "2026-11-01T16:15:29Z",
+      "measuredAt": "2026-11-01T19:50:00Z",
+      "retrievedAt": "2026-11-01T20:34:23Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "precipitation10MinMm"
@@ -58,16 +58,12 @@
   },
   "forecast": {
     "status": "ok",
-    "issuedAt": "2026-11-01T09:00:00Z",
-    "retrievedAt": "2026-11-01T16:15:29Z",
-    "validAt": "2026-11-01T17:00:00Z",
-    "validThrough": "2026-11-11T16:00:00.000Z",
+    "issuedAt": "2026-11-01T15:00:00Z",
+    "retrievedAt": "2026-11-01T20:34:23Z",
+    "validAt": "2026-11-01T21:00:00Z",
+    "validThrough": "2026-11-11T22:00:00.000Z",
     "hasUsablePoint": true,
     "usableValidTimes": [
-      "2026-11-01T17:00:00Z",
-      "2026-11-01T18:00:00Z",
-      "2026-11-01T19:00:00Z",
-      "2026-11-01T20:00:00Z",
       "2026-11-01T21:00:00Z",
       "2026-11-01T22:00:00Z",
       "2026-11-01T23:00:00Z",
@@ -303,7 +299,13 @@
       "2026-11-11T13:00:00Z",
       "2026-11-11T14:00:00Z",
       "2026-11-11T15:00:00Z",
-      "2026-11-11T16:00:00Z"
+      "2026-11-11T16:00:00Z",
+      "2026-11-11T17:00:00Z",
+      "2026-11-11T18:00:00Z",
+      "2026-11-11T19:00:00Z",
+      "2026-11-11T20:00:00Z",
+      "2026-11-11T21:00:00Z",
+      "2026-11-11T22:00:00Z"
     ]
   }
 }
