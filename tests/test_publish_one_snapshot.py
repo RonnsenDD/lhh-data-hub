@@ -178,7 +178,11 @@ exit 1
             bare, work, racer = self.make_repos(root)
             second = work / FRESHNESS_TARGET
             second.parent.mkdir(parents=True, exist_ok=True)
-            second.write_text('{"sourceStatus":"ok","measuredAt":"2026-11-01T01:20:00Z"}\n')
+            second.write_text(
+                '{"schemaVersion":1,"sourceStatus":"ok","forecast":'
+                '{"validAt":"2026-11-01T10:00:00Z","usableValidTimes":'
+                '["2026-11-01T10:00:00Z","2026-11-01T11:00:00Z"]}}\n'
+            )
             (work / TARGET).write_text('{"generation":2}\n')
             hook = work / ".git/hooks/pre-push"
             hook.unlink()
@@ -187,7 +191,9 @@ exit 1
             committed_paths = git(["show", "--pretty=format:", "--name-only", "HEAD"], work).stdout.split()
             self.assertEqual(set(committed_paths), {TARGET, FRESHNESS_TARGET})
             self.assertIn('"generation":2', git(["--git-dir", str(bare), "show", f"main:{TARGET}"], root).stdout)
-            self.assertIn('"measuredAt":"2026-11-01T01:20:00Z"', git(["--git-dir", str(bare), "show", f"main:{FRESHNESS_TARGET}"], root).stdout)
+            published_sidecar = git(["--git-dir", str(bare), "show", f"main:{FRESHNESS_TARGET}"], root).stdout
+            self.assertIn('"validAt":"2026-11-01T10:00:00Z"', published_sidecar)
+            self.assertIn('"usableValidTimes":["2026-11-01T10:00:00Z","2026-11-01T11:00:00Z"]', published_sidecar)
 
     def test_freshness_sidecar_is_allowlisted(self):
         with tempfile.TemporaryDirectory(prefix="publisher-sidecar-allowlist-") as temp:

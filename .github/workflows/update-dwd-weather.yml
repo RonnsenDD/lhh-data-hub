@@ -52,6 +52,12 @@ jobs:
           --input data/generated/dwd-weather.json
           --output data/generated/dwd-weather-freshness.json
 
+      - name: Validate freshness sidecar schema and forecast timestamps
+        run: >-
+          python3 src/validate_dwd_weather_freshness.py
+          data/generated/dwd-weather-freshness.json
+          --require-usable-valid-times
+
       - name: Wetter-Quelldatenstand und Alter protokollieren
         run: |
           python3 - <<'PY'
