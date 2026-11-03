@@ -6,11 +6,11 @@
     "latitude": 51.4693,
     "longitude": 13.76319
   },
-  "status": "ok",
+  "status": "partial",
   "observations": {
     "temperatureHumidity": {
-      "status": "ok",
-      "statusReason": "latest CDC measurement is within freshness limit",
+      "status": "stale",
+      "statusReason": "measurement is older than 60 minutes",
       "station": {
         "id": "02627",
         "name": "Schipkau-Klettwitz",
@@ -19,11 +19,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute air temperature / relative humidity / dew point / station pressure",
-      "measuredAt": "2026-11-02T21:50:00Z",
-      "measuredAtLocal": "2026-11-02T22:50:00+01:00",
-      "retrievedAt": "2026-11-02T22:29:34Z",
-      "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-      "ageMinutes": 39.6,
+      "measuredAt": "2026-11-03T01:20:00Z",
+      "measuredAtLocal": "2026-11-03T02:20:00+01:00",
+      "retrievedAt": "2026-11-03T03:39:28Z",
+      "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+      "ageMinutes": 139.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -32,9 +32,9 @@
         "dewPointC": "°C"
       },
       "values": {
-        "temperatureC": 4.7,
-        "relativeHumidityPercent": 89.3,
-        "dewPointC": 3.1
+        "temperatureC": 5.2,
+        "relativeHumidityPercent": 85.2,
+        "dewPointC": 2.9
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -44,8 +44,8 @@
       "invalidRowsSkipped": 0
     },
     "stationPressure": {
-      "status": "ok",
-      "statusReason": "latest CDC measurement is within freshness limit",
+      "status": "stale",
+      "statusReason": "measurement is older than 60 minutes",
       "station": {
         "id": "01001",
         "name": "Doberlug-Kirchhain",
@@ -54,18 +54,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute station pressure",
-      "measuredAt": "2026-11-02T21:50:00Z",
-      "measuredAtLocal": "2026-11-02T22:50:00+01:00",
-      "retrievedAt": "2026-11-02T22:29:34Z",
-      "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-      "ageMinutes": 39.6,
+      "measuredAt": "2026-11-03T01:20:00Z",
+      "measuredAtLocal": "2026-11-03T02:20:00+01:00",
+      "retrievedAt": "2026-11-03T03:39:28Z",
+      "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+      "ageMinutes": 139.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "stationPressureHpa": "hPa"
       },
       "values": {
-        "stationPressureHpa": 1019.4
+        "stationPressureHpa": 1019.2
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -75,8 +75,8 @@
       "invalidRowsSkipped": 0
     },
     "wind": {
-      "status": "ok",
-      "statusReason": "latest CDC measurement is within freshness limit",
+      "status": "stale",
+      "statusReason": "measurement is older than 60 minutes",
       "station": {
         "id": "01001",
         "name": "Doberlug-Kirchhain",
@@ -85,11 +85,11 @@
         "distanceKm": 23.5
       },
       "product": "10-minute wind speed and direction",
-      "measuredAt": "2026-11-02T21:50:00Z",
-      "measuredAtLocal": "2026-11-02T22:50:00+01:00",
-      "retrievedAt": "2026-11-02T22:29:34Z",
-      "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-      "ageMinutes": 39.6,
+      "measuredAt": "2026-11-03T01:20:00Z",
+      "measuredAtLocal": "2026-11-03T02:20:00+01:00",
+      "retrievedAt": "2026-11-03T03:39:28Z",
+      "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+      "ageMinutes": 139.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -97,8 +97,8 @@
         "windDirectionDeg": "degree"
       },
       "values": {
-        "windSpeedKmh": 2.52,
-        "windDirectionDeg": 330.0
+        "windSpeedKmh": 3.6,
+        "windDirectionDeg": 20.0
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -108,8 +108,8 @@
       "invalidRowsSkipped": 0
     },
     "windGust": {
-      "status": "ok",
-      "statusReason": "latest CDC measurement is within freshness limit",
+      "status": "stale",
+      "statusReason": "measurement is older than 60 minutes",
       "station": {
         "id": "01001",
         "name": "Doberlug-Kirchhain",
@@ -118,18 +118,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute extreme wind (maximum gust)",
-      "measuredAt": "2026-11-02T21:50:00Z",
-      "measuredAtLocal": "2026-11-02T22:50:00+01:00",
-      "retrievedAt": "2026-11-02T22:29:34Z",
-      "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-      "ageMinutes": 39.6,
+      "measuredAt": "2026-11-03T01:20:00Z",
+      "measuredAtLocal": "2026-11-03T02:20:00+01:00",
+      "retrievedAt": "2026-11-03T03:39:28Z",
+      "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+      "ageMinutes": 139.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "windGustKmh": "km/h"
       },
       "values": {
-        "windGustKmh": 6.12
+        "windGustKmh": 5.76
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -139,8 +139,8 @@
       "invalidRowsSkipped": 0
     },
     "precipitation": {
-      "status": "ok",
-      "statusReason": "latest CDC measurement is within freshness limit",
+      "status": "stale",
+      "statusReason": "measurement is older than 60 minutes",
       "station": {
         "id": "02627",
         "name": "Schipkau-Klettwitz",
@@ -149,11 +149,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute precipitation sum",
-      "measuredAt": "2026-11-02T21:50:00Z",
-      "measuredAtLocal": "2026-11-02T22:50:00+01:00",
-      "retrievedAt": "2026-11-02T22:29:34Z",
-      "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-      "ageMinutes": 39.6,
+      "measuredAt": "2026-11-03T01:20:00Z",
+      "measuredAtLocal": "2026-11-03T02:20:00+01:00",
+      "retrievedAt": "2026-11-03T03:39:28Z",
+      "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+      "ageMinutes": 139.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -183,9 +183,9 @@
     "distanceKm": 17.34,
     "issuedAt": "2026-11-02T21:00:00Z",
     "issuedAtLocal": "2026-11-02T22:00:00+01:00",
-    "retrievedAt": "2026-11-02T22:29:34Z",
-    "retrievedAtLocal": "2026-11-02T23:29:34+01:00",
-    "ageHours": 1.49,
+    "retrievedAt": "2026-11-03T03:39:28Z",
+    "retrievedAtLocal": "2026-11-03T04:39:28+01:00",
+    "ageHours": 6.66,
     "models": [
       {
         "name": "ICON",
@@ -3659,6 +3659,6 @@
       "license": "DWD Open Data; CC BY 4.0 attribution applies"
     }
   },
-  "lastAttemptAt": "2026-11-02T22:29:34Z",
+  "lastAttemptAt": "2026-11-03T03:39:28Z",
   "sourceNote": "Messwerte und MOSMIX-Prognosen sind getrennt. Fehlende Werte bleiben null; CDC-now-Daten sind noch nicht abschließend qualitätsgesichert."
 }
