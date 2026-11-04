@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "feuerwehr-lauchhammer-dwd-weather-dispatcher",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-04",
+  "workers_dev": false,
+  "vars": {
+    "WEATHER_DISPATCH_MODE": "disabled",
+    "WEATHER_DISPATCH_ENABLED": "false",
+    "GITHUB_APP_ID": "5555433",
+    "GITHUB_INSTALLATION_ID": "177220128"
+  },
+  "triggers": {
+    "crons": ["8,23,38,53 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
+    "traces": { "enabled": false }
+  }
+}
