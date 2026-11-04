@@ -11,7 +11,11 @@ const snapshot = {
     temperatureHumidity: { status: 'ok', measuredAt: '2026-11-04T11:45:00Z', retrievedAt: '2026-11-04T11:50:00Z', freshnessThresholdMinutes: 60 },
     wind: { status: 'ok', measuredAt: '2026-11-04T11:40:00Z', retrievedAt: '2026-11-04T11:50:00Z', freshnessThresholdMinutes: 60 },
   },
-  forecast: { status: 'ok', issuedAt: '2026-11-04T06:00:00Z', retrievedAt: '2026-11-04T11:50:00Z', validThrough: '2026-11-14T00:00:00Z', hasUsablePoint: true },
+  forecast: {
+    status: 'ok', issuedAt: '2026-11-04T06:00:00Z', retrievedAt: '2026-11-04T11:50:00Z',
+    validThrough: '2026-11-14T00:00:00Z', hasUsablePoint: true,
+    usableValidTimes: Array.from({ length: 240 }, (_, i) => new Date(Date.parse('2026-11-04T12:00:00Z') + i * 3600000).toISOString()),
+  },
 };
 const json = JSON.stringify(snapshot);
 const pair = generateKeyPairSync('rsa', { modulusLength: 2048 });
