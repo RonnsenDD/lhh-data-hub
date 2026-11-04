@@ -78,6 +78,14 @@ test('9 future measurement timestamps fail closed', () => {
   const bad = structuredClone(fresh); bad.observations.wind.measuredAt = '2026-11-04T13:00:00Z';
   assert.equal(assessWeather(bad, now).reason, 'observation-time-in-future-or-invalid');
 });
+test('9a even small future skew is not treated as a current measurement', () => {
+  const bad = structuredClone(fresh); bad.observations.wind.measuredAt = '2026-11-04T12:01:00Z';
+  assert.equal(assessWeather(bad, now).reason, 'observation-time-in-future-or-invalid');
+});
+test('9b impossible calendar dates are rejected instead of normalized by Date.parse', () => {
+  const bad = structuredClone(fresh); bad.observations.wind.measuredAt = '2026-02-30T10:00:00Z';
+  assert.equal(assessWeather(bad, now).reason, 'observation-time-invalid');
+});
 test('10 stale generatedAt cannot make missing or old original data fresh', () => {
   const bad = structuredClone(fresh); bad.derivedAt = '2026-11-04T11:59:59Z'; bad.forecast.issuedAt = '2026-11-03T00:00:00Z';
   assert.equal(assessWeather(bad, now).stale, true);
