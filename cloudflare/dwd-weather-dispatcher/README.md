@@ -1,69 +1,57 @@
-# DWD weather dispatcher (prepared, not deployed)
+# DWD weather dispatcher — prepared, not deployed
 
-This folder is an isolated, standalone Cloudflare Worker proposal for `RonnsenDD/lhh-data-hub`. It is separate from PR #20. Nothing here changes the current Watchdog, the CPU-test Worker, the Pegel pilot, the GitHub producer workflow, or public data.
+This standalone dispatcher proposal is isolated from the live Watchdog and Pegel pilot. PR #21 remains Draft. No Cloudflare Worker or Cron was created or changed by this PR.
 
-## Safety state
+## Safety
 
-- `WEATHER_DISPATCH_MODE` defaults to `disabled`; disabled performs **zero** fetches.
-- `observe` fetches the public DWD sidecar and reads only the `update-dwd-weather.yml` Actions history. It never calls `workflow_dispatch`.
-- `dispatch` is recognized as a separate, future mode, but remains fail-closed. The implementation deliberately refuses a dispatch with `atomic-dispatch-lock-not-configured`. There is no approved atomic cross-invocation lock, and GitHub concurrency alone can queue duplicate manual runs. Do not treat this branch as dispatch-ready.
-- There is no `fetch` handler or public administrative endpoint.
-- The repository/App scope is hard-coded to `RonnsenDD/lhh-data-hub`; the token request narrows both repository and Actions permission. `derivedAt`, `retrievedAt`, `lastSuccessfulAt`, and `snapshotPublishedAt` do not substitute for source measurement/model times.
-- Request errors are reduced to bounded status labels. JWTs, tokens, private keys, authorization headers and bodies are never logged.
+- The base `wrangler.jsonc` is inert: mode `disabled`, dispatch gate `false`, no Cron, no route, `workers_dev=false`, and `preview_urls=false`.
+- `src/worker.js` exports only `scheduled()`; there is no `fetch()` handler or public control endpoint.
+- The separate `wrangler.observe-test.jsonc` is the only config with a Cron and `observe` mode. Deploying that config would activate the Cron. It must not be deployed before separate approval.
+- Observe uses anonymous GET requests only for the public DWD sidecar and public GitHub Actions workflow-run history. No GitHub app, token, secret, Authorization header, POST, dispatch, publication, SharePoint write, or persistent storage is used.
+- The code's `dispatch` pathway remains fail-closed. It cannot make a write request and returns `dispatch=false`; the tests assert this.
+- Unknown, stale, malformed, future-dated, HTTP-error, timeout, and GitHub 403/429 cases fail closed without retries. A successful workflow run is not treated as evidence that the source measurements are current.
 
-## Schedule and expected quota use
+## Cron-only Observe config
 
-The proposed Cron is `8,23,38,53 * * * *` (96 decisions/day), five minutes after the producer's scheduled `:03/:18/:33/:48` times. Its purpose is to observe a missed producer opportunity after the scheduled start. It is only in the local Wrangler configuration; no trigger has been created.
+Worker name: `lhh-dwd-dispatcher-observe-test`  
+Cron: `8,23,38,53 * * * *` UTC — four checks per hour, 96/day. This matches the handler's UTC-minute guard and offsets the existing producer's quarter-hour schedule.  
+Dispatch gate: `WEATHER_DISPATCH_ENABLED=false`.
 
-The current live inventory read found these schedules:
+The config sets `workers_dev=false`, `preview_urls=false`, declares no routes, and uses an entrypoint with no HTTP handler. Cloudflare documents these URL controls separately: disabling `workers.dev` alone does not necessarily disable Version/Preview URLs, so both flags are explicit. These controls are currently only in source; after a future approved deploy, verify the actual Worker settings show no route or URL.
 
-| Existing Worker | Cron |
+## Capacity and cost estimate
+
+Read-only inventory on 2026-11-05 found three existing Workers and two active Cron expressions:
+
+| Worker | Cron |
 | --- | --- |
 | `feuerwehr-lauchhammer-watchdog` | `*/5 * * * *` |
 | `feuerwehr-lauchhammer-watchdog-cpu-test` | `*/30 * * * *` |
 | `feuerwehr-lauchhammer-pegel-pilot` | none |
 
-A separately deployed dispatcher would add a third schedule. Planning uses the Workers Free documented ceilings: 5 Cron Triggers per account, 10 ms CPU per Cron invocation, 100,000 requests/day and 50 external subrequests per invocation. The proposed observe invocation makes at most three external requests (public sidecar, short-lived installation-token exchange, one workflow-runs query): 288/day if all 96 checks run. This is below the documented request/subrequest ceilings, but is not a measured live usage result and does not confirm the actual account tariff. The Cloudflare API did not provide billing-plan details through this connection. Workers Logs currently includes 200,000 events/day and 3-day retention on Free; with invocation and decision logging this worker would produce about 192 events/day. On December 1, 2026, Cloudflare will move existing Workers Observability customers to shared observability pricing (Free: 0.5 GB/day ingestion and 7-day retention; Paid: 50 GB/month ingestion and 10 GB-month storage included). Account-level remaining allowances are not visible here, so plan and usage must be checked again before any deployment after that change.
+If deployed, the Observe Worker would add one Cron expression, taking the inventory from 2 to 3. Cloudflare documents Workers Free ceilings of five Cron triggers/account, 10 ms CPU per Cron invocation, 100,000 requests/day, and 50 external subrequests per invocation. The prepared worker estimates 96 scheduled invocations/day and two external GETs per eligible run (about 192 outbound requests/day). This is below those published ceilings, but no Cloudflare CPU measurement exists. The task identifies the account as Free; the connected API did not expose actual subscription or remaining allowance, so the account owner's dashboard must be checked before deployment.
 
-Sources: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/).
+Workers Logs are currently included on Free at 200,000 events/day and three-day retention; two events per run would be about 192/day. Cloudflare's shared Observability pricing change is announced for 2026-12-01. Check the current Free allowance and account-level usage before any test crossing that date. Traces are disabled. Use Cloudflare Analytics/Observability CPU telemetry for actual p50/p90/p95/max; Node CPU timing is not Cloudflare telemetry.
 
-## Data decision rules
+GitHub's unauthenticated REST primary limit is 60 requests/hour per originating IP. This poller makes four workflow-history API calls/hour in steady state. Shared egress, secondary limits, or other callers could still cause 403/429; the worker makes no retry and records a fail-closed result.
 
-1. Accept only the expected DWD v2 sidecar source and valid RFC3339 source timestamps.
-2. Compute weather age from each original observation `measuredAt`; existing declared limits are capped at 60 minutes.
-3. Compute MOSMIX age from original `issuedAt`; the existing 12-hour limit is a hard cap. Check `hasUsablePoint` and `validThrough` separately.
-4. Ignore `derivedAt` and retrieval/publication timestamps for freshness. Null `lastSuccessfulAt` and `snapshotPublishedAt` remain null and are not synthesized.
-5. Unknown statuses, missing or future source times, malformed JSON, HTTP errors and GitHub API failures all fail closed. A GitHub run is not proof that published source data is current.
-6. An eligible observation sees queued/running jobs and any workflow start younger than 20 minutes as a stop condition. A recent publication attempt is another stop condition. Only a stale original source state with older-than-cooldown attempt/run history can become `wouldDispatch` in Observe.
-7. Dispatch is additionally stopped until a safe atomic lock and a separately approved dispatch design exist. No exactly-once claim is made.
+Official references: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [workers.dev routing](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/), [Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/), [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/), [GitHub REST rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
 
-## Modes and configuration
+## Telemetry and 24-hour acceptance
 
-`wrangler.jsonc` pins `WEATHER_DISPATCH_MODE="disabled"` and `WEATHER_DISPATCH_ENABLED="false"`. The proposed schedule and Worker name are configuration only. Do not deploy this config without separate authorization.
+Each scheduled decision logs UTC decision time, measured-data age, MOSMIX age, latest workflow creation/start times, last successful workflow start, workflow status/event, active-run count, hypothetical dispatch decision/reason, and error label. It does not log headers, payloads, tokens, or credentials. Logs have platform retention and are not a durable database.
 
-For an eventual Observe deployment, the separate Worker would need its own app bindings. Existing Cloudflare secrets are Worker-scoped: read-only settings inspection found `GITHUB_APP_ID`, `GITHUB_INSTALLATION_ID`, and a redacted `GITHUB_APP_PRIVATE_KEY` binding on the existing Watchdog, but no such binding on the CPU-test Worker. No private key value was read. The new Worker does not inherit the Watchdog secret. App ID/installation ID are non-secret variables; the key must be manually entered as a Cloudflare secret after deployment approval. Current GitHub App installation is repository-restricted and has Actions read only. Observe requires `Actions: read`; future dispatch would need repository-scoped `Actions: write` and separate approval. No permission change is requested.
+After separate deployment approval, observe at least 96 scheduled slots over 24 hours. Reconcile expected runs, actual scheduled events, source freshness, workflow status, errors, and CPU. Require zero dispatch attempts, no public route/URL, no CPU-limit failures, and no repeated GitHub 403/429. Continue monitoring beyond one day before claiming reliability. Roll back only the named test worker or its Cron, then verify the existing two schedules remain unchanged.
 
-## Local tests and CPU measurements
+## Local validation
+
+From this folder:
 
 ```sh
-node --test tests/worker.test.mjs
-node tests/benchmark.mjs
+node --check src/worker.js
+node --test tests/worker.test.mjs tests/cpu-test-worker.test.mjs
 ```
 
-The benchmark uses Node.js `process.cpuUsage()` and reports component-level percentiles for JSON parse, source-time evaluation, RSA token signing/token mock, and combined observe evaluation. Its 7,144-byte synthetic DWD manifest includes a 240-point forecast horizon. The current Node 24.21.0 run measured JSON parse p50/p95 0.005/0.007 ms (5,000 runs), freshness+decision p50/p95 0.007/0.010 ms (10,000), RSA+mock token p50/p95 0.582/1.171 ms (100), and combined CPU components p50/p95 0.590/0.799 ms (500). The RSA microbenchmark maximum was 14.554 ms; garbage collection and process scheduling affect these figures. It is only a local comparison; it is **not** Cloudflare CPU telemetry and cannot prove the 10 ms Cron limit. Initial isolate startup is also not represented by the in-process Node benchmark.
+Wrangler is unavailable in the local environment: it was not installed and npm registry DNS resolution failed. No remote Wrangler execution, deployment, or Cron run was performed. Local Node measurements/profile are explicitly not equivalent to Cloudflare CPU telemetry.
 
-The local Python suite found in the available October export (which has no `.git` metadata and is not the current GitHub `main`) also passed 63 tests. This is not a rerun of PR #20’s current 131-test suite; the prior PR report states those 131 passed. A fresh clone attempt was blocked by unavailable DNS/network, so current-main Python tests could not be independently rerun. A real Cloudflare CPU result would require a separately approved deployment of this isolated Worker, then a full 24-hour Observe period and read-only Cloudflare analytics. The prior live Workers showed watchdog p50 13.524 ms/p95 26.128 ms and CPU-test p50 6.407 ms/p95 11.934 ms (rolling 24h at the previous check); these are other Workers, not a measurement of this dispatcher. The standalone dispatch path is not authorized or enabled.
-
-## 24-hour Observe acceptance
-
-After account-plan/cost verification and explicit deployment approval:
-
-- Preserve both existing schedules and deploy only the named standalone Worker.
-- Keep dispatch `disabled`; use Observe only. Never configure `WEATHER_DISPATCH_ENABLED=true`.
-- Collect 96 planned checks and compare UTC decision, source age, last workflow start/event/status, decision/reason, failure label and Cloudflare CPU.
-- Acceptance: at least 92/96 decision logs, zero dispatch requests, zero CPU-limit errors, no credential strings in logs, and a manual review of each stale-data or missed-schedule case. This does not prove long-term reliability; continue monitoring.
-- Roll back by setting mode to `disabled` or deleting only the separately deployed test Worker after explicit approval. Do not change existing producer or Watchdog schedules.
-
-## PR #20
-
-PR #20 remains separate and unchanged: open Draft, head `80acdd306beeed8f590f28f81837937e2f80e24e`, reported mergeable against `main` at base `ec51ac169889acbf954565e2bad720cd2499d4df`. This dispatcher branch must not be combined with its MOSMIX fallback changes.
+See [OBSERVE-TEST.md](OBSERVE-TEST.md) for the exact configuration review and activation checklist. PR #20 remains separate and unchanged.
