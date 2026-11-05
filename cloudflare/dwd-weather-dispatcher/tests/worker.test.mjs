@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateKeyPairSync, createVerify } from 'node:crypto';
-import worker, { appToken, assessWeather, decide, evaluateWeatherDispatcher, isEligibleCron, privateKeyPkcs8 } from '../src/worker.js';
+import worker, { assessWeather, decide, evaluateWeatherDispatcher, isEligibleCron } from '../src/worker.js';
 
 const now = Date.parse('2026-11-04T12:00:00Z');
 const fresh = {
@@ -19,14 +18,12 @@ const stale = {
   observations: { temperatureHumidity: { status: 'stale', measuredAt: '2026-11-04T10:00:00Z', freshnessThresholdMinutes: 60 } },
   forecast: { status: 'stale', issuedAt: '2026-11-03T23:00:00Z', validThrough: '2026-11-04T10:00:00Z', hasUsablePoint: false },
 };
-const appPair = generateKeyPairSync('rsa', { modulusLength: 2048 });
-const appEnv = (mode = 'observe') => ({ WEATHER_DISPATCH_MODE: mode, WEATHER_DISPATCH_ENABLED: 'false', GITHUB_APP_ID: '5555433', GITHUB_INSTALLATION_ID: '177220128', GITHUB_APP_PRIVATE_KEY: appPair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() });
+const appEnv = (mode = 'observe') => ({ WEATHER_DISPATCH_MODE: mode, WEATHER_DISPATCH_ENABLED: 'false' });
 
 function mockFetch({ snapshot = fresh, runs = [], sidecarStatus = 200, runStatus = 200 } = {}) {
   const requests = [];
   const fetchImpl = async (url, init = {}) => {
     requests.push({ url: String(url), init });
-    if (String(url).includes('/access_tokens')) return new Response(JSON.stringify({ token: 'mock-installation-token' }), { status: 201 });
     if (String(url).includes('raw.githubusercontent.com')) return new Response(sidecarStatus === 200 ? JSON.stringify(snapshot) : 'unavailable', { status: sidecarStatus });
     if (String(url).includes('/actions/workflows/')) return new Response(runStatus === 200 ? JSON.stringify({ workflow_runs: runs }) : 'failed', { status: runStatus });
     throw new Error(`unexpected URL ${url}`);
@@ -43,15 +40,15 @@ test('2 disabled explicit mode also makes no requests', async () => {
   const result = await evaluateWeatherDispatcher({ WEATHER_DISPATCH_MODE: 'disabled' }, async () => assert.fail(), now);
   assert.equal(result.dispatch, false); assert.equal(result.reason, 'disabled');
 });
-test('3 observe reads public sidecar and workflow history but never writes dispatch', async () => {
+test('3 secret-free observe reads public sidecar and workflow history with anonymous GETs only', async () => {
   const { requests, fetchImpl } = mockFetch();
   const result = await evaluateWeatherDispatcher(appEnv('observe'), fetchImpl, now);
   assert.equal(result.reason, 'data-fresh'); assert.equal(result.dispatch, false);
   assert.ok(requests.some((x) => x.url.includes('raw.githubusercontent.com')));
   assert.ok(requests.some((x) => x.url.includes('/actions/workflows/update-dwd-weather.yml/runs')));
-  assert.equal(requests.some((x) => x.url.endsWith('/dispatches')), false);
-  const tokenRequest = requests.find((x) => x.url.includes('/access_tokens'));
-  assert.deepEqual(JSON.parse(tokenRequest.init.body), { repositories: ['lhh-data-hub'], permissions: { actions: 'read' } });
+  assert.equal(requests.every((x) => (x.init.method || 'GET') === 'GET'), true);
+  assert.equal(requests.every((x) => !Object.keys(x.init.headers || {}).some((name) => name.toLowerCase() === 'authorization')), true);
+  assert.equal(requests.some((x) => x.url.includes('/access_tokens') || x.url.endsWith('/dispatches')), false);
 });
 test('4 fresh measured data prevents a hypothetical dispatch', () => {
   const result = decide({ mode: 'observe', assessment: assessWeather(fresh, now), runs: [], now });
@@ -117,11 +114,14 @@ test('16 malformed or missing GitHub run history fails closed', () => {
   assert.equal(decide({ mode: 'observe', assessment, runs: null, now }).dispatch, false);
   assert.equal(decide({ mode: 'observe', assessment, runs: [{ status: 'queued' }], now }).reason, 'workflow-history-invalid');
 });
-test('17 GitHub API failures fail closed without dispatch', async () => {
-  const { requests, fetchImpl } = mockFetch({ runStatus: 403 });
-  const result = await evaluateWeatherDispatcher(appEnv('observe'), fetchImpl, now);
-  assert.equal(result.reason, 'github-workflow-history-unavailable'); assert.equal(result.dispatch, false);
-  assert.equal(requests.some((x) => x.url.endsWith('/dispatches')), false);
+test('17 GitHub API 403 and 429 fail closed without retry or dispatch', async () => {
+  for (const runStatus of [403, 429]) {
+    const { requests, fetchImpl } = mockFetch({ runStatus });
+    const result = await evaluateWeatherDispatcher(appEnv('observe'), fetchImpl, now);
+    assert.equal(result.reason, 'github-workflow-history-unavailable'); assert.equal(result.errorStatus, `github-api-http-${runStatus}`); assert.equal(result.dispatch, false);
+    assert.equal(requests.length, 2); // sidecar + a single anonymous API read
+    assert.equal(requests.some((x) => x.url.endsWith('/dispatches')), false);
+  }
 });
 test('18 unavailable public sidecar fails closed', async () => {
   const { fetchImpl } = mockFetch({ sidecarStatus: 503 });
@@ -133,38 +133,33 @@ test('19 invalid JSON and invalid source identity fail closed', async () => {
   const result = await evaluateWeatherDispatcher(appEnv('observe'), fetchImpl, now);
   assert.equal(result.reason, 'source-or-attempt-time-invalid'); assert.equal(result.dispatch, false);
 });
-test('20 missing GitHub App secret is reported without exposing a value', async () => {
-  const { fetchImpl } = mockFetch();
-  const result = await evaluateWeatherDispatcher({ WEATHER_DISPATCH_MODE: 'observe', GITHUB_APP_ID: '5555433', GITHUB_INSTALLATION_ID: '177220128' }, fetchImpl, now);
-  assert.equal(result.reason, 'github-app-config-missing'); assert.equal(result.dispatch, false);
+test('20 secret-free observe succeeds without GitHub App configuration', async () => {
+  const { requests, fetchImpl } = mockFetch();
+  const result = await evaluateWeatherDispatcher({ WEATHER_DISPATCH_MODE: 'observe' }, fetchImpl, now);
+  assert.equal(result.reason, 'data-fresh'); assert.equal(result.dispatch, false);
+  assert.equal(requests.some((x) => x.url.includes('/access_tokens')), false);
 });
 test('21 dispatch mode is fail-closed without explicit gate and cross-invocation lock', async () => {
   const { requests, fetchImpl } = mockFetch({ snapshot: stale });
   const env = appEnv('dispatch'); env.WEATHER_DISPATCH_ENABLED = 'true';
   const result = await evaluateWeatherDispatcher(env, fetchImpl, now);
   assert.equal(result.reason, 'atomic-dispatch-lock-not-configured'); assert.equal(result.dispatch, false);
-  assert.equal(requests.some((x) => x.url.endsWith('/dispatches')), false);
-  const tokenBody = JSON.parse(requests.find((x) => x.url.includes('/access_tokens')).init.body);
-  assert.deepEqual(tokenBody.permissions, { actions: 'read' });
+  assert.equal(requests.some((x) => (x.init.method || 'GET') !== 'GET'), false);
+  assert.equal(requests.some((x) => x.url.includes('/access_tokens') || x.url.endsWith('/dispatches')), false);
 });
 test('22 malformed mode does not access network', async () => {
   let count = 0;
   const result = await evaluateWeatherDispatcher({ WEATHER_DISPATCH_MODE: 'enabled' }, async () => { count++; }, now);
   assert.equal(result.reason, 'mode-invalid'); assert.equal(count, 0);
 });
-test('23 GitHub JWT is RS256 signed and installation token is repository-scoped read-only', async () => {
-  const pem = appPair.privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
-  let captured;
-  const token = await appToken({ GITHUB_APP_ID: '5555433', GITHUB_INSTALLATION_ID: '177220128', GITHUB_APP_PRIVATE_KEY: pem }, async (url, init) => {
-    captured = { url, init }; return new Response(JSON.stringify({ token: 'mock-token' }), { status: 201 });
-  }, 'read', 1793793600);
-  assert.equal(token, 'mock-token');
-  assert.equal(new URL(captured.url).pathname, '/app/installations/177220128/access_tokens');
-  assert.deepEqual(JSON.parse(captured.init.body), { repositories: ['lhh-data-hub'], permissions: { actions: 'read' } });
-  const jwt = captured.init.headers.authorization.slice(7).split('.');
-  const verify = createVerify('RSA-SHA256'); verify.update(`${jwt[0]}.${jwt[1]}`); verify.end();
-  assert.equal(verify.verify(appPair.publicKey, Buffer.from(jwt[2].replace(/-/g, '+').replace(/_/g, '/'), 'base64')), true);
-  assert.ok(privateKeyPkcs8(pem).byteLength > 0);
+test('23 workflow history request uses documented public REST endpoint and only read headers', async () => {
+  const { requests, fetchImpl } = mockFetch();
+  await evaluateWeatherDispatcher({ WEATHER_DISPATCH_MODE: 'observe' }, fetchImpl, now);
+  const request = requests.find((x) => x.url.includes('/actions/workflows/'));
+  assert.equal(new URL(request.url).pathname, '/repos/RonnsenDD/lhh-data-hub/actions/workflows/update-dwd-weather.yml/runs');
+  assert.equal(new URL(request.url).searchParams.get('per_page'), '20');
+  assert.equal(request.init.method || 'GET', 'GET');
+  assert.equal(Object.keys(request.init.headers).some((name) => name.toLowerCase() === 'authorization'), false);
 });
 test('24 Cron decision is restricted to four quarter-hour offsets and no public fetch handler exists', () => {
   for (const minute of [8, 23, 38, 53]) assert.equal(isEligibleCron({ scheduledTime: Date.parse(`2026-11-04T12:${String(minute).padStart(2, '0')}:00Z`) }), true);
@@ -176,13 +171,13 @@ test('25 observe decision includes UTC time and original-source age, not retriev
   assert.equal(result.decisionTime, '2026-11-04T12:00:00.000Z');
   assert.equal(result.weatherAgeMinutes, 20); assert.equal(result.workflowEvent, 'schedule');
 });
-test('26 dispatch mode with closed gate requests read-only token and cannot dispatch', async () => {
+test('26 dispatch mode with closed gate is read-only and cannot dispatch', async () => {
   const { requests, fetchImpl } = mockFetch({ snapshot: stale });
   const env = appEnv('dispatch');
   const result = await evaluateWeatherDispatcher(env, fetchImpl, now);
   assert.equal(result.reason, 'dispatch-gate-disabled'); assert.equal(result.dispatch, false);
-  assert.deepEqual(JSON.parse(requests.find((x) => x.url.includes('/access_tokens')).init.body).permissions, { actions: 'read' });
-  assert.equal(requests.some((x) => x.url.endsWith('/dispatches')), false);
+  assert.equal(requests.some((x) => (x.init.method || 'GET') !== 'GET'), false);
+  assert.equal(requests.some((x) => x.url.includes('/access_tokens') || x.url.endsWith('/dispatches')), false);
 });
 test('27 invalid sidecar JSON fails closed', async () => {
   const fetchImpl = async (url) => {
@@ -192,15 +187,13 @@ test('27 invalid sidecar JSON fails closed', async () => {
   const result = await evaluateWeatherDispatcher(appEnv('observe'), fetchImpl, now);
   assert.equal(result.reason, 'public-sidecar-invalid'); assert.equal(result.errorStatus, 'sidecar-json-invalid');
 });
-test('28 scheduled logs contain no app key or installation token values', async () => {
+test('28 scheduled logs contain no secrets or authorization values', async () => {
   const savedFetch = globalThis.fetch;
   const savedLog = console.log;
   const savedError = console.error;
   const captured = [];
   const env = appEnv('observe');
-  const privateValue = env.GITHUB_APP_PRIVATE_KEY;
   globalThis.fetch = async (url) => {
-    if (String(url).includes('/access_tokens')) return new Response(JSON.stringify({ token: 'secret-installation-token' }), { status: 201 });
     if (String(url).includes('raw.githubusercontent.com')) return new Response(JSON.stringify(fresh), { status: 200 });
     if (String(url).includes('/actions/workflows/')) return new Response(JSON.stringify({ workflow_runs: [] }), { status: 200 });
     throw new Error('unexpected request');
@@ -211,7 +204,8 @@ test('28 scheduled logs contain no app key or installation token values', async 
   finally { globalThis.fetch = savedFetch; console.log = savedLog; console.error = savedError; }
   const logs = captured.join('\n');
   assert.ok(logs.includes('data-fresh'));
-  assert.equal(logs.includes(privateValue), false);
-  assert.equal(logs.includes('secret-installation-token'), false);
+  assert.equal(logs.includes('Bearer '), false);
+  assert.equal(logs.includes('/access_tokens'), false);
 });
+
 
