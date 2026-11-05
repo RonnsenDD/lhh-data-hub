@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import worker, { assessWeather, decide, evaluateWeatherDispatcher, isEligibleCron } from '../src/worker.js';
 
 const now = Date.parse('2026-11-04T12:00:00Z');
@@ -206,6 +207,79 @@ test('28 scheduled logs contain no secrets or authorization values', async () =>
   assert.ok(logs.includes('data-fresh'));
   assert.equal(logs.includes('Bearer '), false);
   assert.equal(logs.includes('/access_tokens'), false);
+});
+
+test('29 observe cron logs source age, workflow timestamps, status and hypothetical decision without dispatch', async () => {
+  const savedFetch = globalThis.fetch;
+  const savedLog = console.log;
+  const captured = [];
+  const run = {
+    created_at: '2026-11-04T11:00:00Z', run_started_at: '2026-11-04T11:00:03Z',
+    status: 'completed', conclusion: 'success', event: 'schedule',
+  };
+  const env = appEnv('observe');
+  globalThis.fetch = async (url, init = {}) => {
+    assert.equal(init.method || 'GET', 'GET');
+    assert.equal(Object.keys(init.headers || {}).some((key) => key.toLowerCase() === 'authorization'), false);
+    if (String(url).includes('raw.githubusercontent.com')) return new Response(JSON.stringify(stale), { status: 200 });
+    if (String(url).includes('/actions/workflows/')) return new Response(JSON.stringify({ workflow_runs: [run] }), { status: 200 });
+    throw new Error('unexpected-request');
+  };
+  console.log = (...args) => captured.push(args.join(' '));
+  try { await worker.scheduled({ scheduledTime: Date.parse('2026-11-04T12:08:00Z') }, env); }
+  finally { globalThis.fetch = savedFetch; console.log = savedLog; }
+  const entry = JSON.parse(captured[0]);
+  assert.equal(entry.decisionTime, '2026-11-04T12:08:00.000Z');
+  assert.equal(entry.weatherAgeMinutes, 128);
+  assert.equal(entry.latestWorkflowCreatedAt, run.created_at);
+  assert.equal(entry.latestWorkflowStartedAt, run.run_started_at);
+  assert.equal(entry.lastSuccessfulWorkflowStartedAt, run.run_started_at);
+  assert.equal(entry.workflowStatus, 'completed');
+  assert.equal(entry.workflowEvent, 'schedule');
+  assert.equal(entry.runningWorkflowCount, 0);
+  assert.equal(entry.wouldDispatch, true);
+  assert.equal(entry.dispatch, false);
+  assert.equal(entry.reason, 'would-dispatch');
+});
+
+test('30 running workflow is visible in observe telemetry and prevents hypothetical dispatch', () => {
+  const runs = [
+    { status: 'in_progress', created_at: '2026-11-04T11:00:00Z', run_started_at: '2026-11-04T11:00:02Z', event: 'schedule' },
+    { status: 'completed', conclusion: 'success', created_at: '2026-11-04T09:00:00Z', run_started_at: '2026-11-04T09:00:01Z', event: 'schedule' },
+  ];
+  const result = decide({ mode: 'observe', assessment: assessWeather(stale, now), runs, now });
+  assert.equal(result.runningWorkflowCount, 1);
+  assert.equal(result.lastSuccessfulWorkflowStartedAt, '2026-11-04T09:00:01Z');
+  assert.equal(result.reason, 'workflow-active');
+  assert.equal(result.wouldDispatch, undefined);
+  assert.equal(result.dispatch, false);
+});
+
+test('31 Cron-only Wrangler config exposes no HTTP, workers.dev, preview URL, secrets or storage', async () => {
+  const configText = await readFile(new URL('../wrangler.observe-test.jsonc', import.meta.url), 'utf8');
+  const config = JSON.parse(configText);
+  assert.equal(config.name, 'lhh-dwd-dispatcher-observe-test');
+  assert.equal(config.main, 'src/worker.js');
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.preview_urls, false);
+  assert.deepEqual(config.triggers.crons, ['8,23,38,53 * * * *']);
+  assert.equal(config.vars.WEATHER_DISPATCH_MODE, 'observe');
+  assert.equal(config.vars.WEATHER_DISPATCH_ENABLED, 'false');
+  assert.deepEqual(Object.keys(config).filter((key) => /routes|unsafe|durable|kv|r2|d1|secrets/i.test(key)), []);
+  assert.equal(typeof worker.scheduled, 'function');
+  assert.equal(typeof worker.fetch, 'undefined');
+});
+
+test('32 base dispatcher config is inert: disabled, no Cron, no public route and no credentials', async () => {
+  const configText = await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  const config = JSON.parse(configText);
+  assert.equal(config.vars.WEATHER_DISPATCH_MODE, 'disabled');
+  assert.equal(config.vars.WEATHER_DISPATCH_ENABLED, 'false');
+  assert.equal(config.triggers, undefined);
+  assert.equal(config.routes, undefined);
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.preview_urls, false);
+  assert.equal(Object.keys(config.vars).some((key) => /token|secret|private|github_app/i.test(key)), false);
 });
 
 
