@@ -37,6 +37,13 @@ function newestRun(runs) {
   return runs.reduce((latest, run) => !latest || Date.parse(run.created_at) > Date.parse(latest.created_at) ? run : latest, null);
 }
 
+function newestSuccessfulStartedRun(runs) {
+  return runs.reduce((latest, run) => {
+    if (run.status !== "completed" || run.conclusion !== "success" || !validInstant(run.run_started_at)) return latest;
+    return !latest || Date.parse(run.run_started_at) > Date.parse(latest.run_started_at) ? run : latest;
+  }, null);
+}
+
 /** Re-evaluate original observation/model times; derivedAt is intentionally ignored. */
 export function assessWeather(snapshot, now = Date.now()) {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return { valid: false, reason: "snapshot-invalid" };
@@ -103,7 +110,10 @@ export function decide({ mode, assessment, runs, now = Date.now(), dispatchEnabl
     mosmixAgeMinutes: assessment?.mosmixAgeMinutes ?? null,
     lastSuccessfulAt: assessment?.lastSuccessfulAt ?? null,
     snapshotPublishedAt: assessment?.snapshotPublishedAt ?? null,
-    lastWorkflowStart: null,
+    latestWorkflowCreatedAt: null,
+    latestWorkflowStartedAt: null,
+    lastSuccessfulWorkflowStartedAt: null,
+    runningWorkflowCount: 0,
     workflowStatus: null,
     workflowEvent: null,
     dispatch: false,
@@ -112,11 +122,20 @@ export function decide({ mode, assessment, runs, now = Date.now(), dispatchEnabl
   if (mode === "disabled" || !mode) return { ...base, reason: "disabled" };
   if (mode !== "observe" && mode !== "dispatch") return { ...base, reason: "mode-invalid", errorStatus: "configuration-invalid" };
   if (!assessment?.valid) return { ...base, reason: assessment?.reason || "source-state-unknown", errorStatus: "source-state-invalid" };
-  if (!Array.isArray(runs) || runs.some((run) => !run || !validInstant(run.created_at) || ageMinutes(run.created_at, now) === null || !["queued", "in_progress", "completed"].includes(run.status))) {
+  if (!Array.isArray(runs) || runs.some((run) => !run || !validInstant(run.created_at) || ageMinutes(run.created_at, now) === null || !["queued", "in_progress", "completed"].includes(run.status)
+    || (run.run_started_at !== null && run.run_started_at !== undefined && !validInstant(run.run_started_at)))) {
     return { ...base, reason: "workflow-history-invalid", errorStatus: "workflow-history-invalid" };
   }
   const latest = newestRun(runs);
-  if (latest) Object.assign(base, { lastWorkflowStart: latest.created_at, workflowStatus: latest.status, workflowEvent: typeof latest.event === "string" ? latest.event : null });
+  if (latest) Object.assign(base, {
+    latestWorkflowCreatedAt: latest.created_at,
+    latestWorkflowStartedAt: validInstant(latest.run_started_at) ? latest.run_started_at : null,
+    workflowStatus: latest.status,
+    workflowEvent: typeof latest.event === "string" ? latest.event : null,
+  });
+  const latestSuccessful = newestSuccessfulStartedRun(runs);
+  if (latestSuccessful) base.lastSuccessfulWorkflowStartedAt = latestSuccessful.run_started_at;
+  base.runningWorkflowCount = runs.reduce((count, run) => count + (run.status === "queued" || run.status === "in_progress" ? 1 : 0), 0);
   if (!assessment.stale) return { ...base, reason: "data-fresh" };
   if (runs.some((run) => run.status === "queued" || run.status === "in_progress")) return { ...base, reason: "workflow-active" };
   if (runs.some((run) => (now - Date.parse(run.created_at)) / 60000 < RUN_COOLDOWN_MINUTES)) return { ...base, reason: "workflow-start-cooldown" };
