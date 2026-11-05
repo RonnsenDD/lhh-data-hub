@@ -13,40 +13,6 @@ const MOSMIX_MAX_MINUTES = 12 * 60;
 const CHECK_MINUTES_UTC = new Set([8, 23, 38, 53]);
 const API_HEADERS = { accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" };
 
-const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-const utf8 = (value) => new TextEncoder().encode(value);
-
-function derLength(length) {
-  if (length < 128) return Uint8Array.of(length);
-  const bytes = [];
-  for (let value = length; value > 0; value >>>= 8) bytes.unshift(value & 0xff);
-  return Uint8Array.of(0x80 | bytes.length, ...bytes);
-}
-
-function der(tag, value) {
-  const length = derLength(value.length);
-  const result = new Uint8Array(1 + length.length + value.length);
-  result[0] = tag;
-  result.set(length, 1);
-  result.set(value, 1 + length.length);
-  return result;
-}
-
-export function privateKeyPkcs8(pem) {
-  const match = /^-----BEGIN (PRIVATE KEY|RSA PRIVATE KEY)-----([\s\S]+?)-----END \1-----$/.exec(String(pem || "").trim());
-  if (!match) throw new Error("github-app-key-format-unsupported");
-  const raw = Uint8Array.from(atob(match[2].replace(/\s/g, "")), (char) => char.charCodeAt(0));
-  if (match[1] === "PRIVATE KEY") return raw;
-  const algorithm = der(0x30, Uint8Array.of(0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00));
-  const version = Uint8Array.of(0x02, 0x01, 0x00);
-  const privateOctets = der(0x04, raw);
-  const content = new Uint8Array(version.length + algorithm.length + privateOctets.length);
-  content.set(version);
-  content.set(algorithm, version.length);
-  content.set(privateOctets, version.length + algorithm.length);
-  return der(0x30, content);
-}
-
 function validInstant(value) {
   if (typeof value !== "string") return false;
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-](\d{2}):(\d{2}))$/.exec(value);
@@ -162,28 +128,10 @@ export function decide({ mode, assessment, runs, now = Date.now(), dispatchEnabl
   return { ...base, reason: "dispatch-eligible", dispatch: true };
 }
 
-export async function appToken(env, fetchImpl = fetch, permission = "read", nowSeconds = Math.floor(Date.now() / 1000)) {
-  if (!env.GITHUB_APP_ID || !env.GITHUB_INSTALLATION_ID || !env.GITHUB_APP_PRIVATE_KEY) throw new Error("github-app-config-missing");
-  const header = b64url(utf8(JSON.stringify({ alg: "RS256", typ: "JWT" })));
-  const payload = b64url(utf8(JSON.stringify({ iat: nowSeconds - 30, exp: nowSeconds + 540, iss: env.GITHUB_APP_ID })));
-  const signingInput = `${header}.${payload}`;
-  const key = await crypto.subtle.importKey("pkcs8", privateKeyPkcs8(env.GITHUB_APP_PRIVATE_KEY), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, utf8(signingInput));
-  const jwt = `${signingInput}.${b64url(signature)}`;
-  const response = await fetchImpl(`${API}/app/installations/${encodeURIComponent(env.GITHUB_INSTALLATION_ID)}/access_tokens`, {
-    method: "POST",
-    headers: { ...API_HEADERS, authorization: `Bearer ${jwt}` },
-    body: JSON.stringify({ repositories: [REPO], permissions: { actions: permission } }),
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!response.ok) throw new Error(`github-token-http-${response.status}`);
-  const result = await response.json();
-  if (typeof result.token !== "string" || !result.token) throw new Error("github-token-response-invalid");
-  return result.token;
-}
-
-async function getJson(url, token, fetchImpl = fetch) {
-  const response = await fetchImpl(url, { headers: { ...API_HEADERS, authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) });
+async function getJson(url, fetchImpl = fetch) {
+  // The repository and workflow history are public. Use an anonymous GET so
+  // Observe needs neither an App private key nor an installation token.
+  const response = await fetchImpl(url, { headers: API_HEADERS, signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(`github-api-http-${response.status}`);
   return response.json();
 }
@@ -204,16 +152,9 @@ export async function evaluateWeatherDispatcher(env, fetchImpl = fetch, now = Da
     const http = /^sidecar-http-(\d{3})$/.exec(error.message);
     return { dispatch: false, reason: http ? "public-sidecar-unavailable" : "public-sidecar-invalid", decisionTime: new Date(now).toISOString(), errorStatus: http ? `sidecar-http-${http[1]}` : error.message === "sidecar-json-invalid" ? "sidecar-json-invalid" : "sidecar-request-failed" };
   }
-  let token;
-  // This preparation branch never requests Actions: write. A future approved
-  // implementation must add a reviewed lock path before it can request that scope.
-  try { token = await appToken(env, fetchImpl, "read"); }
-  catch (error) {
-    return { ...decide({ mode, assessment, runs: null, now }), dispatch: false, wouldDispatch: false, reason: error.message === "github-app-config-missing" ? "github-app-config-missing" : "github-authentication-unavailable", errorStatus: error.message.startsWith("github-token-http-") ? error.message : "github-authentication-failed" };
-  }
   let runs;
   try {
-    const payload = await getJson(`${API}/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=20`, token, fetchImpl);
+    const payload = await getJson(`${API}/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=20`, fetchImpl);
     runs = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : null;
   } catch (error) {
     return { ...decide({ mode, assessment, runs: null, now }), dispatch: false, wouldDispatch: false, reason: "github-workflow-history-unavailable", errorStatus: error.message.startsWith("github-api-http-") ? error.message : "github-api-request-failed" };
@@ -245,3 +186,4 @@ export default {
     }
   },
 };
+
