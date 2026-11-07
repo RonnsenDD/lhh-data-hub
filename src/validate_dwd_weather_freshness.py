@@ -66,6 +66,23 @@ def validate_manifest(document: Any, *, require_usable_valid_times: bool = False
         raise ValueError("forecast.status is missing or unsupported")
     for name in ("issuedAt", "retrievedAt", "validAt", "validThrough"):
         _instant(forecast.get(name), f"forecast.{name}")
+    if forecast.get("refreshStatus") is not None:
+        if forecast.get("refreshStatus") not in {"success", "error"}:
+            raise ValueError("forecast.refreshStatus is unsupported")
+        if forecast["refreshStatus"] == "error":
+            if not isinstance(forecast.get("refreshStatusReason"), str) or not forecast["refreshStatusReason"]:
+                raise ValueError("forecast.refreshStatusReason is required after a refresh error")
+            refresh_attempt = _instant(forecast.get("refreshAttemptAt"), "forecast.refreshAttemptAt", nullable=False)
+            last_attempt = _instant(document.get("lastAttemptAt"), "lastAttemptAt", nullable=False)
+            if refresh_attempt != last_attempt:
+                raise ValueError("forecast.refreshAttemptAt must match lastAttemptAt")
+            issued = _instant(forecast.get("issuedAt"), "forecast.issuedAt", nullable=False)
+            age_at_attempt = forecast.get("ageAtAttemptHours")
+            if not isinstance(age_at_attempt, (int, float)) or isinstance(age_at_attempt, bool):
+                raise ValueError("forecast.ageAtAttemptHours is required after a refresh error")
+            actual_age = (last_attempt - issued).total_seconds() / 3600
+            if abs(actual_age - age_at_attempt) > 0.1:
+                raise ValueError("forecast.ageAtAttemptHours disagrees with issuedAt and lastAttemptAt")
     has_usable = forecast.get("hasUsablePoint")
     if not isinstance(has_usable, bool):
         raise ValueError("forecast.hasUsablePoint must be boolean")

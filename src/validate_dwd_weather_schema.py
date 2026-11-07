@@ -149,6 +149,20 @@ def validate_publication(instance: Any, schema: dict[str, Any], *, now: datetime
     forecast = instance.get("forecast", {})
     forecast_status = forecast.get("status")
     substatuses.append(forecast_status)
+    refresh_status = forecast.get("refreshStatus")
+    if refresh_status is not None:
+        if refresh_status not in ("success", "error"):
+            errors.append("$.forecast.refreshStatus: invalid refresh status")
+        elif refresh_status == "error":
+            substatuses.append("error")
+            if not isinstance(forecast.get("refreshStatusReason"), str) or not forecast["refreshStatusReason"]:
+                errors.append("$.forecast.refreshStatusReason: required when refresh failed")
+            try:
+                refresh_attempt = parse_timestamp(forecast.get("refreshAttemptAt"))
+                if refresh_attempt != attempted:
+                    errors.append("$.forecast.refreshAttemptAt: must match lastAttemptAt")
+            except (TypeError, ValueError):
+                errors.append("$.forecast.refreshAttemptAt: invalid or missing timestamp")
     if forecast_status == "error":
         errors.append("$.forecast.status: technical forecast errors cannot be published")
     elif forecast_status not in ("ok", "stale"):
@@ -174,9 +188,14 @@ def validate_publication(instance: Any, schema: dict[str, Any], *, now: datetime
             actual_age = (retrieved - issued).total_seconds() / 3600
             if abs(actual_age - age_hours) > 0.1:
                 errors.append("$.forecast.ageHours: inconsistent with issuedAt and retrievedAt")
-            if forecast_status == "ok" and actual_age > 12:
+            age_at_attempt = (attempted - issued).total_seconds() / 3600
+            reported_age_at_attempt = forecast.get("ageAtAttemptHours")
+            if reported_age_at_attempt is not None:
+                if not isinstance(reported_age_at_attempt, (int, float)) or isinstance(reported_age_at_attempt, bool) or abs(age_at_attempt - reported_age_at_attempt) > 0.1:
+                    errors.append("$.forecast.ageAtAttemptHours: inconsistent with issuedAt and lastAttemptAt")
+            if forecast_status == "ok" and age_at_attempt > 12:
                 errors.append("$.forecast.status: ok contradicts the 12-hour freshness threshold")
-            if forecast_status == "stale" and actual_age <= 12:
+            if forecast_status == "stale" and age_at_attempt <= 12:
                 errors.append("$.forecast.status: stale contradicts the 12-hour freshness threshold")
     except (TypeError, ValueError):
         errors.append("$.forecast: invalid issue/retrieval timestamp")
