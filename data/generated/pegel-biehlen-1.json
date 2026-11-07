@@ -5,146 +5,16 @@
   "river": "Schwarze Elster",
   "latestMeasurement": {
     "waterLevelCm": 40.0,
-    "measuredAt": "2026-11-07T10:45:00+01:00",
-    "measuredAtUtc": "2026-11-07T09:45:00Z"
+    "measuredAt": "2026-11-07T17:15:00+01:00",
+    "measuredAtUtc": "2026-11-07T16:15:00Z"
   },
-  "retrievedAt": "2026-11-07T09:57:43.135165Z",
-  "ageMinutes": 12,
+  "retrievedAt": "2026-11-07T16:22:04.050334Z",
+  "ageMinutes": 7,
   "freshnessThresholdMinutes": 45,
   "status": "ok",
   "statusReason": "Messwert innerhalb der Frischegrenze",
   "invalidRowsSkipped": 0,
   "history": [
-    {
-      "measuredAt": "2026-11-06T11:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T10:00:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-11-06T11:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T10:15:00Z",
-      "waterLevelCm": 41.0
-    },
-    {
-      "measuredAt": "2026-11-06T11:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T10:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T11:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T10:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T12:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T11:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T12:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T11:15:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T12:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T11:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T12:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T11:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T13:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T12:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T13:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T12:15:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T13:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T12:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T13:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T12:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T14:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T13:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T14:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T13:15:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T14:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T13:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T14:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T13:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T15:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T14:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T15:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T14:15:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T15:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T14:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T15:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T14:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T16:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T15:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T16:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T15:15:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T16:30:00+01:00",
-      "measuredAtUtc": "2026-11-06T15:30:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T16:45:00+01:00",
-      "measuredAtUtc": "2026-11-06T15:45:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T17:00:00+01:00",
-      "measuredAtUtc": "2026-11-06T16:00:00Z",
-      "waterLevelCm": 42.0
-    },
-    {
-      "measuredAt": "2026-11-06T17:15:00+01:00",
-      "measuredAtUtc": "2026-11-06T16:15:00Z",
-      "waterLevelCm": 42.0
-    },
     {
       "measuredAt": "2026-11-06T17:30:00+01:00",
       "measuredAtUtc": "2026-11-06T16:30:00Z",
@@ -494,6 +364,136 @@
       "measuredAt": "2026-11-07T10:45:00+01:00",
       "measuredAtUtc": "2026-11-07T09:45:00Z",
       "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T11:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T10:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T11:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T10:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T11:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T10:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T11:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T10:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T12:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T11:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T12:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T11:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T12:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T11:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T12:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T11:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T13:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T12:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T13:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T12:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T13:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T12:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T13:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T12:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T14:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T13:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T14:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T13:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T14:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T13:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T14:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T13:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T15:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T14:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T15:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T14:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T15:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T14:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T15:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T14:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T16:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T15:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T16:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T15:15:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T16:30:00+01:00",
+      "measuredAtUtc": "2026-11-07T15:30:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T16:45:00+01:00",
+      "measuredAtUtc": "2026-11-07T15:45:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T17:00:00+01:00",
+      "measuredAtUtc": "2026-11-07T16:00:00Z",
+      "waterLevelCm": 40.0
+    },
+    {
+      "measuredAt": "2026-11-07T17:15:00+01:00",
+      "measuredAtUtc": "2026-11-07T16:15:00Z",
+      "waterLevelCm": 40.0
     }
   ],
   "source": {
@@ -503,5 +503,5 @@
   },
   "officialAlarmLevel": null,
   "officialAlarmLevelNote": "Keine amtliche Alarmstufe aus dem Messwert abgeleitet.",
-  "lastAttemptAt": "2026-11-07T09:57:43.135165Z"
+  "lastAttemptAt": "2026-11-07T16:22:04.050334Z"
 }
