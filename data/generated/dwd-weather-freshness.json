@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "source": "DWD weather snapshot v2",
-  "sourceStatus": "partial",
-  "lastAttemptAt": "2026-11-10T11:50:08Z",
+  "sourceStatus": "ok",
+  "lastAttemptAt": "2026-11-10T19:30:06Z",
   "lastSuccessfulAt": null,
   "snapshotPublishedAt": null,
-  "derivedAt": "2026-11-10T11:50:12.496627Z",
+  "derivedAt": "2026-11-10T19:30:11.044113Z",
   "observations": {
     "temperatureHumidity": {
-      "status": "stale",
-      "measuredAt": "2026-11-10T09:50:00Z",
-      "retrievedAt": "2026-11-10T11:50:08Z",
+      "status": "ok",
+      "measuredAt": "2026-11-10T18:50:00Z",
+      "retrievedAt": "2026-11-10T19:30:06Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "temperatureC",
@@ -19,18 +19,18 @@
       ]
     },
     "stationPressure": {
-      "status": "stale",
-      "measuredAt": "2026-11-10T09:50:00Z",
-      "retrievedAt": "2026-11-10T11:50:08Z",
+      "status": "ok",
+      "measuredAt": "2026-11-10T18:50:00Z",
+      "retrievedAt": "2026-11-10T19:30:06Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "stationPressureHpa"
       ]
     },
     "wind": {
-      "status": "stale",
-      "measuredAt": "2026-11-10T09:50:00Z",
-      "retrievedAt": "2026-11-10T11:50:08Z",
+      "status": "ok",
+      "measuredAt": "2026-11-10T18:50:00Z",
+      "retrievedAt": "2026-11-10T19:30:06Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "windSpeedKmh",
@@ -38,18 +38,18 @@
       ]
     },
     "windGust": {
-      "status": "stale",
-      "measuredAt": "2026-11-10T09:50:00Z",
-      "retrievedAt": "2026-11-10T11:50:08Z",
+      "status": "ok",
+      "measuredAt": "2026-11-10T18:50:00Z",
+      "retrievedAt": "2026-11-10T19:30:06Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "windGustKmh"
       ]
     },
     "precipitation": {
-      "status": "stale",
-      "measuredAt": "2026-11-10T10:20:00Z",
-      "retrievedAt": "2026-11-10T11:50:08Z",
+      "status": "ok",
+      "measuredAt": "2026-11-10T18:50:00Z",
+      "retrievedAt": "2026-11-10T19:30:06Z",
       "freshnessThresholdMinutes": 60,
       "availableFields": [
         "precipitation10MinMm"
@@ -58,20 +58,12 @@
   },
   "forecast": {
     "status": "ok",
-    "issuedAt": "2026-11-10T09:00:00Z",
-    "retrievedAt": "2026-11-10T11:50:08Z",
-    "validAt": "2026-11-10T12:00:00Z",
-    "validThrough": "2026-11-20T16:00:00.000Z",
+    "issuedAt": "2026-11-10T15:00:00Z",
+    "retrievedAt": "2026-11-10T19:30:06Z",
+    "validAt": "2026-11-10T20:00:00Z",
+    "validThrough": "2026-11-20T22:00:00.000Z",
     "hasUsablePoint": true,
     "usableValidTimes": [
-      "2026-11-10T12:00:00Z",
-      "2026-11-10T13:00:00Z",
-      "2026-11-10T14:00:00Z",
-      "2026-11-10T15:00:00Z",
-      "2026-11-10T16:00:00Z",
-      "2026-11-10T17:00:00Z",
-      "2026-11-10T18:00:00Z",
-      "2026-11-10T19:00:00Z",
       "2026-11-10T20:00:00Z",
       "2026-11-10T21:00:00Z",
       "2026-11-10T22:00:00Z",
@@ -308,7 +300,13 @@
       "2026-11-20T13:00:00Z",
       "2026-11-20T14:00:00Z",
       "2026-11-20T15:00:00Z",
-      "2026-11-20T16:00:00Z"
+      "2026-11-20T16:00:00Z",
+      "2026-11-20T17:00:00Z",
+      "2026-11-20T18:00:00Z",
+      "2026-11-20T19:00:00Z",
+      "2026-11-20T20:00:00Z",
+      "2026-11-20T21:00:00Z",
+      "2026-11-20T22:00:00Z"
     ]
   }
 }
