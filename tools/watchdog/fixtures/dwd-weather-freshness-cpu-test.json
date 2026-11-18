@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "source": "DWD weather snapshot v2",
+  "sourceStatus": "ok",
+  "lastAttemptAt": "2026-11-01T02:16:10Z",
+  "lastSuccessfulAt": null,
+  "snapshotPublishedAt": null,
+  "derivedAt": "2026-11-01T06:29:27Z",
+  "observations": {
+    "temperatureHumidity": {
+      "status": "ok",
+      "measuredAt": "2026-11-01T01:20:00Z",
+      "retrievedAt": "2026-11-01T02:16:10Z",
+      "freshnessThresholdMinutes": 60,
+      "availableFields": [
+        "temperatureC",
+        "relativeHumidityPercent",
+        "dewPointC"
+      ]
+    },
+    "stationPressure": {
+      "status": "ok",
+      "measuredAt": "2026-11-01T01:20:00Z",
+      "retrievedAt": "2026-11-01T02:16:10Z",
+      "freshnessThresholdMinutes": 60,
+      "availableFields": [
+        "stationPressureHpa"
+      ]
+    },
+    "wind": {
+      "status": "ok",
+      "measuredAt": "2026-11-01T01:20:00Z",
+      "retrievedAt": "2026-11-01T02:16:10Z",
+      "freshnessThresholdMinutes": 60,
+      "availableFields": [
+        "windSpeedKmh",
+        "windDirectionDeg"
+      ]
+    },
+    "windGust": {
+      "status": "ok",
+      "measuredAt": "2026-11-01T01:20:00Z",
+      "retrievedAt": "2026-11-01T02:16:10Z",
+      "freshnessThresholdMinutes": 60,
+      "availableFields": [
+        "windGustKmh"
+      ]
+    },
+    "precipitation": {
+      "status": "ok",
+      "measuredAt": "2026-11-01T01:50:00Z",
+      "retrievedAt": "2026-11-01T02:16:10Z",
+      "freshnessThresholdMinutes": 60,
+      "availableFields": [
+        "precipitation10MinMm"
+      ]
+    }
+  },
+  "forecast": {
+    "status": "ok",
+    "issuedAt": "2026-10-31T21:00:00Z",
+    "retrievedAt": "2026-11-01T02:16:10Z",
+    "validAt": "2026-11-01T07:00:00Z",
+    "validThrough": "2026-11-11T04:00:00.000Z",
+    "hasUsablePoint": true
+  }
+}

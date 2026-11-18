@@ -3,6 +3,10 @@ import { createGitHubAppClient } from "./github-app-adapter.js";
 export const URLS = {
   weather:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather.json",
+  weatherFreshness:
+    "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/dwd-weather-freshness.json",
+  cpuTestWeatherFreshness:
+    "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/feat/watchdog-stale-dispatch-guarded/tools/watchdog/fixtures/dwd-weather-freshness-cpu-test.json",
   levelsL:
     "https://raw.githubusercontent.com/RonnsenDD/lhh-data-hub/main/data/generated/pegel-lauchhammer.json",
   levelsB:
@@ -143,7 +147,12 @@ async function textBody(res) {
     b.set(c, o);
     o += c.length;
   }
-  return FEED_DECODER.decode(b);
+  const decodeStartedAt = performance.now();
+  return {
+    text: FEED_DECODER.decode(b),
+    byteLength: n,
+    decodeMs: performance.now() - decodeStartedAt,
+  };
 }
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 3;
@@ -153,7 +162,9 @@ async function get(feed, now, fetcher) {
   const allowedOrigin = initialUrl.origin;
   const controller = new AbortController();
   const start = Date.now();
+  const fetchStartedAt = performance.now();
   const timer = setTimeout(() => controller.abort(), LIMITS.timeoutMs);
+  let responseStatus = null;
   try {
     let currentUrl = initialUrl;
     let redirectCount = 0;
@@ -174,6 +185,8 @@ async function get(feed, now, fetcher) {
           Pragma: "no-cache",
         },
       });
+      // Fetch duration is wall time; it includes network wait and is not CPU.
+      // Keep it separate from the synchronous JSON and schema work below.
       if (!REDIRECT_STATUSES.has(response.status)) break;
       const location = response.headers.get("location");
       if (response.body) {
@@ -202,10 +215,13 @@ async function get(feed, now, fetcher) {
       currentUrl = nextUrl;
       redirectCount++;
     }
+    responseStatus = response.status;
+    const fetchWallMs = performance.now() - fetchStartedAt;
     const ageHeader = response.headers.get("age");
     const ageSeconds =
       ageHeader === null ? Number.NaN : Number(ageHeader);
     const transport = {
+      httpStatus: response.status,
       httpDate: response.headers.get("date"),
       httpLastModified: response.headers.get("last-modified"),
       httpAgeSeconds: Number.isFinite(ageSeconds) ? ageSeconds : null,
@@ -229,16 +245,35 @@ async function get(feed, now, fetcher) {
               : "UPSTREAM_HTTP_ERROR",
         ),
       };
-    let j;
+    let j, body;
+    const bodyReadStartedAt = performance.now();
     try {
-      j = JSON.parse(await textBody(response));
+      body = await textBody(response);
+    } catch (e) {
+      throw Error(e.message || "INVALID_BODY");
+    }
+    const bodyReadMs = performance.now() - bodyReadStartedAt;
+    const parseStartedAt = performance.now();
+    try {
+      j = JSON.parse(body.text);
     } catch (e) {
       throw Error(
         e instanceof SyntaxError ? "INVALID_JSON" : e.message || "INVALID_BODY",
       );
     }
     if (!obj(j)) throw Error("INVALID_SCHEMA");
-    return { j, transport, durationMs: Date.now() - start };
+    return {
+      j,
+      transport,
+      durationMs: Date.now() - start,
+      diagnostics: {
+        fetchWallMs,
+        bodyReadWallMs: bodyReadMs,
+        decodeMs: body.decodeMs,
+        jsonParseMs: performance.now() - parseStartedAt,
+        bodyBytes: body.byteLength,
+      },
+    };
   } catch (e) {
     const knownCodes = [
       "INVALID_JSON",
@@ -262,6 +297,7 @@ async function get(feed, now, fetcher) {
           key: feed.key,
           label: feed.label,
           checkedAt: new Date(now).toISOString(),
+          httpStatus: responseStatus,
           reason:
             code === "TIMEOUT"
               ? "Abrufzeitlimit überschritten."
@@ -277,7 +313,7 @@ async function get(feed, now, fetcher) {
     clearTimeout(timer);
   }
 }
-function obs(o, field, now) {
+function obs(o, field, now, ageCache) {
   if (!obj(o))
     return state(
       { field, measuredAt: null, retrievedAt: null },
@@ -301,7 +337,8 @@ function obs(o, field, now) {
         ? o.freshnessThresholdMinutes
         : 45,
     ),
-    a = age(o.measuredAt, lim * 60000, now);
+    a = ageCache?.get(o) ?? age(o.measuredAt, lim * 60000, now);
+  ageCache?.set(o, a);
   return state(
     { ...base, ageMinutes: a.ageMinutes, thresholdMinutes: lim },
     a.status,
@@ -376,7 +413,8 @@ function weather(j, c, now) {
       ["windGust", "windGustKmh"],
       ["precipitation", "precipitation10MinMm"],
     ],
-    products = fields.map(([p, f]) => obs(j.observations[p], f, now)),
+    ageCache = new WeakMap(),
+    products = fields.map(([p, f]) => obs(j.observations[p], f, now, ageCache)),
     forecast = mos(j.forecast, now);
   const producer =
     j.status === "error"
@@ -395,6 +433,98 @@ function weather(j, c, now) {
       forecast,
       ...(producer ? [{ status: producer }] : []),
     ]),
+  };
+}
+// Cron/dispatch evaluation consumes the compact source-time sidecar produced
+// from the validated DWD snapshot. Public / and /status still evaluate the
+// complete weather payload, including all MOSMIX points.
+function weatherFreshness(j, c, now) {
+  if (j.schemaVersion !== 1 || !obj(j.observations) || !obj(j.forecast))
+    return state(c, "ERROR", "INVALID_SCHEMA");
+  const fields = [
+      ["temperatureHumidity", "temperatureC"],
+      ["temperatureHumidity", "relativeHumidityPercent"],
+      ["temperatureHumidity", "dewPointC"],
+      ["stationPressure", "stationPressureHpa"],
+      ["wind", "windSpeedKmh"],
+      ["wind", "windDirectionDeg"],
+      ["windGust", "windGustKmh"],
+      ["precipitation", "precipitation10MinMm"],
+    ],
+    products = fields.map(([name, field]) => {
+      const product = j.observations[name];
+      if (!obj(product)) return state({ field, measuredAt: null }, "UNAVAILABLE", "PRODUCT_MISSING");
+      const base = { field, measuredAt: product.measuredAt ?? null, retrievedAt: product.retrievedAt ?? null };
+      if (product.status === "error") return state(base, "ERROR", "PRODUCER_ERROR");
+      if (product.status === "stale") return state(base, "STALE", "PRODUCER_STALE");
+      if (! ["ok", "partial"].includes(product.status)) return state(base, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
+      if (!Array.isArray(product.availableFields) || !product.availableFields.includes(field))
+        return state(base, "UNAVAILABLE", "VALUE_MISSING");
+      const thresholdMinutes = Math.min(45,
+        Number.isFinite(product.freshnessThresholdMinutes) ? product.freshnessThresholdMinutes : 45);
+      const result = age(product.measuredAt, thresholdMinutes * 60000, now);
+      return state({ ...base, ageMinutes: result.ageMinutes, thresholdMinutes }, result.status, result.reasonCode);
+    });
+  const f = j.forecast,
+    forecastBase = {
+      product: "MOSMIX-L",
+      issuedAt: f.issuedAt ?? null,
+      retrievedAt: f.retrievedAt ?? null,
+      validAt: f.validAt ?? null,
+      validThrough: f.validThrough ?? null,
+    };
+  let forecast;
+  if (f.status === "error") forecast = state(forecastBase, "ERROR", "PRODUCER_ERROR");
+  else if (f.status === "stale") forecast = state(forecastBase, "STALE", "PRODUCER_STALE");
+  else if (f.status === "unavailable") forecast = state(forecastBase, "UNAVAILABLE", "PRODUCER_UNAVAILABLE");
+  else if (!["ok", "partial"].includes(f.status)) forecast = state(forecastBase, "UNKNOWN", "PRODUCER_STATUS_UNKNOWN");
+  else {
+    const result = age(f.issuedAt, LIMITS.mosmixHours * 3600000, now);
+    if (result.status !== "OK") {
+      forecast = state({ ...forecastBase, ageMinutes: result.ageMinutes }, result.status, result.reasonCode || "ISSUE_STALE");
+    } else if (Array.isArray(f.usableValidTimes)) {
+      if ((f.hasUsablePoint === true) !== (f.usableValidTimes.length > 0)) {
+        forecast = state(forecastBase, "ERROR", "INCONSISTENT_VALID_POINT_METADATA");
+      }
+      const usableTimes = [];
+      for (const value of forecast ? [] : f.usableValidTimes) {
+        const parsed = timestamp(value);
+        if (parsed === undefined) {
+          forecast = state(forecastBase, "ERROR", "INVALID_VALID_POINT_TIMES");
+          break;
+        }
+        if (parsed >= now) usableTimes.push([parsed, value]);
+      }
+      if (!forecast) {
+        usableTimes.sort((a, b) => a[0] - b[0]);
+        const next = usableTimes[0];
+        forecast = next
+          ? state({ ...forecastBase, validAt: next[1] }, "OK")
+          : state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+      }
+    } else if (f.hasUsablePoint !== true) {
+      forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+    } else {
+      const nextPoint = timestamp(f.validAt);
+      const horizon = timestamp(f.validThrough);
+      if (nextPoint !== undefined && nextPoint >= now) {
+        forecast = state(forecastBase, "OK");
+      } else if (horizon !== undefined && horizon >= now) {
+        // Legacy sidecars only carry the first usable point at generation time.
+        // A future horizon alone cannot prove a later point is usable, so keep
+        // this status explicitly unknown until the additive time list is present.
+        forecast = state(forecastBase, "UNKNOWN", "FUTURE_POINT_TIMES_UNVERIFIED");
+      } else {
+        forecast = state(forecastBase, "UNAVAILABLE", "NO_VALID_POINT");
+      }
+    }
+  }
+  const producer = j.sourceStatus === "error" ? "ERROR" : j.sourceStatus === "stale" ? "STALE" : ["ok", "partial"].includes(j.sourceStatus) ? null : "UNKNOWN";
+  return {
+    ...c,
+    sourceStatus: j.sourceStatus ?? null,
+    products: { observations: products, forecast },
+    status: worst([...products, forecast, ...(producer ? [{ status: producer }] : [])]),
   };
 }
 function level(j, c, station, now) {
@@ -602,6 +732,11 @@ const feeds = [
   ["graslandfeuerindex", "DWD-Graslandfeuerindex", URLS.grass, grass],
   ["waldbrand_osl", "Waldbrandgefahrenstufe OSL", URLS.wildfire, wildfire],
 ];
+const dispatchFeeds = [
+  ["weather", "DWD-Wetter", URLS.weatherFreshness, weatherFreshness],
+  ["radolan_ry", "RADOLAN-RY", URLS.radar, radar],
+  ["konrad3d", "KONRAD3D", URLS.konrad, konrad],
+];
 async function mapLimit(xs, n, fn) {
   const out = new Array(xs.length);
   let i = 0;
@@ -625,19 +760,25 @@ const times = (j) => ({
 export async function collectStatus({
   nowMs = Date.now(),
   fetcher = fetch,
+  includeDiagnostics = false,
 } = {}) {
   const checkedAt = new Date(nowMs).toISOString(),
+    diagnostics = [],
     sources = await mapLimit(
       feeds,
       LIMITS.concurrency,
       async ([key, label, url, evalFn]) => {
         const r = await get({ key, label, url }, nowMs, fetcher);
-        if (r.failure) return r.failure;
+        if (r.failure) {
+          if (includeDiagnostics) diagnostics.push({ key, failure: r.failure.reasonCode ?? "FETCH_FAILED" });
+          return r.failure;
+        }
         const c = {
           key,
           label,
           checkedAt,
           durationMs: r.durationMs,
+          httpStatus: r.transport.httpStatus,
           transport: {
             httpDate: r.transport.httpDate,
             httpLastModified: r.transport.httpLastModified,
@@ -646,13 +787,21 @@ export async function collectStatus({
           ...times(r.j),
         };
         try {
-          return evalFn(r.j, c, nowMs);
+          const evaluationStartedAt = performance.now();
+          const evaluated = evalFn(r.j, c, nowMs);
+          if (includeDiagnostics) diagnostics.push({
+            key,
+            ...r.diagnostics,
+            // Evaluation timing is synchronous wall time, a practical CPU proxy.
+            evaluationMs: performance.now() - evaluationStartedAt,
+          });
+          return evaluated;
         } catch {
           return state({ key, label, checkedAt }, "ERROR", "EVALUATION_FAILED");
         }
       },
     );
-  return {
+  const result = {
     schemaVersion: 1,
     mode: "observe-only",
     checkedAt,
@@ -666,7 +815,412 @@ export async function collectStatus({
       freshnessFromSourceTimes: true,
     },
   };
+  if (includeDiagnostics) result.diagnostics = diagnostics;
+  return result;
 }
+export async function collectDispatchStatus({
+  nowMs = Date.now(),
+  fetcher = fetch,
+  includeDiagnostics = false,
+  weatherFixtureMode = false,
+} = {}) {
+  const checkedAt = new Date(nowMs).toISOString(),
+    diagnostics = [],
+    feedsForRun = weatherFixtureMode
+      ? dispatchFeeds.map((feed) => feed[0] === "weather"
+        ? [feed[0], feed[1], URLS.cpuTestWeatherFreshness, feed[3]]
+        : feed)
+      : dispatchFeeds,
+    sources = await mapLimit(
+      feedsForRun,
+      LIMITS.concurrency,
+      async ([key, label, url, evalFn]) => {
+        const r = await get({ key, label, url }, nowMs, fetcher);
+        if (r.failure) {
+          if (includeDiagnostics) diagnostics.push({ key, failure: r.failure.reasonCode ?? "FETCH_FAILED" });
+          return r.failure;
+        }
+        const c = {
+          key,
+          label,
+          checkedAt,
+          durationMs: r.durationMs,
+          httpStatus: r.transport.httpStatus,
+          transport: {
+            httpDate: r.transport.httpDate,
+            httpLastModified: r.transport.httpLastModified,
+            httpAgeSeconds: r.transport.httpAgeSeconds,
+          },
+          ...times(r.j),
+          dataSourceMode: key === "weather"
+            ? (weatherFixtureMode ? "test-fixture" : "public-sidecar")
+            : "public-feed",
+        };
+        try {
+          const evaluationStartedAt = performance.now();
+          const evaluated = evalFn(r.j, c, nowMs);
+          if (includeDiagnostics) diagnostics.push({
+            key,
+            ...r.diagnostics,
+            evaluationMs: performance.now() - evaluationStartedAt,
+          });
+          return evaluated;
+        } catch {
+          return state({ key, label, checkedAt }, "ERROR", "EVALUATION_FAILED");
+        }
+      },
+    );
+  const result = {
+    schemaVersion: 1,
+    mode: "dispatch-observe-only",
+    checkedAt,
+    overallStatus: worst(sources),
+    sources,
+    guarantees: {
+      githubRestApiUsed: false,
+      writesPerformed: false,
+      workflowDispatchPerformed: false,
+      persistenceUsed: false,
+      freshnessFromSourceTimes: true,
+    },
+  };
+  if (includeDiagnostics) result.diagnostics = diagnostics;
+  return result;
+}
+const DISPATCH_TARGETS = Object.freeze([
+  { workflowFile: "update-dwd-weather.yml", sourceKeys: ["weather"] },
+  { workflowFile: "update-radolan-ry.yml", sourceKeys: ["radolan_ry", "konrad3d"] },
+]);
+const DISPATCH_COOLDOWN_MS = 30 * 60 * 1000;
+const DISPATCH_MAX_PER_UTC_DAY = 2;
+const DISPATCH_LEASE_MS = 5 * 60 * 1000;
+
+function staleSourceFingerprint(source) {
+  const stamps = [];
+  if (source.key === "weather") {
+    for (const item of source.products?.observations ?? []) {
+      if (item?.status !== "STALE") continue;
+      const measuredAt = item.measuredAt;
+      if (typeof measuredAt === "string" && Number.isFinite(Date.parse(measuredAt))) {
+        stamps.push(Date.parse(measuredAt));
+      }
+    }
+    const forecast = source.products?.forecast;
+    if (forecast?.status === "STALE" && typeof forecast.issuedAt === "string" && Number.isFinite(Date.parse(forecast.issuedAt))) {
+      stamps.push(Date.parse(forecast.issuedAt));
+    }
+  } else {
+    const sourceTime = source.sourceTime ?? source.measuredAt;
+    if (typeof sourceTime === "string" && Number.isFinite(Date.parse(sourceTime))) stamps.push(Date.parse(sourceTime));
+  }
+  // Use the oldest stale product time as the snapshot identity. Freshness
+  // changes in sibling fields must not create a new retry identity while the
+  // same oldest stale measurement remains unresolved.
+  return stamps.length ? source.key + ":oldest=" + Math.min(...stamps) : null;
+}
+
+/** Pure observation used while dispatch is disabled. Makes no API/DO calls. */
+export function planDispatchObservation(report, snapshot = null) {
+  return DISPATCH_TARGETS.map((target) => {
+    const sources = report.sources.filter((source) => target.sourceKeys.includes(source.key));
+    const stale = sources.filter((source) => source.status === "STALE");
+    const detail = (source) => {
+      const staleProducts = source.key === "weather"
+        ? (source.products?.observations ?? []).filter((item) => item?.status === "STALE")
+        : [];
+      const timestamps = staleProducts.map((item) => item?.measuredAt).filter((value) => typeof value === "string" && Number.isFinite(Date.parse(value)));
+      const forecast = source.key === "weather" && source.products?.forecast?.status === "STALE"
+        ? source.products.forecast.issuedAt
+        : null;
+      if (forecast && Number.isFinite(Date.parse(forecast))) timestamps.push(forecast);
+      return {
+        key: source.key,
+        status: source.status,
+        reasonCode: source.reasonCode ?? null,
+        ageMinutes: source.ageMinutes ?? null,
+        thresholdMinutes: source.thresholdMinutes ?? null,
+        sourceTime: timestamps.length ? timestamps.sort()[0] : source.sourceTime ?? source.measuredAt ?? null,
+        staleFields: staleProducts.map((item) => item.field ?? "observation"),
+        freshObservationCount: source.key === "weather"
+          ? (source.products?.observations ?? []).filter((item) => item?.status === "OK").length
+          : null,
+      };
+    };
+    if (!stale.length) return { workflowFile: target.workflowFile, decision: "no_stale_source", sources: sources.map(detail) };
+    const fingerprints = stale.map(staleSourceFingerprint);
+    const workflow = snapshot?.workflows?.find((item) => item.file === target.workflowFile);
+    let runState = "not_checked_read_disabled";
+    if (snapshot) {
+      if (snapshot.queryStatus !== "OK" || workflow?.queryStatus !== "OK") runState = "unavailable";
+      else if (workflow.activeRuns?.length) runState = "already_running";
+      else runState = "no_active_run";
+    }
+    return {
+      workflowFile: target.workflowFile,
+      decision: fingerprints.some((value) => !value)
+        ? "blocked_missing_source_time"
+        : runState === "unavailable"
+          ? "blocked_github_status"
+          : runState === "already_running"
+            ? "already_running"
+            : runState === "no_active_run"
+              ? "would_dispatch_if_enabled"
+              : "stale_candidate_dispatch_disabled",
+      runState,
+      sources: stale.map(detail),
+    };
+  });
+}
+
+function logDispatchObservation(report, snapshot = null, logFn = console.log) {
+  const decisions = planDispatchObservation(report, snapshot);
+  const candidates = decisions.filter((item) => item.decision !== "no_stale_source");
+  if (!candidates.length) return;
+  logFn(JSON.stringify({
+    event: "workflow_dispatch_observation",
+    requestId: crypto.randomUUID(),
+    repository: "RonnsenDD/lhh-data-hub",
+    checkedAt: report.checkedAt,
+    mode: "observe_only",
+    dispatchEnabled: false,
+    githubRunStateChecked: Boolean(snapshot),
+    candidates,
+  }));
+}
+
+function logGitHubError(error) {
+  console.log(JSON.stringify({
+    event: "github_workflow_observation",
+    requestId: crypto.randomUUID(),
+    repository: "RonnsenDD/lhh-data-hub",
+    checkedAt: new Date().toISOString(),
+    queryStatus: "ERROR",
+    reasonCode: typeof error?.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
+      ? error.code
+      : "GITHUB_OBSERVATION_FAILED",
+    httpStatus: Number.isInteger(error?.status) ? error.status : null,
+    stage: typeof error?.stage === "string" && /^[a-z_]+$/.test(error.stage)
+      ? error.stage
+      : "unknown",
+  }));
+}
+
+function logWorkflowObservation(snapshot) {
+  console.log(JSON.stringify({
+    event: "github_workflow_observation",
+    requestId: crypto.randomUUID(),
+    repository: snapshot.repository,
+    checkedAt: snapshot.checkedAt,
+    queryStatus: snapshot.queryStatus,
+    reasonCode: snapshot.reasonCode ?? null,
+    httpStatus: snapshot.httpStatus ?? null,
+    retryAfterSeconds: snapshot.retryAfterSeconds ?? null,
+    rateLimitRemaining: snapshot.rateLimitRemaining ?? null,
+    rateLimitResetAt: snapshot.rateLimitResetAt ?? null,
+    workflows: snapshot.workflows.map((workflow) => ({
+      file: workflow.file,
+      cron: workflow.cron,
+      queryStatus: workflow.queryStatus,
+      reasonCode: workflow.reasonCode ?? null,
+      httpStatus: workflow.httpStatus ?? null,
+      retryAfterSeconds: workflow.retryAfterSeconds ?? null,
+      rateLimitRemaining: workflow.rateLimitRemaining ?? null,
+      rateLimitResetAt: workflow.rateLimitResetAt ?? null,
+      lastSuccess: workflow.lastSuccess
+        ? { id: workflow.lastSuccess.id, createdAt: workflow.lastSuccess.createdAt, startedAt: workflow.lastSuccess.startedAt, conclusion: workflow.lastSuccess.conclusion, headSha: workflow.lastSuccess.headSha }
+        : null,
+      lastFailure: workflow.lastFailure
+        ? { id: workflow.lastFailure.id, createdAt: workflow.lastFailure.createdAt, startedAt: workflow.lastFailure.startedAt, conclusion: workflow.lastFailure.conclusion, headSha: workflow.lastFailure.headSha }
+        : null,
+      activeRuns: workflow.activeRuns ?? [],
+      lastAutomaticRunCreatedAt: workflow.lastAutomaticRunCreatedAt ?? null,
+      lastAutomaticRunStartedAt: workflow.lastAutomaticRunStartedAt ?? null,
+      minutesSinceLastAutomaticRunCreated: workflow.minutesSinceLastAutomaticRunCreated ?? null,
+      minutesSinceLastAutomaticRunStarted: workflow.minutesSinceLastAutomaticRunStarted ?? null,
+      latestExpectedScheduleTickAt: workflow.latestExpectedScheduleTickAt ?? null,
+      latestExpectedTickOverdueMinutes: workflow.latestExpectedTickOverdueMinutes ?? null,
+      lastAutomaticScheduleCreationDelayMinutes: workflow.lastAutomaticScheduleCreationDelayMinutes ?? null,
+      lastAutomaticRunStartDelayMinutes: workflow.lastAutomaticRunStartDelayMinutes ?? null,
+      missingExpectedScheduleTicksBetweenLatestAutomaticRuns: workflow.missingExpectedScheduleTicksBetweenLatestAutomaticRuns ?? null,
+    })),
+  }));
+}
+
+async function coordinatorRequest(coordinator, action, payload) {
+  const response = await coordinator.fetch(new Request("https://dispatch-coordinator.internal/" + action, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+  if (!response.ok) throw new Error("COORDINATOR_HTTP_" + response.status);
+  return response.json();
+}
+
+export function dispatchCoordinatorStub(namespace) {
+  if (!namespace || typeof namespace.idFromName !== "function" || typeof namespace.get !== "function") return null;
+  return namespace.get(namespace.idFromName("weather-radar-dispatch-v1"));
+}
+
+/**
+ * Dispatches only feeds already marked STALE by the public-feed evaluator.
+ * GitHub is consulted solely for active-run suppression, never to decide freshness.
+ */
+export async function dispatchStaleSources({ report, client, coordinator, nowMs = Date.now(), logFn = () => {} }) {
+  const results = [];
+  for (const target of DISPATCH_TARGETS) {
+    const staleSources = report.sources.filter((source) =>
+      target.sourceKeys.includes(source.key) && source.status === "STALE");
+    if (staleSources.length === 0) continue;
+    const sourceDetails = staleSources.map(({ key, reasonCode, ageMinutes, ageHours, sourceTime, measuredAt, thresholdMinutes }) => ({
+      key, reasonCode: reasonCode ?? null, ageMinutes: ageMinutes ?? null,
+      ageHours: ageHours ?? null, sourceTime: sourceTime ?? measuredAt ?? null,
+      thresholdMinutes: thresholdMinutes ?? null,
+    }));
+    const sourceFingerprints = staleSources.map(staleSourceFingerprint);
+    if (sourceFingerprints.some((fingerprint) => !fingerprint)) {
+      results.push({ workflowFile: target.workflowFile, outcome: "blocked_missing_source_time", sources: sourceDetails });
+      continue;
+    }
+    const sourceFingerprint = sourceFingerprints.sort().join(";");
+    let reservation;
+    try {
+      const before = await client.getWorkflowSnapshot({ files: [target.workflowFile] });
+      const workflow = before.workflows?.find((item) => item.file === target.workflowFile);
+      if (before.queryStatus !== "OK" || workflow?.queryStatus !== "OK") {
+        results.push({ workflowFile: target.workflowFile, outcome: "blocked_github_status", reasonCode: workflow?.reasonCode ?? before.reasonCode ?? "STATUS_UNAVAILABLE", sources: sourceDetails });
+        continue;
+      }
+      if (workflow.activeRuns?.length) {
+        results.push({ workflowFile: target.workflowFile, outcome: "already_running", sources: sourceDetails });
+        continue;
+      }
+      reservation = await coordinatorRequest(coordinator, "reserve", {
+        workflowFile: target.workflowFile,
+        nowMs,
+        cooldownMs: DISPATCH_COOLDOWN_MS,
+        maxPerUtcDay: DISPATCH_MAX_PER_UTC_DAY,
+        leaseMs: DISPATCH_LEASE_MS,
+        sourceFingerprint,
+      });
+      if (!reservation.granted) {
+        results.push({ workflowFile: target.workflowFile, outcome: "suppressed", reasonCode: reservation.reason, sources: sourceDetails });
+        continue;
+      }
+
+      const recheck = await client.getWorkflowSnapshot({ files: [target.workflowFile] });
+      const latest = recheck.workflows?.find((item) => item.file === target.workflowFile);
+      if (recheck.queryStatus !== "OK" || latest?.queryStatus !== "OK") {
+        await coordinatorRequest(coordinator, "finish", {
+          workflowFile: target.workflowFile, leaseId: reservation.leaseId, outcome: "uncertain",
+        });
+        results.push({ workflowFile: target.workflowFile, outcome: "blocked_recheck_failed", reasonCode: latest?.reasonCode ?? recheck.reasonCode ?? "STATUS_UNAVAILABLE", sources: sourceDetails });
+        continue;
+      }
+      if (latest.activeRuns?.length) {
+        await coordinatorRequest(coordinator, "finish", {
+          workflowFile: target.workflowFile, leaseId: reservation.leaseId, outcome: "already_running",
+        });
+        results.push({ workflowFile: target.workflowFile, outcome: "already_running", sources: sourceDetails });
+        continue;
+      }
+
+      const dispatch = await client.dispatchWorkflow(target.workflowFile, { enabled: true, ref: "main" });
+      await coordinatorRequest(coordinator, "finish", {
+        workflowFile: target.workflowFile, leaseId: reservation.leaseId, outcome: "accepted",
+      });
+      results.push({ workflowFile: target.workflowFile, outcome: "dispatch_accepted_not_verified", httpStatus: dispatch.httpStatus, sources: sourceDetails });
+    } catch (error) {
+      if (reservation?.granted) {
+        try {
+          await coordinatorRequest(coordinator, "finish", {
+            workflowFile: target.workflowFile, leaseId: reservation.leaseId, outcome: "uncertain",
+          });
+        } catch {
+          // A still-held lease fails closed until expiry.
+        }
+      }
+      results.push({
+        workflowFile: target.workflowFile,
+        outcome: "dispatch_or_control_error",
+        reasonCode: typeof error?.message === "string" && /^[A-Z0-9_]+$/.test(error.message)
+          ? error.message
+          : "CONTROL_FAILED",
+        httpStatus: Number.isInteger(error?.status) ? error.status : null,
+        sources: sourceDetails,
+      });
+    }
+  }
+
+  if (results.length) {
+    logFn(JSON.stringify({
+      event: "workflow_dispatch_check",
+      requestId: crypto.randomUUID(),
+      repository: "RonnsenDD/lhh-data-hub",
+      checkedAt: new Date(nowMs).toISOString(),
+      outcome: "completed",
+      results,
+      note: "A dispatch acceptance is not evidence of a successful publication.",
+    }));
+  }
+  return results;
+}
+
+/** SQLite-backed Durable Object storage is enabled by the operator's namespace binding. */
+export class WatchdogDispatchCoordinator {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.storage = ctx.storage;
+  }
+
+  async fetch(request) {
+    if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    const action = new URL(request.url).pathname.slice(1);
+    if (!["reserve", "finish"].includes(action)) return new Response("Not found", { status: 404 });
+    let input;
+    try { input = await request.json(); } catch { return new Response("Bad request", { status: 400 }); }
+    const allowed = DISPATCH_TARGETS.some((item) => item.workflowFile === input.workflowFile);
+    if (!allowed) return new Response("Workflow not allowed", { status: 400 });
+
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const key = "dispatch:" + input.workflowFile;
+      const state = await this.storage.get(key) ?? {
+        lastAttemptAt: 0, dayKey: "", attemptsToday: 0, sourceFingerprint: null, leaseId: null, leaseUntil: 0, lastOutcome: null,
+      };
+      const now = Number.isFinite(input.nowMs) ? input.nowMs : Date.now();
+      if (action === "reserve") {
+        if (![input.cooldownMs, input.maxPerUtcDay, input.leaseMs].every(Number.isFinite) || input.cooldownMs < 0 || !Number.isInteger(input.maxPerUtcDay) || input.maxPerUtcDay < 1 || input.leaseMs < 1 || typeof input.sourceFingerprint !== "string" || input.sourceFingerprint.length < 1 || input.sourceFingerprint.length > 2048) {
+          return Response.json({ granted: false, reason: "invalid_reservation" }, { status: 400 });
+        }
+        if (state.leaseId && state.leaseUntil > now) return Response.json({ granted: false, reason: "reservation_active" });
+        const dayKey = new Date(now).toISOString().slice(0, 10);
+        const attemptsToday = state.dayKey === dayKey ? state.attemptsToday : 0;
+        if (attemptsToday >= input.maxPerUtcDay) return Response.json({ granted: false, reason: "daily_limit" });
+        if (state.lastAttemptAt && now - state.lastAttemptAt < input.cooldownMs) {
+          return Response.json({ granted: false, reason: "cooldown" });
+        }
+        if (state.sourceFingerprint === input.sourceFingerprint) return Response.json({ granted: false, reason: "same_source_snapshot" });
+        const leaseId = crypto.randomUUID();
+        const next = {
+          ...state, dayKey, attemptsToday: attemptsToday + 1,
+          sourceFingerprint: input.sourceFingerprint,
+          lastAttemptAt: now, leaseId, leaseUntil: now + input.leaseMs,
+          lastOutcome: "reserved",
+        };
+        await this.storage.put(key, next);
+        return Response.json({ granted: true, leaseId, expiresAt: next.leaseUntil });
+      }
+      if (typeof input.leaseId !== "string" || input.leaseId !== state.leaseId) {
+        return Response.json({ completed: false, reason: "lease_mismatch" }, { status: 409 });
+      }
+      const allowedOutcomes = new Set(["accepted", "uncertain", "already_running"]);
+      if (!allowedOutcomes.has(input.outcome)) return Response.json({ completed: false, reason: "invalid_outcome" }, { status: 400 });
+      const next = { ...state, leaseId: null, leaseUntil: 0, lastOutcome: input.outcome };
+      await this.storage.put(key, next);
+      return Response.json({ completed: true, outcome: input.outcome });
+    });
+  }
+}
+
 const headers = (o) => {
   const h = {
     "Content-Type": "application/json; charset=utf-8",
@@ -681,6 +1235,44 @@ const headers = (o) => {
   }
   return h;
 };
+export function formatScheduledStatus(report, event = {}) {
+  return JSON.stringify({
+    event: "feed_watchdog_check",
+    requestId: crypto.randomUUID(),
+    cron: event?.cron ?? null,
+    scheduledAt: event?.scheduledTime
+      ? new Date(event.scheduledTime).toISOString()
+      : null,
+    checkedAt: report.checkedAt,
+    overallStatus: report.overallStatus,
+    sources: report.sources.map(({
+      key,
+      status,
+      httpStatus,
+      reasonCode,
+      ageMinutes,
+      ageHours,
+      sourceTime,
+      measuredAt,
+      validUntil,
+      dataSourceMode,
+    }) => ({
+      key,
+      status,
+      httpStatus: httpStatus ?? null,
+      fetchStatus: Number.isInteger(httpStatus)
+        ? (httpStatus >= 200 && httpStatus < 300 ? "success" : "http_error")
+        : "transport_error",
+      reasonCode: reasonCode ?? null,
+      ageMinutes: ageMinutes ?? null,
+      ageHours: ageHours ?? null,
+      sourceTime: sourceTime ?? measuredAt ?? null,
+      validUntil: validUntil ?? null,
+      ...(dataSourceMode ? { dataSourceMode } : {}),
+    })),
+    ...(Array.isArray(report.diagnostics) ? { sourceTimings: report.diagnostics } : {}),
+  });
+}
 export default {
   async fetch(req) {
     const u = new URL(req.url),
@@ -701,119 +1293,72 @@ export default {
     });
   },
   async scheduled(event, env) {
-    const r = await collectStatus();
-    console.log(
-      JSON.stringify({
-        event: "feed_watchdog_check",
-        requestId: crypto.randomUUID(),
-        cron: event?.cron ?? null,
-        scheduledAt: event?.scheduledTime
-          ? new Date(event.scheduledTime).toISOString()
-          : null,
-        checkedAt: r.checkedAt,
-        overallStatus: r.overallStatus,
-        sources: r.sources.map(
-          ({
-            key,
-            status,
-            reasonCode,
-            ageMinutes,
-            ageHours,
-            sourceTime,
-            measuredAt,
-            validUntil,
-          }) => ({
-            key,
-            status,
-            reasonCode: reasonCode ?? null,
-            ageMinutes: ageMinutes ?? null,
-            ageHours: ageHours ?? null,
-            sourceTime: sourceTime ?? measuredAt ?? null,
-            validUntil: validUntil ?? null,
-          }),
-        ),
-      }),
-    );
+    const diagnosticsEnabled = env?.WATCHDOG_DIAGNOSTICS_ENABLED === "true";
+    const cpuTestMode = env?.WATCHDOG_CPU_TEST_MODE === "true";
+    const weatherFixtureMode = env?.WATCHDOG_WEATHER_FIXTURE_MODE === "true";
+    const r = await collectDispatchStatus({ includeDiagnostics: diagnosticsEnabled, weatherFixtureMode });
+    console.log(formatScheduledStatus(r, event));
 
-    if (env?.GITHUB_APP_READ_ENABLED !== "true") return;
-
-    let snapshot;
-    try {
-      snapshot = await createGitHubAppClient(env).getWorkflowSnapshot();
-    } catch (error) {
-      console.log(JSON.stringify({
-        event: "github_workflow_observation",
-        requestId: crypto.randomUUID(),
-        repository: "RonnsenDD/lhh-data-hub",
-        checkedAt: new Date().toISOString(),
-        queryStatus: "ERROR",
-        reasonCode: typeof error?.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
-          ? error.code
-          : "GITHUB_OBSERVATION_FAILED",
-        httpStatus: Number.isInteger(error?.status) ? error.status : null,
-        stage: typeof error?.stage === "string" && /^[a-z_]+$/.test(error.stage)
-          ? error.stage
-          : "unknown",
-      }));
+    const readEnabled = !cpuTestMode && env?.GITHUB_APP_READ_ENABLED === "true";
+    const dispatchEnabled = !cpuTestMode && env?.WORKFLOW_DISPATCH_ENABLED === "true";
+    if (!readEnabled && !dispatchEnabled) {
+      logDispatchObservation(r);
       return;
     }
 
-    console.log(JSON.stringify({
-      event: "github_workflow_observation",
-      requestId: crypto.randomUUID(),
-      repository: snapshot.repository,
-      checkedAt: snapshot.checkedAt,
-      queryStatus: snapshot.queryStatus,
-      reasonCode: snapshot.reasonCode ?? null,
-      httpStatus: snapshot.httpStatus ?? null,
-      retryAfterSeconds: snapshot.retryAfterSeconds ?? null,
-      rateLimitRemaining: snapshot.rateLimitRemaining ?? null,
-      rateLimitResetAt: snapshot.rateLimitResetAt ?? null,
-      workflows: snapshot.workflows.map((workflow) => ({
-        file: workflow.file,
-        cron: workflow.cron,
-        queryStatus: workflow.queryStatus,
-        reasonCode: workflow.reasonCode ?? null,
-        httpStatus: workflow.httpStatus ?? null,
-        retryAfterSeconds: workflow.retryAfterSeconds ?? null,
-        rateLimitRemaining: workflow.rateLimitRemaining ?? null,
-        rateLimitResetAt: workflow.rateLimitResetAt ?? null,
-        lastSuccess: workflow.lastSuccess
-          ? {
-              id: workflow.lastSuccess.id,
-              createdAt: workflow.lastSuccess.createdAt,
-              startedAt: workflow.lastSuccess.startedAt,
-              conclusion: workflow.lastSuccess.conclusion,
-              headSha: workflow.lastSuccess.headSha,
-            }
-          : null,
-        lastFailure: workflow.lastFailure
-          ? {
-              id: workflow.lastFailure.id,
-              createdAt: workflow.lastFailure.createdAt,
-              startedAt: workflow.lastFailure.startedAt,
-              conclusion: workflow.lastFailure.conclusion,
-              headSha: workflow.lastFailure.headSha,
-            }
-          : null,
-        activeRuns: workflow.activeRuns ?? [],
-        lastAutomaticRunCreatedAt: workflow.lastAutomaticRunCreatedAt ?? null,
-        lastAutomaticRunStartedAt: workflow.lastAutomaticRunStartedAt ?? null,
-        minutesSinceLastAutomaticRunCreated:
-          workflow.minutesSinceLastAutomaticRunCreated ?? null,
-        minutesSinceLastAutomaticRunStarted:
-          workflow.minutesSinceLastAutomaticRunStarted ?? null,
-        latestExpectedScheduleTickAt: workflow.latestExpectedScheduleTickAt ?? null,
-        latestExpectedTickOverdueMinutes:
-          workflow.latestExpectedTickOverdueMinutes ?? null,
-        lastAutomaticScheduleCreationDelayMinutes:
-          workflow.lastAutomaticScheduleCreationDelayMinutes ?? null,
-        lastAutomaticRunStartDelayMinutes:
-          workflow.lastAutomaticRunStartDelayMinutes ?? null,
-        missingExpectedScheduleTicksBetweenLatestAutomaticRuns:
-          workflow.missingExpectedScheduleTicksBetweenLatestAutomaticRuns ?? null,
-      })),
-    }));
+    let client;
+    try {
+      client = createGitHubAppClient(env);
+    } catch (error) {
+      logGitHubError(error);
+      return;
+    }
+
+    let observedSnapshot = null;
+    if (readEnabled) {
+      try {
+        observedSnapshot = await client.getWorkflowSnapshot();
+      } catch (error) {
+        logGitHubError(error);
+        observedSnapshot = { queryStatus: "ERROR", workflows: [] };
+      }
+      if (observedSnapshot) logWorkflowObservation(observedSnapshot);
+    }
+
+    if (!dispatchEnabled) {
+      logDispatchObservation(r, observedSnapshot);
+      return;
+    }
+    const namespace = env?.WATCHDOG_DISPATCH_COORDINATOR;
+    if (!namespace) {
+      console.log(JSON.stringify({
+        event: "workflow_dispatch_check",
+        requestId: crypto.randomUUID(),
+        outcome: "disabled_missing_coordinator",
+      }));
+      return;
+    }
+    let coordinator;
+    try {
+      coordinator = dispatchCoordinatorStub(namespace);
+    } catch {
+      coordinator = null;
+    }
+    if (!coordinator || typeof coordinator.fetch !== "function") {
+      console.log(JSON.stringify({
+        event: "workflow_dispatch_check",
+        requestId: crypto.randomUUID(),
+        outcome: "disabled_invalid_coordinator_binding",
+      }));
+      return;
+    }
+    await dispatchStaleSources({
+      report: r,
+      client,
+      coordinator,
+      nowMs: Date.parse(r.checkedAt) || Date.now(),
+      logFn: (line) => console.log(line),
+    });
   },
 };
 

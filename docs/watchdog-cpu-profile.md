@@ -1,0 +1,69 @@
+# Watchdog CPU profiling and freshness-only Cron path
+
+## Current behavior
+
+The public `GET /` and `GET /status` handlers continue to fetch and evaluate all seven feeds. The existing full weather feed is about 106 KB and contains the observation values plus the complete MOSMIX forecast (the sample reviewed for this change had 247 forecast points). That public result remains the detailed operational status view.
+
+The scheduled dispatch guard only needs the DWD product timestamps/statuses and the two radar product timestamps. It now reads three small inputs: the DWD freshness sidecar, RADOLAN-RY, and KONRAD3D. The weather workflow derives `data/generated/dwd-weather-freshness.json` from the already validated DWD snapshot and publishes both files in the same bounded publisher commit. The sidecar carries no measurement values and no forecast points. Its `derivedAt` and `snapshotPublishedAt` fields are informational only; freshness is calculated from the original observation `measuredAt` fields and MOSMIX `issuedAt`.
+
+The sidecar is generated only after the existing schema/publication validator succeeds. A missing source timestamp remains missing. `status`, measured time, issue time, freshness thresholds, and numeric-field availability are copied from the validated full snapshot. MOSMIX `validAt`/`validThrough` are derived from its real point timestamps. The additive `forecast.usableValidTimes` field lists actual times for points that have at least one finite numeric value; it carries no forecast values. A source timestamp is never replaced with the time the sidecar was generated or published.
+
+## CPU measurement
+
+Set `WATCHDOG_DIAGNOSTICS_ENABLED=true` only during a controlled observation. A scheduled run logs per-feed response bytes, body read duration, UTF-8 decode time, JSON parse time, and synchronous evaluator duration. Those durations are useful component timings, but body read/fetch durations include waiting and are not CPU measurements. Diagnostics are off unless explicitly enabled and never log values, URLs, headers, or credentials.
+
+`node tools/watchdog/benchmark.mjs` measures Node process CPU with mocked outbound HTTP. It is a repeatable comparison tool, not a Cloudflare CPU measurement. Use `WATCHDOG_BENCH_DIR` with a directory containing `dwd-weather.json`, `radar.json`, and `konrad.json` to profile actual public payload sizes; other feeds may be schema fixtures. The output reports median, p90, p95, maximum, process CPU, HTTP-call counts, and synchronous per-component timings. Results must be labeled with Node version and snapshot capture time.
+
+### Local comparison for this PR
+
+Run on Node v24.21.0 with 30 warm-ups, 200 measured iterations, and 100 per-feed diagnostic iterations. The weather input was the public `dwd-weather.json` snapshot fetched for this change (106,184 bytes, 247 MOSMIX points). The sidecar was generated from that snapshot by the new Python helper (1,779 bytes). Radar/KONRAD3D and the other feeds were small schema fixtures; they do not represent their live payload sizes.
+
+| Local collector | Feed requests/run | Input bytes/run | Median CPU | p90 | p95 | Maximum |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Full seven-feed collection | 7 | 106,960 | 0.281 ms | 0.396 ms | 0.523 ms | 1.805 ms |
+| Scheduled freshness collection | 3 | 2,033 | 0.025 ms | 0.031 ms | 0.041 ms | 0.497 ms |
+
+The three-feed path used about 98% fewer input bytes and 57% fewer feed requests in this fixture comparison. This is a local Node comparison; it does not predict the same percentage of Cloudflare CPU savings. Per-feed Node profile for the weather input: full JSON decode median/p95 0.016/0.092 ms, JSON parse 0.120/0.144 ms, full weather evaluation 0.025/0.037 ms. For the 1,779-byte sidecar those were 0.0003/0.0016 ms, 0.0027/0.0043 ms, and 0.0038/0.0102 ms. Separate formatting checks measured full status JSON serialization at median/p95 0.004/0.006 ms (4,744 output bytes) and scheduled log formatting at 0.002/0.006 ms (624 bytes). The remaining full public route still evaluates all MOSMIX points; the scheduled route does not.
+
+Additional Node process CPU samples (200 runs each): scheduled with flags off median/p90/p95/max 0.033/0.106/0.252/1.316 ms; stale observe-only 0.031/0.041/0.069/1.033 ms; diagnostics on 0.032/0.048/0.219/0.852 ms; simulated GitHub read-only 0.657/0.810/0.911/1.770 ms with six mocked GitHub API requests per run and zero dispatches. The read-only CPU increase is local RS256 signing and mocked API handling. All outbound HTTP was mocked; no GitHub API or Worker dispatch was performed by the benchmark.
+
+Cloudflare CPU must be read from the deployed Worker’s Cron telemetry. The Cloudflare Free plan documents a 10 ms CPU limit per Cron Trigger invocation: <https://developers.cloudflare.com/workers/platform/limits/>. Account plan/billing status is separate and must be checked in the account. Do not infer Cloudflare CPU from Node timing or from total request wall time.
+
+## Safe evaluation and rollout boundary
+
+No Worker was deployed for this change. The updated handler and editor bundle have only local automated tests and Node benchmarks. The live Worker therefore still runs its already deployed code, with its existing five-minute Cron. A real Cloudflare comparison of the new code requires a separately approved, isolated free test Worker or an explicitly approved version-routing method; overwriting the production Worker to measure it is not an acceptable test.
+
+The GitHub App read adapter, Durable Object dispatch reservation, workflow allowlist, `WORKFLOW_DISPATCH_ENABLED=false` default, and all dispatch guards remain in the Worker. No dispatch was run by this change. The compact freshness path only supplies its weather/radar states to those existing guards.
+
+## Interpretation limits
+
+- The smaller sidecar reduces Cron JSON bytes from the full weather document to a compact status document and removes the Worker’s MOSMIX-point scan. It also removes four non-target feed checks from each scheduled decision.
+- Public status retains the seven-feed detailed path, so its CPU is intentionally unchanged.
+- The producer workflow now writes two generated files together. Existing publisher path allowlisting and atomic multi-file publication are tested.
+- A successful producer execution is not proof of fresh observations; actual source times remain decisive.
+- The PR remains draft and the Worker remains undeployed. No sustained Free-plan headroom is claimed until the changed code is measured on Cloudflare across sufficient runs.
+
+## Isolated CPU observation preparation (2026-11-01)
+
+The separate config `wrangler.watchdog-cpu-test.jsonc` names a different Worker, disables `workers.dev`, contains no routes, secrets, Durable Object binding, or migration, and sets the GitHub read and dispatch switches off. `WATCHDOG_CPU_TEST_MODE=true` also hard-disables GitHub reads and dispatches in code, even if their variables were accidentally set true. Its only schedule is a test-only 30-minute Cron; it is not in `wrangler.watchdog.jsonc` and cannot change the production Worker's `*/5` trigger. It would add 48 read-only Cron invocations per day while deployed.
+
+The Cloudflare read-only Observability usage-limit endpoint returned `plan: free`, `status: normal`, and a 200,000-events/day Observability cap. Its API schema defines `free` as an account without Workers Paid or Enterprise. The Workers API lists only the existing watchdog and pegel-pilot scripts; only the watchdog currently has a Cron (`*/5 * * * *`), so adding the isolated test Cron would use two of the documented five Free Cron Triggers. Billing subscriptions itself remains unreadable (HTTP 403, missing Billing Read), but the Observability plan field is an explicit plan signal. The separate Worker would be the account's third script, below the documented Free limit of 100.
+
+At 2026-11-01 06:29:27 UTC, the public weather snapshot was 106,184 bytes. It recorded a successful attempt at 02:16:10 UTC, with actual observation times 01:20 UTC and 01:50 UTC. The locally generated 1,772-byte sidecar preserved those source times. Both the full weather adapter and compact sidecar adapter classified all observations as `STALE` at the test instant; MOSMIX remained valid with issue time 2026-10-31 21:00 UTC and next usable point 07:00 UTC. The `derivedAt` time did not make measurements fresh. A historical metadata-only fixture remains under `tools/watchdog/fixtures/`; it is selected only when the separate `WATCHDOG_WEATHER_FIXTURE_MODE=true` switch is explicitly set. The CPU safety switch no longer selects a fixture. Radar and KONRAD3D remain real public GET targets during the isolated test.
+
+The publication validator was also run against this public snapshot. It rejected it because `lastAttemptAt` was older than the configured 10-minute publication limit. Therefore no sidecar publication was attempted from this stale snapshot. The public sidecar URL currently returns HTTP 404, as expected while PR #17 remains unmerged. The existing local publisher regression test publishes a weather file and sidecar together to an isolated temporary bare Git remote; it does not write to the public repository. No GitHub workflow was run.
+
+### Controlled live measurement procedure (not executed)
+
+1. The read-only API confirmed Workers Free and capacity for the isolated Worker/second Cron; the subscriptions endpoint itself is inaccessible to this connection. Keep the test within the current Free quotas.
+2. Deploy only `wrangler.watchdog-cpu-test.jsonc`. With `WATCHDOG_CPU_TEST_MODE=true` and `WATCHDOG_WEATHER_FIXTURE_MODE=false`, it uses the actual public DWD sidecar plus actual public radar/KONRAD JSON. Logs identify weather as `public-sidecar`; HTTP transport outcome is recorded separately from source freshness. Never set the fixture switch for a live-data CPU sample. The historical fixture can still be selected explicitly for automated/local tests and is labeled `test-fixture` in output.
+3. Observe at least 48 hours (96 scheduled samples). Record Cloudflare CPU p50, p90, p95, maximum, and invocation outcomes for this test Worker. Require p95 no higher than 7 ms and no sample at or above 10 ms before claiming useful reserve under the documented Free limit. Any CPU-limit outcome or failed fixture/source fetch stops the test.
+4. Remove the test-only trigger and test Worker after observation through the owner's approved Cloudflare process. This PR does not automate cleanup.
+
+## Draft PR #17: real-sidecar test-mode and forecast-point correction
+
+`WATCHDOG_CPU_TEST_MODE` is a safety switch only: it disables GitHub App reads and dispatch even if those flags are accidentally true. It does not choose a weather source. The separate `WATCHDOG_WEATHER_FIXTURE_MODE` switch controls fixture selection, and defaults to `false` in `wrangler.watchdog-cpu-test.jsonc`. The scheduled test Worker therefore requests the public DWD sidecar while retaining GitHub and dispatch isolation.
+
+The sidecar's former single `validAt` indicated only the first usable point at generation time. Once it elapsed, that timestamp alone could no longer prove whether later forecast points had data. The additive v1 `usableValidTimes` list fixes this without publishing forecast values. The evaluator selects the earliest listed point not yet elapsed, after independently checking the MOSMIX `issuedAt` age. It rejects inconsistent `hasUsablePoint` metadata. If an older v1 sidecar has an elapsed `validAt` but a future `validThrough`, the result is `UNKNOWN` (not falsely available or unavailable): the horizon alone cannot prove usable values. If the horizon has elapsed, no points exist, or the model is stale, normal unavailable/stale states apply. `derivedAt` is never used as a measurement or model issue time.
+
+The automated scheduled-mode tests assert the public Sidecar URL is requested by default, `dataSourceMode` is `public-sidecar`, GitHub/API and Durable Object access remain blocked in CPU mode, and explicitly enabled fixture mode is labeled `test-fixture`. These are mocked/local tests; only a post-deployment scheduled execution and Cloudflare telemetry can establish an actual public Sidecar read and Cloudflare CPU sample.

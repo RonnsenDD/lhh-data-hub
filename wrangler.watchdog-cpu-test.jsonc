@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "feuerwehr-lauchhammer-watchdog-cpu-test",
+  "main": "tools/watchdog/worker.bundle.js",
+  "compatibility_date": "2026-10-31",
+  "workers_dev": false,
+  "vars": {
+    "WATCHDOG_CPU_TEST_MODE": "true",
+    "WATCHDOG_WEATHER_FIXTURE_MODE": "false",
+    "GITHUB_APP_READ_ENABLED": "false",
+    "WORKFLOW_DISPATCH_ENABLED": "false",
+    "WATCHDOG_DIAGNOSTICS_ENABLED": "false"
+  },
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  }
+}

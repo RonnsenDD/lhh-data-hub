@@ -5,6 +5,10 @@ const API_VERSION = "2026-03-10";
 const MAX_TOKEN_BYTES = 65536;
 const MAX_RUNS_BYTES = 131072; // Keep five parallel run-list payloads bounded for Workers Free.
 const TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
+const DISPATCHABLE_WORKFLOWS = new Set([
+  "update-dwd-weather.yml",
+  "update-radolan-ry.yml",
+]);
 const DEFAULT_TIMEOUT_MS = 8000;
 const GITHUB_JSON_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 
@@ -198,7 +202,7 @@ async function readJsonBounded(response, maxBytes, stage) {
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 1;
 
-async function fetchJson(fetcher, url, init, { timeoutMs, maxBytes, stage }) {
+async function fetchJson(fetcher, url, init, { timeoutMs, maxBytes, stage, expectedStatus }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -259,6 +263,10 @@ async function fetchJson(fetcher, url, init, { timeoutMs, maxBytes, stage }) {
       redirects++;
     }
     if (!response.ok) throw classifyHttpError(response.status, response.headers, stage);
+    if (expectedStatus !== undefined && response.status !== expectedStatus) {
+      throw new GitHubAppAdapterError("GITHUB_UNEXPECTED_STATUS", { stage, status: response.status });
+    }
+    if (response.status === 204) return { value: null, headers: response.headers };
     const value = await readJsonBounded(response, maxBytes, stage);
     return { value, headers: response.headers };
   } catch (error) {
@@ -431,7 +439,7 @@ export function createGitHubAppClient(env, {
 } = {}) {
   const { appId, installationId, privateKeyPem } = validateEnvironment(env);
   let signingKeyPromise;
-  let tokenCache;
+  const tokenCache = new Map();
 
   async function signingKey() {
     if (!signingKeyPromise) signingKeyPromise = importSigningKey(privateKeyPem, cryptoImpl);
@@ -443,10 +451,12 @@ export function createGitHubAppClient(env, {
     return signAppJwt({ appId, key, nowMs: now(), cryptoImpl });
   }
 
-  async function accessToken() {
+  async function accessToken(actionsPermission = "read") {
+    if (!["read", "write"].includes(actionsPermission)) throw new GitHubAppAdapterError("INVALID_PERMISSION_SCOPE", { stage: "configuration" });
     const nowMs = now();
-    if (tokenCache && Date.parse(tokenCache.expiresAt) - nowMs > TOKEN_REFRESH_SKEW_MS) {
-      return tokenCache.accessToken;
+    const cached = tokenCache.get(actionsPermission);
+    if (cached && Date.parse(cached.expiresAt) - nowMs > TOKEN_REFRESH_SKEW_MS) {
+      return cached.accessToken;
     }
     const jwt = await createJwt();
     const tokenUrl = API_ORIGIN + "/app/installations/" + installationId + "/access_tokens";
@@ -461,7 +471,7 @@ export function createGitHubAppClient(env, {
       },
       body: JSON.stringify({
         repository_ids: [REPOSITORY_ID],
-        permissions: { actions: "read" },
+        permissions: { actions: actionsPermission },
       }),
     }, { timeoutMs, maxBytes: MAX_TOKEN_BYTES, stage: "installation_token" });
     if (
@@ -473,8 +483,8 @@ export function createGitHubAppClient(env, {
     ) {
       throw new GitHubAppAdapterError("GITHUB_INVALID_TOKEN_RESPONSE", { stage: "installation_token" });
     }
-    tokenCache = { accessToken: value.token, expiresAt: value.expires_at };
-    return tokenCache.accessToken;
+    tokenCache.set(actionsPermission, { accessToken: value.token, expiresAt: value.expires_at });
+    return value.token;
   }
 
   async function readOneWorkflow(workflow, token) {
@@ -507,7 +517,11 @@ export function createGitHubAppClient(env, {
   }
 
   return Object.freeze({
-    async getWorkflowSnapshot() {
+    async getWorkflowSnapshot({ files = WORKFLOWS.map(({ file }) => file) } = {}) {
+      if (!Array.isArray(files) || files.length === 0 || files.some((file) => !WORKFLOWS.some((workflow) => workflow.file === file))) {
+        throw new GitHubAppAdapterError("INVALID_WORKFLOW_SCOPE", { stage: "configuration" });
+      }
+      const selectedWorkflows = WORKFLOWS.filter(({ file }) => files.includes(file));
       const checkedAt = new Date(now()).toISOString();
       let token;
       try {
@@ -522,16 +536,35 @@ export function createGitHubAppClient(env, {
           retryAfterSeconds: error.retryAfterSeconds ?? null,
           rateLimitRemaining: error.rateLimitRemaining ?? null,
           rateLimitResetAt: error.rateLimitResetAt ?? null,
-          workflows: WORKFLOWS.map(({ file, cron }) => ({ file, cron, queryStatus: "SKIPPED_AUTH_FAILURE" })),
+          workflows: selectedWorkflows.map(({ file, cron }) => ({ file, cron, queryStatus: "SKIPPED_AUTH_FAILURE" })),
         };
       }
-      const workflows = await Promise.all(WORKFLOWS.map((workflow) => readOneWorkflow(workflow, token)));
+      const workflows = await Promise.all(selectedWorkflows.map((workflow) => readOneWorkflow(workflow, token)));
       return {
         repository: "RonnsenDD/lhh-data-hub",
         checkedAt,
         queryStatus: workflows.every((workflow) => workflow.queryStatus === "OK") ? "OK" : "PARTIAL",
         workflows,
       };
+    },
+    async dispatchWorkflow(workflowFile, { enabled = false, ref = "main" } = {}) {
+      if (enabled !== true) throw new GitHubAppAdapterError("DISPATCH_DISABLED", { stage: "workflow_dispatch" });
+      if (!DISPATCHABLE_WORKFLOWS.has(workflowFile)) throw new GitHubAppAdapterError("WORKFLOW_NOT_ALLOWLISTED", { stage: "workflow_dispatch" });
+      if (ref !== "main") throw new GitHubAppAdapterError("REF_NOT_ALLOWLISTED", { stage: "workflow_dispatch" });
+      const token = await accessToken("write");
+      const url = API_ORIGIN + REPOSITORY_PATH + "/actions/workflows/" + encodeURIComponent(workflowFile) + "/dispatches";
+      await fetchJson(fetcher, url, {
+        method: "POST",
+        redirect: "manual",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+          "X-GitHub-Api-Version": API_VERSION,
+        },
+        body: JSON.stringify({ ref }),
+      }, { timeoutMs, maxBytes: 1024, stage: "workflow_dispatch", expectedStatus: 204 });
+      return { accepted: true, workflowFile, ref, httpStatus: 204 };
     },
   });
 }

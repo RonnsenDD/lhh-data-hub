@@ -9,7 +9,9 @@ const adapterPath = join(directory, "github-app-adapter.js");
 const outputPath = join(directory, "worker.bundle.js");
 const workerImport = /^import \{ createGitHubAppClient \} from ["']\.\/github-app-adapter\.js["'];\r?\n\r?\n/;
 const stripNamedExports = (source) =>
-  source.replace(/^export\s+(?=(?:const|class|async function|function)\b)/gm, "");
+  source
+    .replace(/^export\s+(?=(?:const|async function|function)\b)/gm, "")
+    .replace(/^export class (?!WatchdogDispatchCoordinator\b)/gm, "class ");
 
 export async function buildEditorBundle() {
   const [workerSource, adapterSource] = await Promise.all([
