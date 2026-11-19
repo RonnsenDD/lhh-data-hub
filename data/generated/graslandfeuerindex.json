@@ -6,26 +6,22 @@
   },
   "status": "ok",
   "statusReason": "DWD-Prognose ist aktuell",
-  "retrievedAt": "2026-11-18T13:59:54.751Z",
-  "lastSuccessfulAt": "2026-11-18T13:59:54.751Z",
-  "lastAttemptAt": "2026-11-18T13:59:54.751Z",
+  "retrievedAt": "2026-11-19T14:26:55.028Z",
+  "lastSuccessfulAt": "2026-11-19T14:26:55.028Z",
+  "lastAttemptAt": "2026-11-19T14:26:55.028Z",
   "source": {
     "provider": "Deutscher Wetterdienst (DWD), CDC Open Data",
     "url": "https://opendata.dwd.de/climate_environment/CDC/derived_germany/fire_danger_index/grassland/forecast/recent/derived_germany_fire_danger_index_grassland_forecast_recent_2627_v2-0--0.csv.gz",
     "productVersion": "v2-0--0",
-    "dataAsOf": "2026-11-18T04:16:00.000Z",
-    "lastModifiedAt": "2026-11-18T04:20:14.000Z",
+    "dataAsOf": "2026-11-19T04:16:00.000Z",
+    "lastModifiedAt": "2026-11-19T04:20:14.000Z",
     "license": "CC BY 4.0"
   },
   "today": {
-    "date": "2026-11-18",
+    "date": "2026-11-19",
     "index": 1
   },
   "days": [
-    {
-      "date": "2026-11-18",
-      "index": 1
-    },
     {
       "date": "2026-11-19",
       "index": 1
@@ -48,6 +44,10 @@
     },
     {
       "date": "2026-11-24",
+      "index": 1
+    },
+    {
+      "date": "2026-11-25",
       "index": 1
     }
   ]
