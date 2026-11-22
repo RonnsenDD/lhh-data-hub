@@ -19,11 +19,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute air temperature / relative humidity / dew point / station pressure",
-      "measuredAt": "2026-11-21T22:50:00Z",
-      "measuredAtLocal": "2026-11-21T23:50:00+01:00",
-      "retrievedAt": "2026-11-21T23:26:16Z",
-      "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-      "ageMinutes": 36.3,
+      "measuredAt": "2026-11-22T02:50:00Z",
+      "measuredAtLocal": "2026-11-22T03:50:00+01:00",
+      "retrievedAt": "2026-11-22T03:23:32Z",
+      "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+      "ageMinutes": 33.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -32,9 +32,9 @@
         "dewPointC": "°C"
       },
       "values": {
-        "temperatureC": 4.2,
-        "relativeHumidityPercent": 90.0,
-        "dewPointC": 2.7
+        "temperatureC": 3.9,
+        "relativeHumidityPercent": 85.5,
+        "dewPointC": 1.7
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -54,18 +54,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute station pressure",
-      "measuredAt": "2026-11-21T22:50:00Z",
-      "measuredAtLocal": "2026-11-21T23:50:00+01:00",
-      "retrievedAt": "2026-11-21T23:26:16Z",
-      "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-      "ageMinutes": 36.3,
+      "measuredAt": "2026-11-22T02:50:00Z",
+      "measuredAtLocal": "2026-11-22T03:50:00+01:00",
+      "retrievedAt": "2026-11-22T03:23:32Z",
+      "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+      "ageMinutes": 33.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "stationPressureHpa": "hPa"
       },
       "values": {
-        "stationPressureHpa": 1001.9
+        "stationPressureHpa": 1000.0
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -85,11 +85,11 @@
         "distanceKm": 23.5
       },
       "product": "10-minute wind speed and direction",
-      "measuredAt": "2026-11-21T22:50:00Z",
-      "measuredAtLocal": "2026-11-21T23:50:00+01:00",
-      "retrievedAt": "2026-11-21T23:26:16Z",
-      "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-      "ageMinutes": 36.3,
+      "measuredAt": "2026-11-22T02:50:00Z",
+      "measuredAtLocal": "2026-11-22T03:50:00+01:00",
+      "retrievedAt": "2026-11-22T03:23:32Z",
+      "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+      "ageMinutes": 33.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -97,8 +97,8 @@
         "windDirectionDeg": "degree"
       },
       "values": {
-        "windSpeedKmh": 18.0,
-        "windDirectionDeg": 250.0
+        "windSpeedKmh": 15.84,
+        "windDirectionDeg": 240.0
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -118,18 +118,18 @@
         "distanceKm": 23.5
       },
       "product": "10-minute extreme wind (maximum gust)",
-      "measuredAt": "2026-11-21T22:50:00Z",
-      "measuredAtLocal": "2026-11-21T23:50:00+01:00",
-      "retrievedAt": "2026-11-21T23:26:16Z",
-      "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-      "ageMinutes": 36.3,
+      "measuredAt": "2026-11-22T02:50:00Z",
+      "measuredAtLocal": "2026-11-22T03:50:00+01:00",
+      "retrievedAt": "2026-11-22T03:23:32Z",
+      "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+      "ageMinutes": 33.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
         "windGustKmh": "km/h"
       },
       "values": {
-        "windGustKmh": 27.36
+        "windGustKmh": 25.56
       },
       "source": {
         "provider": "DWD Climate Data Center (CDC)",
@@ -149,11 +149,11 @@
         "distanceKm": 12.7
       },
       "product": "10-minute precipitation sum",
-      "measuredAt": "2026-11-21T22:50:00Z",
-      "measuredAtLocal": "2026-11-21T23:50:00+01:00",
-      "retrievedAt": "2026-11-21T23:26:16Z",
-      "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-      "ageMinutes": 36.3,
+      "measuredAt": "2026-11-22T02:50:00Z",
+      "measuredAtLocal": "2026-11-22T03:50:00+01:00",
+      "retrievedAt": "2026-11-22T03:23:32Z",
+      "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+      "ageMinutes": 33.5,
       "freshnessThresholdMinutes": 60,
       "qualityLevel": 2,
       "units": {
@@ -183,9 +183,9 @@
     "distanceKm": 17.34,
     "issuedAt": "2026-11-21T21:00:00Z",
     "issuedAtLocal": "2026-11-21T22:00:00+01:00",
-    "retrievedAt": "2026-11-21T23:26:16Z",
-    "retrievedAtLocal": "2026-11-22T00:26:16+01:00",
-    "ageHours": 2.44,
+    "retrievedAt": "2026-11-22T03:23:32Z",
+    "retrievedAtLocal": "2026-11-22T04:23:32+01:00",
+    "ageHours": 6.39,
     "models": [
       {
         "name": "ICON",
@@ -3659,6 +3659,6 @@
       "license": "DWD Open Data; CC BY 4.0 attribution applies"
     }
   },
-  "lastAttemptAt": "2026-11-21T23:26:16Z",
+  "lastAttemptAt": "2026-11-22T03:23:32Z",
   "sourceNote": "Messwerte und MOSMIX-Prognosen sind getrennt. Fehlende Werte bleiben null; CDC-now-Daten sind noch nicht abschließend qualitätsgesichert."
 }
