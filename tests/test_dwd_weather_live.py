@@ -4,7 +4,14 @@ import zipfile
 from datetime import datetime, timezone
 
 from src.dwd_weather import DwdSourceError
-from src.dwd_weather_live import build_snapshot, local_iso, parse_cdc_product, parse_mosmix_kmz, weather_symbol
+from src.dwd_weather_live import (
+    _retain_forecast_after_refresh_error,
+    build_snapshot,
+    local_iso,
+    parse_cdc_product,
+    parse_mosmix_kmz,
+    weather_symbol,
+)
 from src.validate_dwd_weather_schema import validate
 
 
@@ -170,6 +177,39 @@ class DwdLiveWeatherTests(unittest.TestCase):
         self.assertEqual(snapshot["observations"]["precipitation"]["status"], "ok")
         self.assertEqual(snapshot["observations"]["wind"]["status"], "error")
         self.assertEqual(snapshot["forecast"]["status"], "error")
+
+    def test_mosmix_refresh_error_retains_valid_previous_forecast_without_refreshing_source_times(self):
+        previous = parse_mosmix_kmz(
+            mosmix_kmz(issue="2026-11-01T15:00:00Z", times=["2026-11-02T01:00:00Z"]),
+            datetime(2026, 11, 1, 20, 34, tzinfo=timezone.utc),
+        )
+        attempt = datetime(2026, 11, 1, 23, 55, tzinfo=timezone.utc)
+        retained = _retain_forecast_after_refresh_error(previous, RuntimeError("DWD request failed"), attempt)
+        self.assertEqual(retained["status"], "ok")
+        self.assertEqual(retained["issuedAt"], previous["issuedAt"])
+        self.assertEqual(retained["retrievedAt"], previous["retrievedAt"])
+        self.assertEqual(retained["ageHours"], previous["ageHours"])
+        self.assertEqual(retained["ageAtAttemptHours"], 8.92)
+        self.assertEqual(retained["refreshStatus"], "error")
+        self.assertEqual(retained["refreshAttemptAt"], "2026-11-01T23:55:00Z")
+
+    def test_mosmix_fallback_becomes_stale_after_12_hours_without_changing_source_times(self):
+        previous = parse_mosmix_kmz(
+            mosmix_kmz(issue="2026-11-01T15:00:00Z", times=["2026-11-02T06:00:00Z"]),
+            datetime(2026, 11, 1, 20, 34, tzinfo=timezone.utc),
+        )
+        retained = _retain_forecast_after_refresh_error(
+            previous, RuntimeError("DWD request failed"), datetime(2026, 11, 2, 4, 0, tzinfo=timezone.utc)
+        )
+        self.assertEqual(retained["status"], "stale")
+        self.assertEqual(retained["ageAtAttemptHours"], 13.0)
+        self.assertEqual(retained["issuedAt"], previous["issuedAt"])
+        self.assertEqual(retained["retrievedAt"], previous["retrievedAt"])
+
+    def test_mosmix_error_without_valid_previous_forecast_remains_an_error(self):
+        self.assertIsNone(_retain_forecast_after_refresh_error(
+            None, RuntimeError("DWD request failed"), self.now
+        ))
 
 
 if __name__ == "__main__":

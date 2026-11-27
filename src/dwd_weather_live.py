@@ -8,6 +8,7 @@ station and source timestamp. Running it is an explicit local operation.
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import io
 import json
@@ -334,7 +335,69 @@ def fetch_bytes(url: str, *, timeout: float = 25, max_bytes: int = MAX_ARCHIVE_B
     return payload
 
 
-def build_snapshot(retrieved_at: datetime, payloads: dict[str, bytes | Exception], mosmix_payload: bytes | Exception | None) -> dict[str, Any]:
+def _previous_valid_forecast(output: Path) -> dict[str, Any] | None:
+    """Load only a schema-valid, previously parsed MOSMIX forecast for fallback."""
+    try:
+        previous = json.loads(output.read_text(encoding="utf-8"))
+        schema_path = Path(__file__).resolve().parents[1] / "docs" / "dwd-weather-v2.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        from src.validate_dwd_weather_schema import validate
+
+        if validate(previous, schema):
+            return None
+        forecast = previous.get("forecast")
+        if not isinstance(forecast, dict) or forecast.get("status") not in {"ok", "stale"}:
+            return None
+        if forecast.get("provider") != "Deutscher Wetterdienst (DWD), MOSMIX-L":
+            return None
+        if forecast.get("stationId") != "P0043" or not isinstance(forecast.get("points"), list):
+            return None
+        source = forecast.get("source")
+        if not isinstance(source, dict) or source.get("url") != MOSMIX_URL:
+            return None
+        return forecast
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _retain_forecast_after_refresh_error(
+    previous: dict[str, Any] | None, refresh_error: Exception, attempted_at: datetime
+) -> dict[str, Any] | None:
+    """Retain the prior source times, but recalculate its 12-hour status at attempt time."""
+    if previous is None:
+        return None
+    try:
+        issued = datetime.fromisoformat(previous["issuedAt"].replace("Z", "+00:00"))
+        retrieved = datetime.fromisoformat(previous["retrievedAt"].replace("Z", "+00:00"))
+        if issued.tzinfo is None or retrieved.tzinfo is None:
+            return None
+        age_at_attempt = (attempted_at.astimezone(timezone.utc) - issued.astimezone(timezone.utc)).total_seconds() / 3600
+        if age_at_attempt < 0:
+            return None
+        retained = copy.deepcopy(previous)
+        retained["status"] = "stale" if age_at_attempt > MOSMIX_MAX_AGE_HOURS else "ok"
+        retained["statusReason"] = (
+            f"last valid MOSMIX model retained after refresh failure; "
+            f"model age at attempt is {age_at_attempt:.2f} hours"
+        )
+        # Keep retrievedAt, issuedAt, and ageHours tied to their original source
+        # event. This field describes model age at this snapshot attempt.
+        retained["ageAtAttemptHours"] = round(age_at_attempt, 2)
+        retained["refreshStatus"] = "error"
+        retained["refreshStatusReason"] = str(refresh_error)[:240]
+        retained["refreshAttemptAt"] = utc_iso(attempted_at)
+        return retained
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def build_snapshot(
+    retrieved_at: datetime,
+    payloads: dict[str, bytes | Exception],
+    mosmix_payload: bytes | Exception | None,
+    *,
+    previous_forecast: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     observations: dict[str, Any] = {}
     for key in PRODUCTS:
         try:
@@ -353,16 +416,26 @@ def build_snapshot(retrieved_at: datetime, payloads: dict[str, bytes | Exception
                 "values": {name: None for name in PRODUCTS[key]["columns"]},
                 "source": {"provider": "DWD Climate Data Center (CDC)", "url": PRODUCTS[key]["url"], "license": "CC BY 4.0"},
             }
+    forecast_refresh_error: Exception | None = None
     try:
         if isinstance(mosmix_payload, Exception):
             raise mosmix_payload
         forecast = parse_mosmix_kmz(mosmix_payload or b"", retrieved_at)
     except Exception as exc:
-        forecast = {"provider": "Deutscher Wetterdienst (DWD), MOSMIX-L", "status": "error", "statusReason": str(exc)[:240], "stationId": "P0043", "issuedAt": None, "issuedAtLocal": None, "retrievedAt": utc_iso(retrieved_at), "retrievedAtLocal": local_iso(retrieved_at), "points": [], "source": {"url": MOSMIX_URL}}
+        forecast_refresh_error = exc
+        forecast = {
+            "provider": "Deutscher Wetterdienst (DWD), MOSMIX-L", "status": "error",
+            "statusReason": str(exc)[:240], "stationId": "P0043", "issuedAt": None,
+            "issuedAtLocal": None, "retrievedAt": utc_iso(retrieved_at),
+            "retrievedAtLocal": local_iso(retrieved_at), "points": [],
+            "source": {"url": MOSMIX_URL}, "refreshStatus": "error",
+            "refreshStatusReason": str(exc)[:240], "refreshAttemptAt": utc_iso(retrieved_at),
+        }
+        forecast = _retain_forecast_after_refresh_error(previous_forecast, exc, retrieved_at) or forecast
     statuses = [x["status"] for x in observations.values()]
     if all(s == "error" for s in statuses) and forecast["status"] == "error":
         status = "error"
-    elif any(s in {"partial", "stale", "error"} for s in statuses) or forecast["status"] != "ok":
+    elif any(s in {"partial", "stale", "error"} for s in statuses) or forecast["status"] != "ok" or forecast_refresh_error is not None:
         status = "partial"
     else:
         status = "ok"
@@ -387,7 +460,12 @@ def run(output: Path, *, now: datetime | None = None) -> dict[str, Any]:
         mos_payload: bytes | Exception = fetch_bytes(MOSMIX_URL)
     except Exception as exc:
         mos_payload = exc
-    snapshot = build_snapshot(retrieved, payloads, mos_payload)
+    snapshot = build_snapshot(
+        retrieved,
+        payloads,
+        mos_payload,
+        previous_forecast=_previous_valid_forecast(output),
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     atomic_json(output, snapshot)
     return snapshot
@@ -399,6 +477,9 @@ def main() -> None:
     args = parser.parse_args()
     snapshot = run(args.output)
     print(f"DWD weather bundle: status={snapshot['status']} forecast={snapshot['forecast']['status']}")
+    if snapshot["forecast"].get("refreshStatus") == "error":
+        # Diagnostic text is bounded and contains no credentials or request headers.
+        print(f"MOSMIX refresh failed: {snapshot['forecast'].get('refreshStatusReason', 'unspecified')}")
     if snapshot["status"] == "error":
         raise SystemExit(1)
 

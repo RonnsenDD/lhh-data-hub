@@ -38,6 +38,7 @@ def snapshot():
         "lastSuccessfulAt": "2026-11-01T01:25:00Z", "publishedAt": "2026-11-01T01:25:02Z",
         "observations": observations,
         "forecast": {"status": "ok", "issuedAt": "2026-11-01T00:00:00Z",
+                     "retrievedAt": "2026-11-01T01:25:00Z",
                      "points": [{"validAt": "2026-11-01T02:00:00Z", "values": {"T": 4}}]},
     }
 
@@ -110,6 +111,21 @@ class FreshnessManifestTests(unittest.TestCase):
         doc = create_manifest(value, derived_at="2026-11-01T02:30:00Z")
         self.assertFalse(doc["forecast"]["hasUsablePoint"])
         self.assertEqual(doc["forecast"]["usableValidTimes"], [])
+
+    def test_manifest_keeps_refresh_failure_separate_from_source_freshness(self):
+        value = snapshot()
+        value["forecast"].update({
+            "refreshStatus": "error",
+            "refreshStatusReason": "DWD request failed",
+            "refreshAttemptAt": "2026-11-01T01:25:00Z",
+            "ageAtAttemptHours": 1.42,
+        })
+        doc = create_manifest(value, derived_at="2026-11-01T01:30:00Z")
+        self.assertEqual(doc["forecast"]["status"], "ok")
+        self.assertEqual(doc["forecast"]["refreshStatus"], "error")
+        self.assertEqual(doc["forecast"]["issuedAt"], "2026-11-01T00:00:00Z")
+        self.assertEqual(doc["forecast"]["retrievedAt"], "2026-11-01T01:25:00Z")
+        self.assertEqual(doc["forecast"]["ageAtAttemptHours"], 1.42)
 
 
 if __name__ == "__main__":

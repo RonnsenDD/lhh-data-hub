@@ -120,6 +120,10 @@ def create_manifest(snapshot: dict[str, Any], *, derived_at: str | None = None) 
             "status": forecast_status,
             "issuedAt": forecast.get("issuedAt"),
             "retrievedAt": forecast.get("retrievedAt"),
+            **({"refreshStatus": forecast["refreshStatus"]} if forecast.get("refreshStatus") is not None else {}),
+            **({"refreshStatusReason": forecast["refreshStatusReason"]} if forecast.get("refreshStatusReason") is not None else {}),
+            **({"refreshAttemptAt": forecast["refreshAttemptAt"]} if forecast.get("refreshAttemptAt") is not None else {}),
+            **({"ageAtAttemptHours": forecast["ageAtAttemptHours"]} if forecast.get("ageAtAttemptHours") is not None else {}),
             "validAt": next_usable[1] if next_usable else None,
             "validThrough": max(valid_times, default=(None, None), key=lambda item: item[0])[0]
             .isoformat(timespec="milliseconds").replace("+00:00", "Z")

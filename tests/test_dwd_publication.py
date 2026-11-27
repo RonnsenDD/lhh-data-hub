@@ -145,6 +145,56 @@ class DwdPublicationTests(unittest.TestCase):
         errors = validate_publication(value, self.schema, now=now)
         self.assertTrue(any("ageHours: inconsistent" in item for item in errors))
 
+    def test_failed_mosmix_refresh_can_publish_only_a_valid_source_time_fallback(self):
+        value, _ = self.snapshot()
+        attempt = datetime.fromisoformat("2026-11-01T23:55:00+00:00")
+        value["lastAttemptAt"] = attempt.isoformat().replace("+00:00", "Z")
+        for observation in value["observations"].values():
+            observation["measuredAt"] = "2026-11-01T23:40:00Z"
+            observation["retrievedAt"] = "2026-11-01T23:50:00Z"
+            observation["ageMinutes"] = 10
+        forecast = value["forecast"]
+        forecast["issuedAt"] = "2026-11-01T15:00:00Z"
+        forecast["retrievedAt"] = "2026-11-01T20:34:00Z"
+        forecast["ageHours"] = 5.57
+        forecast["points"] = [{"validAt": "2026-11-02T01:00:00Z", "validAtLocal": "2026-11-02T02:00:00+01:00", "values": {"temperatureC": 4.0}}]
+        forecast["refreshStatus"] = "error"
+        forecast["refreshStatusReason"] = "DWD request failed"
+        forecast["refreshAttemptAt"] = value["lastAttemptAt"]
+        forecast["ageAtAttemptHours"] = 8.92
+        value["status"] = "partial"
+
+        self.assertEqual(validate_publication(value, self.schema, now=attempt, max_attempt_age_minutes=10), [])
+
+    def test_fallback_status_uses_current_attempt_age_and_becomes_stale_after_12_hours(self):
+        value, _ = self.snapshot()
+        attempt = datetime.fromisoformat("2026-11-02T04:00:00+00:00")
+        value["lastAttemptAt"] = attempt.isoformat().replace("+00:00", "Z")
+        for observation in value["observations"].values():
+            observation["measuredAt"] = "2026-11-02T03:40:00Z"
+            observation["retrievedAt"] = "2026-11-02T03:50:00Z"
+            observation["ageMinutes"] = 10
+        forecast = value["forecast"]
+        forecast["issuedAt"] = "2026-11-01T15:00:00Z"
+        forecast["retrievedAt"] = "2026-11-01T20:34:00Z"
+        forecast["ageHours"] = 5.57
+        forecast["status"] = "stale"
+        forecast["statusReason"] = "last valid model retained; model age at attempt is 13 hours"
+        forecast["ageAtAttemptHours"] = 13.0
+        forecast["refreshStatus"] = "error"
+        forecast["refreshStatusReason"] = "DWD request failed"
+        forecast["refreshAttemptAt"] = value["lastAttemptAt"]
+        value["status"] = "partial"
+
+        self.assertEqual(validate_publication(value, self.schema, now=attempt, max_attempt_age_minutes=10), [])
+
+    def test_forecast_refresh_error_without_successful_fallback_is_still_rejected(self):
+        value, now = self.snapshot()
+        value["status"] = "partial"
+        value["forecast"]["status"] = "error"
+        errors = validate_publication(value, self.schema, now=now)
+        self.assertTrue(any("technical forecast errors cannot be published" in item for item in errors))
+
 
 if __name__ == "__main__":
     unittest.main()
